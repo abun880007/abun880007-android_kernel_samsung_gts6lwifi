@@ -1,9 +1,23 @@
 /*
  * max77705-irq.c - Interrupt controller support for MAX77705
  *
+ * Copyright (C) 2016 Samsung Electronics Co.Ltd
+ * Insun Choi <insun77.choi@samsung.com>
+ *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * This driver is based on max77705-irq.c
  */
 
 #include <linux/err.h>
@@ -12,11 +26,6 @@
 #include <linux/gpio.h>
 #include <linux/mfd/max77705.h>
 #include <linux/mfd/max77705-private.h>
-#if defined(CONFIG_SEC_FACTORY)
-#include <linux/wakelock.h>
-
-static struct wake_lock max77705_irq_wakelock;
-#endif
 
 static const u8 max77705_mask_reg[] = {
 	/* TODO: Need to check other INTMASK */
@@ -44,6 +53,7 @@ static struct i2c_client *get_i2c(struct max77705_dev *max77705,
 	case CC_INT:
 	case PD_INT:
 	case VDM_INT:
+	case VIR_INT:
 		return max77705->muic;
 	default:
 		return ERR_PTR(-EINVAL);
@@ -197,27 +207,17 @@ static irqreturn_t max77705_irq_thread(int irq, void *data)
 	u8 bc_status0 = 0;
 	u8 ccstat = 0;
 	u8 vbvolt = 0;
-	u8 pre_ccstati =0;
+	u8 pre_ccstati = 0;
 	u8 ic_alt_mode = 0;
-	
-	max77705->doing_irq = 1;
 
 	pr_debug("%s: irq gpio pre-state(0x%02x)\n", __func__,
 				gpio_get_value(max77705->irq_gpio));
-
-#if defined(CONFIG_SEC_FACTORY)
-	wake_lock(&max77705_irq_wakelock);
-#endif
 
 	ret = max77705_read_reg(max77705->i2c,
 					MAX77705_PMIC_REG_INTSRC, &irq_src);
 	if (ret) {
 		pr_err("%s:%s Failed to read interrupt source: %d\n",
 			MFD_DEV_NAME, __func__, ret);
-#if defined(CONFIG_SEC_FACTORY)
-		wake_unlock(&max77705_irq_wakelock);
-#endif
-		max77705->doing_irq = 0;
 		return IRQ_NONE;
 	}
 
@@ -264,11 +264,7 @@ static irqreturn_t max77705_irq_thread(int irq, void *data)
 		pr_debug("[%s]IRQ_BASE(%d), NESTED_IRQ(%d)\n",
 			__func__, max77705->irq_base, max77705->irq_base + MAX77705_FG_IRQ_ALERT);
 		handle_nested_irq(max77705->irq_base + MAX77705_FG_IRQ_ALERT);
-
-#if defined(CONFIG_SEC_FACTORY)
-		wake_unlock(&max77705_irq_wakelock);
-#endif
-		goto done;
+		return IRQ_HANDLED;
 	}
 
 	if (irq_src & MAX77705_IRQSRC_TOP) {
@@ -321,21 +317,11 @@ static irqreturn_t max77705_irq_thread(int irq, void *data)
 		case MAX77705_PASS3:
 		case MAX77705_PASS4:
 		case MAX77705_PASS5:
-#if defined(CONFIG_SEC_FACTORY)
-			ret = max77705_bulk_read(max77705->muic, MAX77705_USBC_REG_UIC_INT,
-					3, &irq_reg[USBC_INT]);
-			ret = max77705_read_reg(max77705->muic, MAX77705_USBC_REG_VDM_INT_M,
-					&irq_vdm_mask);
-			if (irq_vdm_mask == 0xF0)
-				ret = max77705_read_reg(max77705->muic, MAX77705_USBC_REG_VDM_INT,
-						&irq_reg[VDM_INT]);
-#else
 			ret = max77705_bulk_read(max77705->muic, MAX77705_USBC_REG_UIC_INT,
 					4, &irq_reg[USBC_INT]);
 			ret = max77705_read_reg(max77705->muic, MAX77705_USBC_REG_VDM_INT_M,
 					&irq_vdm_mask);
-#endif
-			if(irq_reg[USBC_INT] & BIT_VBUSDetI) {
+			if (irq_reg[USBC_INT] & BIT_VBUSDetI) {
 				ret = max77705_read_reg(max77705->muic, REG_BC_STATUS, &bc_status0);
 				ret = max77705_read_reg(max77705->muic, REG_CC_STATUS0, &cc_status0);
 				vbvolt = (bc_status0 & BIT_VBUSDet) >> FFS(BIT_VBUSDet);
@@ -378,22 +364,6 @@ static irqreturn_t max77705_irq_thread(int irq, void *data)
 			handle_nested_irq(max77705->irq_base + i);
 	}
 
-#if defined(CONFIG_SEC_FACTORY)
-	wake_unlock(&max77705_irq_wakelock);
-#endif
-
-done:
-
-	max77705->doing_irq = 0;
-#if defined(CONFIG_CCIC_MAX77705)
-	max77705->is_usbc_queue = !check_usbc_opcode_queue();
-#endif
-
-	pr_info("%s doing_irq = %d, is_usbc_queue=%d\n", __func__,
-				max77705->doing_irq, max77705->is_usbc_queue);
-
-	wake_up_interruptible(&max77705->queue_empty_wait_q);
-
 	return IRQ_HANDLED;
 }
 
@@ -416,10 +386,6 @@ int max77705_irq_init(struct max77705_dev *max77705)
 	}
 
 	mutex_init(&max77705->irqlock);
-
-#if defined(CONFIG_SEC_FACTORY)
-	wake_lock_init(&max77705_irq_wakelock, WAKE_LOCK_SUSPEND, "max77705-irq");
-#endif
 
 	max77705->irq = gpio_to_irq(max77705->irq_gpio);
 	pr_info("%s:%s irq=%d, irq->gpio=%d\n", MFD_DEV_NAME, __func__,

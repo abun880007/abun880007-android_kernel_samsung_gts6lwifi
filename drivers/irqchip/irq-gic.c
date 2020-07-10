@@ -41,7 +41,6 @@
 #include <linux/irqchip.h>
 #include <linux/irqchip/chained_irq.h>
 #include <linux/irqchip/arm-gic.h>
-#include <linux/msm_rtb.h>
 
 #include <asm/cputype.h>
 #include <asm/irq.h>
@@ -330,17 +329,35 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 	u32 val, mask, bit;
 	unsigned long flags;
 
-	if (!force)
-		cpu = cpumask_any_and(mask_val, cpu_online_mask);
-	else
-		cpu = cpumask_first(mask_val);
-
-	if (cpu >= NR_GIC_CPU_IF || cpu >= nr_cpu_ids)
-		return -EINVAL;
-
 	gic_lock_irqsave(flags);
+	if (unlikely(d->common->state_use_accessors & IRQD_GIC_MULTI_TARGET)) {
+		struct cpumask temp_mask;
+
+		bit = 0;
+		if (!cpumask_and(&temp_mask, mask_val, cpu_online_mask))
+			goto err_out;
+#ifndef CONFIG_SCHED_HMP
+		if (!cpumask_and(&temp_mask, &temp_mask, cpu_coregroup_mask(0)))
+			goto err_out;
+#endif
+		for_each_cpu(cpu, &temp_mask) {
+			if (cpu >= NR_GIC_CPU_IF || cpu >= nr_cpu_ids)
+				goto err_out;
+			bit |= gic_cpu_map[cpu];
+		}
+		bit <<= shift;
+	} else {
+		if (!force)
+			cpu = cpumask_any_and(mask_val, cpu_online_mask);
+		else
+			cpu = cpumask_first(mask_val);
+
+		if (cpu >= NR_GIC_CPU_IF || cpu >= nr_cpu_ids)
+				goto err_out;
+
+		bit = gic_cpu_map[cpu] << shift;
+	}
 	mask = 0xff << shift;
-	bit = gic_cpu_map[cpu] << shift;
 	val = readl_relaxed(reg) & ~mask;
 	writel_relaxed(val | bit, reg);
 	gic_unlock_irqrestore(flags);
@@ -348,6 +365,9 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 	irq_data_update_effective_affinity(d, cpumask_of(cpu));
 
 	return IRQ_SET_MASK_OK_DONE;
+err_out:
+	gic_unlock_irqrestore(flags);
+	return -EINVAL;
 }
 #endif
 
@@ -361,12 +381,13 @@ static void __exception_irq_entry gic_handle_irq(struct pt_regs *regs)
 		irqstat = readl_relaxed(cpu_base + GIC_CPU_INTACK);
 		irqnr = irqstat & GICC_IAR_INT_ID_MASK;
 
+		dmb(ish);
+
 		if (likely(irqnr > 15 && irqnr < 1020)) {
 			if (static_key_true(&supports_deactivate))
 				writel_relaxed(irqstat, cpu_base + GIC_CPU_EOI);
 			isb();
 			handle_domain_irq(gic->domain, irqnr, regs);
-			uncached_logk(LOGK_IRQ, (void *)(uintptr_t)irqnr);
 			continue;
 		}
 		if (irqnr < 16) {
@@ -384,7 +405,6 @@ static void __exception_irq_entry gic_handle_irq(struct pt_regs *regs)
 			smp_rmb();
 			handle_IPI(irqnr, regs);
 #endif
-			uncached_logk(LOGK_IRQ, (void *)(uintptr_t)irqnr);
 			continue;
 		}
 		break;
@@ -419,6 +439,9 @@ static void gic_handle_cascade_irq(struct irq_desc *desc)
 }
 
 static const struct irq_chip gic_chip = {
+	.name			= "GIC",
+	.irq_disable		= gic_mask_irq,
+	.irq_enable		= gic_unmask_irq,
 	.irq_mask		= gic_mask_irq,
 	.irq_unmask		= gic_unmask_irq,
 	.irq_eoi		= gic_eoi_irq,
@@ -718,8 +741,7 @@ void gic_cpu_restore(struct gic_chip_data *gic)
 	gic_cpu_if_up(gic);
 }
 
-static int gic_notifier(struct notifier_block *self, unsigned long cmd,
-			void *aff_level)
+static int gic_notifier(struct notifier_block *self, unsigned long cmd,	void *v)
 {
 	int i;
 
@@ -738,20 +760,11 @@ static int gic_notifier(struct notifier_block *self, unsigned long cmd,
 			gic_cpu_restore(&gic_data[i]);
 			break;
 		case CPU_CLUSTER_PM_ENTER:
-			/*
-			 * Affinity level of the node
-			 * eg:
-			 *    cpu level = 0
-			 *    l2 level  = 1
-			 *    cci level = 2
-			 */
-			if (!(unsigned long)aff_level)
-				gic_dist_save(&gic_data[i]);
+			gic_dist_save(&gic_data[i]);
 			break;
 		case CPU_CLUSTER_PM_ENTER_FAILED:
 		case CPU_CLUSTER_PM_EXIT:
-			if (!(unsigned long)aff_level)
-				gic_dist_restore(&gic_data[i]);
+			gic_dist_restore(&gic_data[i]);
 			break;
 		}
 	}

@@ -102,7 +102,7 @@ unlock:
 	if (alg == (void *)&alg_manager.list)
 		return ERR_PTR(-ENOENT);
 
-	bctx = kmem_cache_zalloc(blk_crypt_cachep, GFP_KERNEL);
+	bctx = kmem_cache_zalloc(blk_crypt_cachep, GFP_NOFS);
 	if (!bctx) {
 		res = -ENOMEM;
 		goto err_free;
@@ -146,12 +146,12 @@ bool blk_crypt_mergeable(const struct bio *a, const struct bio *b)
 		return false;
 
 #ifdef CONFIG_BLK_DEV_CRYPT_DUN
-        if (__bio_crypt(a)) {
-                if (!bio_dun(a) ^ !bio_dun(b))
-                        return false;
-                if (bio_dun(a) && bio_end_dun(a) != bio_dun(b))
-                        return false;
-        }
+	if (__bio_crypt(a)) {
+		if (!bio_dun(a) ^ !bio_dun(b))
+			return false;
+		if (bio_dun(a) && bio_end_dun(a) != bio_dun(b))
+			return false;
+	}
 #endif
 #endif
 	return true;
@@ -163,7 +163,7 @@ blk_crypt_t *blk_crypt_get_context(struct block_device *bdev, const char *cipher
 	struct blk_crypt_t *bctx;
 	bctx = blk_crypt_alloc_context(bdev, cipher_str);
 	if (IS_ERR(bctx)) {
-		pr_debug("error allocating diskciher '%s' err: %d",
+		pr_debug("error allocating diskciher '%s' err: %ld",
 			cipher_str, PTR_ERR(bctx));
 		return bctx;
 	}
@@ -210,7 +210,7 @@ void blk_crypt_put_context(blk_crypt_t *bc_ctx)
 }
 
 /* H/W algorithm APIs */
-static int blk_crypt_initialize()
+static int blk_crypt_initialize(void)
 {
 	if (likely(blk_crypt_cachep))
 		return 0;

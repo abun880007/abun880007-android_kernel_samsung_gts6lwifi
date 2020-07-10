@@ -1,3 +1,13 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:a6f73b6583ce4e3143754a4477a4eeb8f7936287c1ca0ad5de102bf9c3c7f59c
-size 303
+ARCH=x86_64
+BRANCH=android-4.4
+CROSS_COMPILE=x86_64-linux-android-
+DEFCONFIG=x86_64_ranchu_defconfig
+EXTRA_CMDS=''
+KERNEL_DIR=common
+LINUX_GCC_CROSS_COMPILE_PREBUILTS_BIN=prebuilts/gcc/linux-x86/x86/x86_64-linux-android-4.9/bin
+FILES="
+arch/x86/boot/bzImage
+vmlinux
+System.map
+"
+STOP_SHIP_TRACEPRINTK=1

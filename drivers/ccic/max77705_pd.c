@@ -43,6 +43,10 @@
 #elif defined(CONFIG_TYPEC)
 #include <linux/usb/typec.h>
 #endif
+#if defined(CONFIG_USE_SECOND_MUIC)
+#include <linux/muic/muic.h>
+#endif
+
 #include "../battery_v2/include/sec_charging_common.h"
 
 extern struct pdic_notifier_struct pd_noti;
@@ -50,10 +54,6 @@ extern void (*fp_select_pdo)(int num);
 #if defined(CONFIG_PDIC_PD30)
 extern int (*fp_sec_pd_select_pps)(int num, int ppsVol, int ppsCur);
 extern int (*fp_sec_pd_get_apdo_max_power)(unsigned int *pdo_pos, unsigned int *taMaxVol, unsigned int *taMaxCur, unsigned int *taMaxPwr);
-#endif
-
-#if defined(CONFIG_USB_DWC3)
-extern void dwc3_set_selfpowered(u8 enable);
 #endif
 
 #if defined(CONFIG_PDIC_PD30)
@@ -125,6 +125,7 @@ void max77705_select_pdo(int num)
 		value.read_length = 1;
 		max77705_usbc_opcode_write(pusbpd, &value);
 	}
+
 	pr_info("%s : OPCODE(0x%02x) W_LENGTH(%d) R_LENGTH(%d) NUM(%d)\n",
 		__func__, value.opcode, value.write_length, value.read_length, num);
 }
@@ -414,6 +415,34 @@ void max77705_usbc_icurr(u8 curr)
 
 }
 
+void max77705_set_gpio5_control(int direction, int output)
+{
+	struct max77705_usbc_platform_data *pusbpd = pd_noti.pusbpd;
+	usbc_cmd_data value;
+	u8 op_data1, op_data2;
+
+	if (direction)
+		op_data1 = 0xFF; // OUTPUT
+	else
+		op_data1 = 0x00; // INPUT
+
+	if (output)
+		op_data2 = 0xFF; // HIGH
+	else
+		op_data2 = 0x00; // LOW
+
+	init_usbc_cmd_data(&value);
+	value.opcode = OPCODE_SAMSUNG_GPIO5_CONTROL;
+	value.write_data[0] = op_data1;
+	value.write_data[1] = op_data2;
+	value.write_length = 2;
+	value.read_length = 0;
+	max77705_usbc_opcode_write(pusbpd, &value);
+
+	pr_info("%s : OPCODE(0x%02x) W_LENGTH(%d) R_LENGTH(%d) gpio5(0x%x, 0x%x)\n",
+		__func__, value.opcode, value.write_length, value.read_length, op_data1, op_data2);
+}
+
 void max77705_set_fw_noautoibus(int enable)
 {
 	struct max77705_usbc_platform_data *pusbpd = pd_noti.pusbpd;
@@ -453,24 +482,19 @@ void max77705_vbus_turn_on_ctrl(struct max77705_usbc_platform_data *usbc_data, b
 	union power_supply_propval val;
 	int on = !!enable;
 	int ret = 0;
+	int count = 5;
 #if defined(CONFIG_USB_HOST_NOTIFY)
 	struct otg_notify *o_notify = get_otg_notify();
-	bool must_block_host = 0;
-	bool unsupport_host = 0;
-	if (o_notify)
-		must_block_host = is_blocked(o_notify, NOTIFY_BLOCK_TYPE_HOST);
+	bool must_block_host = is_blocked(o_notify, NOTIFY_BLOCK_TYPE_HOST);
 
 	pr_info("%s : enable=%d, auto_vbus_en=%d, must_block_host=%d, swaped=%d\n",
 		__func__, enable, usbc_data->auto_vbus_en, must_block_host, swaped);
 	// turn on
 	if (enable) {
-		if (o_notify)
-			unsupport_host  = !is_usb_host(o_notify);
-		pr_info("%s : unsupport_host=%d\n", __func__, unsupport_host);
 		// auto-mode
 		if (usbc_data->auto_vbus_en) {
 			// mpsm
-			if (must_block_host || unsupport_host) {
+			if (must_block_host) {
 				if (swaped) {
 					// turn off vbus because of swaped and blocked host
 					enable = false;
@@ -487,7 +511,7 @@ void max77705_vbus_turn_on_ctrl(struct max77705_usbc_platform_data *usbc_data, b
 			}
 		// non auto-mode
 		} else {
-			if (must_block_host || unsupport_host) {
+			if (must_block_host) {
 				if (swaped) {
 					enable = false;
 					pr_info("%s : turn off vbus because of blocked host\n",
@@ -509,20 +533,32 @@ void max77705_vbus_turn_on_ctrl(struct max77705_usbc_platform_data *usbc_data, b
 
 	pr_info("%s : enable=%d\n", __func__, enable);
 
-	psy_otg = power_supply_get_by_name("otg");
-	if (psy_otg) {
-		val.intval = enable;
-		ret = psy_otg->desc->set_property(psy_otg, POWER_SUPPLY_PROP_ONLINE, &val);
-	} else {
-		pr_err("%s: Fail to get psy battery\n", __func__);
-	}
-	if (ret) {
-		pr_err("%s: fail to set power_suppy ONLINE property(%d)\n",
-			__func__, ret);
-	} else {
-		pr_info("otg accessory power = %d\n", on);
-	}
+	while (count) {
+		psy_otg = power_supply_get_by_name("otg");
+		if (psy_otg) {
+			val.intval = enable;
+#if defined(CONFIG_USE_SECOND_MUIC)
+			muic_hv_charger_disable(enable);
+#endif
 
+			ret = psy_otg->desc->set_property(psy_otg, POWER_SUPPLY_PROP_ONLINE, &val);
+			if (ret == -ENODEV) {
+				pr_err("%s: fail to set power_suppy ONLINE property %d) retry (%d)\n",__func__, ret, count);
+				count--;
+			} else {
+				if (ret) {
+					pr_err("%s: fail to set power_suppy ONLINE property(%d) \n",__func__, ret);
+				} else {
+					pr_info("otg accessory power = %d\n", on);
+				}
+				break;
+			}
+		} else {
+			pr_err("%s: fail to get psy battery\n", __func__);
+			count--;
+			msleep(200);
+		}
+	}
 }
 
 void max77705_pdo_list(struct max77705_usbc_platform_data *usbc_data, unsigned char *data)
@@ -883,6 +919,9 @@ static void max77705_pd_check_pdmsg(struct max77705_usbc_platform_data *usbc_dat
 	usbc_cmd_data value;
 	/*int dr_swap, pr_swap, vcon_swap = 0; u8 value[2], rc = 0;*/
 	MAX77705_VDM_MSG_IRQ_STATUS_Type VDM_MSG_IRQ_State;
+#ifdef CONFIG_USB_NOTIFY_PROC_LOG
+	int event;
+#endif
 
 	VDM_MSG_IRQ_State.DATA = 0x0;
 	init_usbc_cmd_data(&value);
@@ -890,9 +929,6 @@ static void max77705_pd_check_pdmsg(struct max77705_usbc_platform_data *usbc_dat
 
 	switch (pd_msg) {
 	case Nothing_happened:
-#if defined(CONFIG_USB_DWC3)
-		dwc3_set_selfpowered(0);
-#endif
 		break;
 	case Sink_PD_PSRdy_received:
 		/* currently, do nothing
@@ -911,9 +947,6 @@ static void max77705_pd_check_pdmsg(struct max77705_usbc_platform_data *usbc_dat
 			max77705_usbc_disable_auto_vbus(usbc_data);
 			max77705_vbus_turn_on_ctrl(usbc_data, OFF, false);
 		}
-#if defined(CONFIG_USB_DWC3)
-		dwc3_set_selfpowered(1);
-#endif
 		break;
 	case Source_PD_Error_Recovery:
 		break;
@@ -959,14 +992,25 @@ static void max77705_pd_check_pdmsg(struct max77705_usbc_platform_data *usbc_dat
 		usbc_data->pd_pr_swap = cc_SINK;
 		break;
 	case HARDRESET_RECEIVED:
+		/*turn off the vbus both Source and Sink*/
+		if (usbc_data->cc_data->current_pr == SRC) {
+			max77705_vbus_turn_on_ctrl(usbc_data, OFF, false);
+			schedule_delayed_work(&usbc_data->vbus_hard_reset_work, msecs_to_jiffies(760));
+		}
+#ifdef CONFIG_USB_NOTIFY_PROC_LOG
+		event = NOTIFY_EXTRA_HARDRESET_RECEIVED;
+		store_usblog_notify(NOTIFY_EXTRA, (void *)&event, NULL);
+#endif
+		break;
 	case HARDRESET_SENT:
 		/*turn off the vbus both Source and Sink*/
 		if (usbc_data->cc_data->current_pr == SRC) {
 			max77705_vbus_turn_on_ctrl(usbc_data, OFF, false);
 			schedule_delayed_work(&usbc_data->vbus_hard_reset_work, msecs_to_jiffies(760));
 		}
-#if defined(CONFIG_USB_DWC3)
-		dwc3_set_selfpowered(0);
+#ifdef CONFIG_USB_NOTIFY_PROC_LOG
+		event = NOTIFY_EXTRA_HARDRESET_SENT;
+		store_usblog_notify(NOTIFY_EXTRA, (void *)&event, NULL);
 #endif
 		break;
 	case Get_Vbus_turn_on:
@@ -998,10 +1042,10 @@ static void max77705_pd_check_pdmsg(struct max77705_usbc_platform_data *usbc_dat
 		max77705_vbus_turn_on_ctrl(usbc_data, ON, false);
 		msg_maxim("PRSWAP_SNKTOSRC : [%x]", pd_msg);
 		break;
-	case PDMSG_DP_DISCOVER_MODES:
-		cancel_delayed_work(&usbc_data->check_discover_modes_work);
-		schedule_delayed_work(&usbc_data->check_discover_modes_work,
-			msecs_to_jiffies(500));
+	case Current_Cable_Connected:
+		max77705_manual_jig_on(usbc_data, 1);
+		usbc_data->manual_lpm_mode = 1;
+		msg_maxim("Current_Cable_Connected : [%x]", pd_msg);
 		break;
 	case SRC_CAP_RECEIVED:
 		msg_maxim("SRC_CAP_RECEIVED : [%x]", pd_msg);
@@ -1151,9 +1195,6 @@ static irqreturn_t max77705_psrdy_irq(int irq, void *data)
 #if defined(CONFIG_TYPEC)
 	enum typec_pwr_opmode mode = TYPEC_PWR_MODE_USB;
 #endif
-#ifdef CONFIG_USB_NOTIFY_PROC_LOG
-	int pd_state = 0;
-#endif
 
 	msg_maxim("IN");
 	max77705_read_reg(usbc_data->muic, REG_PD_STATUS1, &usbc_data->pd_status1);
@@ -1164,16 +1205,12 @@ static irqreturn_t max77705_psrdy_irq(int irq, void *data)
 			&& usbc_data->pd_data->cc_status != CC_NO_CONN)
 		usbc_data->pd_support = true;
 
-#if defined(CONFIG_TYPEC)
 	if (usbc_data->typec_try_state_change == TRY_ROLE_SWAP_PR &&
 		usbc_data->pd_support) {
-		/* Role change try and new mode detected */
 		msg_maxim("typec_reverse_completion");
 		usbc_data->typec_try_state_change = TRY_ROLE_SWAP_NONE;
 		complete(&usbc_data->typec_reverse_completion);
 	}
-#endif
-
 	msg_maxim("psrdy_received=%d, usbc_data->pd_support=%d, cc_status=%d",
 		psrdy_received, usbc_data->pd_support, usbc_data->pd_data->cc_status);
 
@@ -1185,18 +1222,10 @@ static irqreturn_t max77705_psrdy_irq(int irq, void *data)
 	if (usbc_data->pd_data->cc_status == CC_SNK && psrdy_received) {
 		max77705_check_pdo(usbc_data);
 		usbc_data->pd_data->psrdy_received = true;
-#ifdef CONFIG_USB_NOTIFY_PROC_LOG
-		pd_state = max77705_State_PE_SNK_Ready;
-		store_usblog_notify(NOTIFY_FUNCSTATE, (void *)&pd_state, NULL);
-#endif
 	}
 
-	if (psrdy_received && usbc_data->pd_data->cc_status != CC_NO_CONN) 
+	if (psrdy_received && usbc_data->pd_data->cc_status != CC_NO_CONN)
 		usbc_data->pn_flag = true;
-
-#if defined(CONFIG_USB_DWC3)
-	dwc3_set_selfpowered(psrdy_received);
-#endif
 
 	msg_maxim("OUT");
 	return IRQ_HANDLED;
@@ -1232,15 +1261,14 @@ static void max77705_datarole_irq_handler(void *data, int irq)
 				if (pd_data->previous_dr != 0xFF)
 					msg_maxim("%s detach previous usb connection\n", __func__);
 				max77705_notify_dr_status(usbc_data, 1);
-#if defined(CONFIG_TYPEC)
+#if defined(CONFIG_TYPEC) 
 				if (usbc_data->typec_try_state_change == TRY_ROLE_SWAP_DR ||
 					usbc_data->typec_try_state_change == TRY_ROLE_SWAP_TYPE) {
-					/* Role change try and new mode detected */
 					msg_maxim("typec_reverse_completion");
 					usbc_data->typec_try_state_change = TRY_ROLE_SWAP_NONE;
-					complete(&usbc_data->typec_reverse_completion);
+				complete(&usbc_data->typec_reverse_completion); 
 				}
-#endif
+#endif 
 			}
 			msg_maxim(" UFP");
 			break;
@@ -1253,15 +1281,14 @@ static void max77705_datarole_irq_handler(void *data, int irq)
 					msg_maxim("%s detach previous usb connection\n", __func__);
 
 				max77705_notify_dr_status(usbc_data, 1);
-#if defined(CONFIG_TYPEC)
+#if defined(CONFIG_TYPEC) 
 				if (usbc_data->typec_try_state_change == TRY_ROLE_SWAP_DR ||
 					usbc_data->typec_try_state_change == TRY_ROLE_SWAP_TYPE) {
-					/* Role change try and new mode detected */
 					msg_maxim("typec_reverse_completion");
 					usbc_data->typec_try_state_change = TRY_ROLE_SWAP_NONE;
-					complete(&usbc_data->typec_reverse_completion);
+				complete(&usbc_data->typec_reverse_completion); 
 				}
-#endif
+#endif 
 				if (usbc_data->cc_data->current_pr == SNK && !(usbc_data->is_first_booting)) {
 					max77705_vdm_process_set_identity_req(usbc_data);
 					msg_maxim("SEND THE IDENTITY REQUEST FROM DFP HANDLER");
@@ -1341,7 +1368,7 @@ static irqreturn_t max77705_fctid_irq(int irq, void *data)
 int max77705_pd_init(struct max77705_usbc_platform_data *usbc_data)
 {
 	struct max77705_pd_data *pd_data = NULL;
-	int ret = 0;
+	int ret;
 
 	msg_maxim(" IN");
 	pd_data = usbc_data->pd_data;
@@ -1367,7 +1394,6 @@ int max77705_pd_init(struct max77705_usbc_platform_data *usbc_data)
 	fp_sec_pd_select_pps = max77705_select_pps;
 	fp_sec_pd_get_apdo_max_power = max77705_get_apdo_max_power;
 #endif
-
 	pd_data->wqueue = create_singlethread_workqueue("max77705_pd");
 	if (!pd_data->wqueue) {
 		pr_err("%s: Fail to Create Workqueue\n", __func__);

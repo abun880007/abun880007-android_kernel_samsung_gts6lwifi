@@ -273,7 +273,7 @@ static ssize_t show_shost_transferred_cnt(struct device *dev, struct device_attr
 
     return sprintf(buf, "%u\n", hba->transferred_sector);
 }
-static DEVICE_ATTR(transferred_cnt, S_IRUGO | S_IWUSR, show_shost_transferred_cnt, NULL);
+static DEVICE_ATTR(transferred_cnt, 0444, show_shost_transferred_cnt, NULL);
 
 static ssize_t
 show_shost_active_mode(struct device *dev,
@@ -409,12 +409,12 @@ static struct attribute *scsi_sysfs_shost_attrs[] = {
 	&dev_attr_scan.attr,
 	&dev_attr_hstate.attr,
 	&dev_attr_supported_mode.attr,
-	&dev_attr_transferred_cnt.attr,
 	&dev_attr_active_mode.attr,
 	&dev_attr_prot_capabilities.attr,
 	&dev_attr_prot_guard_type.attr,
 	&dev_attr_host_reset.attr,
 	&dev_attr_eh_deadline.attr,
+	&dev_attr_transferred_cnt.attr,
 	NULL
 };
 
@@ -684,11 +684,8 @@ sdev_store_timeout (struct device *dev, struct device_attribute *attr,
 {
 	struct scsi_device *sdev;
 	int timeout;
-	int res;
 	sdev = to_scsi_device(dev);
-	res= sscanf (buf, "%d\n", &timeout);
-	if (res != 1)
-		return -EINVAL;
+	sscanf (buf, "%d\n", &timeout);
 	blk_queue_rq_timeout(sdev->request_queue, timeout * HZ);
 	return count;
 }
@@ -1259,8 +1256,7 @@ int scsi_sysfs_add_sdev(struct scsi_device *sdev)
 	device_enable_async_suspend(&sdev->sdev_gendev);
 	scsi_autopm_get_target(starget);
 	pm_runtime_set_active(&sdev->sdev_gendev);
-	if (!sdev->use_rpm_auto)
-		pm_runtime_forbid(&sdev->sdev_gendev);
+	pm_runtime_forbid(&sdev->sdev_gendev);
 	pm_runtime_enable(&sdev->sdev_gendev);
 	scsi_autopm_put_target(starget);
 

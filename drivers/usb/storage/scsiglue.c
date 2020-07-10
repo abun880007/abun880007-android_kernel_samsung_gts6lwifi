@@ -432,7 +432,6 @@ static int command_abort(struct scsi_cmnd *srb)
 #ifdef CONFIG_USB_DEBUG_DETAILED_LOG
 	printk(KERN_ERR USB_STORAGE "%s scsi_lock +\n", __func__);
 #endif
-
 	/*
 	 * us->srb together with the TIMED_OUT, RESETTING, and ABORTING
 	 * bits are protected by the host lock.
@@ -534,7 +533,6 @@ void usb_stor_report_bus_reset(struct us_data *us)
 #ifdef CONFIG_USB_DEBUG_DETAILED_LOG
 	printk(KERN_ERR USB_STORAGE "%s scsi_lock\n", __func__);
 #endif
-
 	scsi_lock(host);
 	scsi_report_bus_reset(host, 0);
 	scsi_unlock(host);

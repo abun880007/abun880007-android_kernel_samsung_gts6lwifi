@@ -11,9 +11,7 @@
  *
  */
 
-#ifdef CONFIG_CS40L2X_SAMSUNG_FEATURE
 #define pr_fmt(fmt) "[VIB] " fmt
-#endif
 #define DEBUG_VIB 0
 
 #include <linux/module.h>
@@ -42,7 +40,7 @@
 #include <linux/vib_notifier.h>
 #endif
 
-#include "cs40l2x-private.h"
+#include "cs40l2x.h"
 
 #ifdef CONFIG_ANDROID_TIMED_OUTPUT
 #include "timed_output.h"
@@ -94,6 +92,9 @@ struct cs40l2x_private {
 	unsigned int q_measured;
 #ifdef CONFIG_CS40L2X_SAMSUNG_FEATURE
 	unsigned int intensity;
+#if defined(CONFIG_VIB_FORCE_TOUCH)
+	unsigned int force_touch_intensity;
+#endif	
 	EVENT_STATUS save_vib_event;
 #endif
 	struct cs40l2x_pbq_pair pbq_pairs[CS40L2X_PBQ_DEPTH_MAX];
@@ -203,7 +204,6 @@ static const int FOLDER_TYPE = 1;
 #else
 static const int FOLDER_TYPE = 0;
 #endif
-static bool vib_disable = 0;
 #endif
 
 #ifdef CONFIG_MOTOR_DRV_CS40L2X_PMIC_RESET
@@ -247,7 +247,8 @@ static int regulator_vldo_control(struct cs40l2x_private *cs40l2x, int on) {
 	return 0;
 }
 
-static int cs40l2x_reset_control(struct cs40l2x_private *cs40l2x, int on) {
+static int cs40l2x_reset_control(struct cs40l2x_private *cs40l2x, int on)
+{
 	int ret = 0;
 
 	if(cs40l2x == NULL || (on < 0 && on > 1)) {
@@ -270,7 +271,8 @@ static int cs40l2x_reset_control(struct cs40l2x_private *cs40l2x, int on) {
 }
 #endif
 #if defined(CONFIG_SEC_FACTORY) && defined(CONFIG_MOTOR_DRV_CS40L2X_PMIC_RESET)
-static int regulator_vldo_get_value(struct cs40l2x_private *cs40l2x) {
+static int regulator_vldo_get_value(struct cs40l2x_private *cs40l2x)
+{
 
 	if (IS_ERR_OR_NULL(cs40l2x->reset_vldo)) {
 		pr_err("%s: can't request VLDO power supply: %ld\n",
@@ -343,20 +345,12 @@ static int set_current_dig_scale(struct cs40l2x_private *cs40l2x) {
 				scale = EVENT_DIG_SCALE_FOLDER_OPEN_LONG_DURATION;
 			}
 		} else {
-			if(status->EVENTS.SHORT_DURATION == 1) {
-				scale = EVENT_DIG_SCALE_FOLDER_CLOSE_SHORT_DURATION;
-			}
-			else {
-				scale = EVENT_DIG_SCALE_FOLDER_CLOSE_LONG_DURATION;
-			}
+			scale = EVENT_DIG_SCALE_FOLDER_CLOSE;
 		}
 	} else {
 		scale = EVENT_DIG_SCALE_NONE;
 	}
-
-	mutex_lock(&cs40l2x->lock);
 	cs40l2x_dig_scale_set(cs40l2x, scale);
-	mutex_unlock(&cs40l2x->lock);
 
 	scale = 0;
 	cs40l2x_dig_scale_get(cs40l2x, &scale);
@@ -375,7 +369,7 @@ static int set_current_dig_scale(struct cs40l2x_private *cs40l2x) {
 	return 0;
 }
 
-static void set_event_for_dig_scale(struct cs40l2x_private *cs40l2x, 
+static void set_event_for_dig_scale(struct cs40l2x_private *cs40l2x,
 			int event_idx)
 {
 	EVENT_STATUS *status = &cs40l2x->save_vib_event;
@@ -422,11 +416,10 @@ static void set_cp_trigger_index_for_dig_scale(struct cs40l2x_private *cs40l2x)
 	case 10:
 	case 11:
 	case 15:
-	case 17:
 	case 23:
 	case 24:
 	case 25:
-	case 31 ... 70:
+	case 31 ... 50:
 		short_duration = 1;
 		break;
 	default:
@@ -440,7 +433,7 @@ static void set_cp_trigger_index_for_dig_scale(struct cs40l2x_private *cs40l2x)
 	}
 }
 
-static void set_duration_for_dig_scale(struct cs40l2x_private *cs40l2x, 
+static void set_duration_for_dig_scale(struct cs40l2x_private *cs40l2x,
 			int duration)
 {
 	EVENT_STATUS *status = &cs40l2x->save_vib_event;
@@ -2584,8 +2577,7 @@ static int cs40l2x_gpio1_dig_scale_set(struct cs40l2x_private *cs40l2x,
 
 	return cs40l2x_dsp_cache(cs40l2x, reg, val);
 }
-#endif
-#ifdef CIRRUS_VIB_DIG_SCALE_SUPPORT
+
 static ssize_t cs40l2x_gpio1_dig_scale_show(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
@@ -3291,7 +3283,6 @@ static ssize_t cs40l2x_intensity_store(struct device *dev,
 	return count;
 }
 
-#if !defined (CONFIG_1030LRA_MOTOR)
 static ssize_t cs40l2x_haptic_engine_show(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
@@ -3310,16 +3301,56 @@ static ssize_t cs40l2x_haptic_engine_store(struct device *dev,
 
 	return count;
 }
+
+#if defined(CONFIG_CS40L2X_SAMSUNG_FEATURE) && defined(CONFIG_VIB_FORCE_TOUCH)
+static ssize_t cs40l2x_force_touch_intensity_store(struct device *dev,
+		struct device_attribute *devattr, const char *buf, size_t count)
+{
+	struct cs40l2x_private *cs40l2x = cs40l2x_get_private(dev);
+	int ret = 0;
+	unsigned int intensity, dig_scale;
+
+	ret = kstrtou32(buf, 10, &intensity);
+	if (ret) {
+		pr_err("fail to get intensity\n");
+		return -EINVAL;
+	}
+
+	if(intensity > CS40L2X_INTENSITY_SCALE_MAX)
+		return -EINVAL;
+
+ 	dig_scale = cs40l2x_pbq_dig_scale[intensity/100];
+	pr_info("%s: %u (gpio1 dig scale: %u)\n", __func__, intensity, dig_scale);
+
+	mutex_lock(&cs40l2x->lock);
+	ret = cs40l2x_gpio1_dig_scale_set(cs40l2x, dig_scale);
+	mutex_unlock(&cs40l2x->lock);
+
+	if (ret) {
+		pr_err("Failed to write digital scale\n");
+		return ret;
+	}
+
+	cs40l2x->force_touch_intensity = intensity;
+	return count;
+}
+
+static ssize_t cs40l2x_force_touch_intensity_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct cs40l2x_private *cs40l2x = cs40l2x_get_private(dev);
+	return snprintf(buf, 30, "force_touch_intensity: %u\n", cs40l2x->force_touch_intensity);
+}
 #endif
 
-static ssize_t cs40l2x_motor_type_show(struct device *dev, 
+static ssize_t cs40l2x_motor_type_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	pr_info("%s: %s\n", __func__, sec_motor_type);
 	return snprintf(buf, MAX_STR_LEN_VIB_TYPE, "%s\n", sec_motor_type);
 }
 
-static ssize_t cs40l2x_event_cmd_show(struct device *dev, 
+static ssize_t cs40l2x_event_cmd_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	pr_info("%s: [%d] %s\n", __func__, sec_prev_event_cmd);
@@ -3763,7 +3794,7 @@ static ssize_t cs40l2x_exc_enable_store(struct device *dev,
 			reg, val ? CS40L2X_EXC_ENABLED : CS40L2X_EXC_DISABLED);
 	if (ret)
 		goto err_mutex;
-	
+
 	ret = cs40l2x_dsp_cache(cs40l2x,
 			reg, val ? CS40L2X_EXC_ENABLED : CS40L2X_EXC_DISABLED);
 	if (ret)
@@ -4406,8 +4437,10 @@ static DEVICE_ATTR(heartbeat, 0660, cs40l2x_heartbeat_show, NULL);
 static DEVICE_ATTR(num_waves, 0660, cs40l2x_num_waves_show, NULL);
 #ifdef CONFIG_CS40L2X_SAMSUNG_FEATURE
 static DEVICE_ATTR(intensity, 0660, cs40l2x_intensity_show, cs40l2x_intensity_store);
-#if !defined (CONFIG_1030LRA_MOTOR)
 static DEVICE_ATTR(haptic_engine, 0660, cs40l2x_haptic_engine_show, cs40l2x_haptic_engine_store);
+#if defined(CONFIG_VIB_FORCE_TOUCH)
+static DEVICE_ATTR(force_touch_intensity, 0660, cs40l2x_force_touch_intensity_show,
+		cs40l2x_force_touch_intensity_store);
 #endif
 static DEVICE_ATTR(motor_type, 0660, cs40l2x_motor_type_show, NULL);
 static DEVICE_ATTR(event_cmd, 0660, cs40l2x_event_cmd_show, cs40l2x_event_cmd_store);
@@ -4485,9 +4518,10 @@ static struct attribute *cs40l2x_dev_attrs[] = {
 	&dev_attr_num_waves.attr,
 #ifdef CONFIG_CS40L2X_SAMSUNG_FEATURE
 	&dev_attr_intensity.attr,
-#if !defined (CONFIG_1030LRA_MOTOR)
 	&dev_attr_haptic_engine.attr,
-#endif
+#if defined(CONFIG_VIB_FORCE_TOUCH)	
+	&dev_attr_force_touch_intensity.attr,
+#endif	
 	&dev_attr_motor_type.attr,
 	&dev_attr_event_cmd.attr,
 #endif
@@ -4882,10 +4916,10 @@ static void cs40l2x_vibe_pbq_worker(struct work_struct *work)
 	}
 
 	ret = regmap_read(regmap,
-			  cs40l2x_dsp_reg(cs40l2x, "STATUS",
-					  CS40L2X_XM_UNPACKED_TYPE,
-					  CS40L2X_ALGO_ID_VIBE),
-			  &val);
+			cs40l2x_dsp_reg(cs40l2x, "STATUS",
+				CS40L2X_XM_UNPACKED_TYPE,
+				CS40L2X_ALGO_ID_VIBE),
+			&val);
 	if (ret) {
 		dev_err(dev, "Failed to capture playback status\n");
 		goto err_mutex;
@@ -5531,17 +5565,6 @@ static void cs40l2x_vibe_enable(struct timed_output_dev *sdev, int timeout)
 #ifdef CONFIG_CS40L2X_SAMSUNG_FEATURE
 	pr_info("%s: %dms\n", __func__, timeout);
 
-	if (vib_disable) {
-		pr_info("%s: disable vibrate mode\n", __func__);
-		return;
-	}
-#if 0
-	/* temp disable cp trigier index (31 ~ 50) */
-	if (cs40l2x->cp_trigger_index >= 31 && cs40l2x->cp_trigger_index <= 50 && timeout > 0) {
-		pr_info("%s: disable trigger index: %d \n", __func__, cs40l2x->cp_trigger_index);
-		return;
-	}
-#endif
 	set_duration_for_dig_scale(cs40l2x, timeout);
 
 	if (cs40l2x->vibe_init_success) {
@@ -5657,7 +5680,6 @@ static int cs40l2x_create_led(struct cs40l2x_private *cs40l2x)
 		dev_err(dev, "Failed to create sysfs group: %d\n", ret);
 		return ret;
 	}
-	
 	return 0;
 }
 #endif /* CONFIG_ANDROID_TIMED_OUTPUT */
@@ -5689,7 +5711,7 @@ static void cs40l2x_dev_node_remove(struct cs40l2x_private *cs40l2x)
 	if (cs40l2x->reset_vldo != NULL) {
 		regulator_put(cs40l2x->reset_vldo);
 	}
-	cs40l2x->reset_vldo = NULL;
+	cs40l2x->reset_vldo == NULL;
 #endif
 }
 #endif
@@ -6504,22 +6526,9 @@ static int cs40l2x_raw_write(struct cs40l2x_private *cs40l2x, unsigned int reg,
 	return ret;
 }
 
-static struct regmap_config cs40l2x_regmap = {
-	.reg_bits = 32,
-	.val_bits = 32,
-	.reg_stride = 4,
-	.reg_format_endian = REGMAP_ENDIAN_BIG,
-	.val_format_endian = REGMAP_ENDIAN_BIG,
-	.max_register = CS40L2X_LASTREG,
-	.precious_reg = cs40l2x_precious_reg,
-	.readable_reg = cs40l2x_readable_reg,
-	.cache_type = REGCACHE_NONE,
-};
-
 static int cs40l2x_ack_write(struct cs40l2x_private *cs40l2x, unsigned int reg,
 			unsigned int write_val, unsigned int reset_val)
 {
-	struct cs40l2x_coeff_desc *coeff_desc;
 	struct regmap *regmap = cs40l2x->regmap;
 	struct device *dev = cs40l2x->dev;
 	unsigned int val;
@@ -6546,60 +6555,6 @@ static int cs40l2x_ack_write(struct cs40l2x_private *cs40l2x, unsigned int reg,
 	}
 
 	dev_err(dev, "Timed out with register 0x%08X = 0x%08X\n", reg, val);
-
-	if (cs40l2x->regdump_done)
-		return -ETIME;
-
-	for (i = 0; i <= cs40l2x_regmap.max_register;
-		i += cs40l2x_regmap.reg_stride) {
-		if (!(cs40l2x_readable_reg(dev, i)))
-			continue;
-
-		if (cs40l2x_precious_reg(dev, i))
-			continue;
-
-		if (i >= CS40L2X_DSP1_XMEM_PACK_0
-			&& i <= CS40L2X_DSP1_XMEM_UNPACK32_2046)
-			continue;
-
-		if (i >= CS40L2X_DSP1_XMEM_UNPACK24_0
-			&& i <= CS40L2X_DSP1_XMEM_UNPACK24_4093)
-			continue;
-
-		if (i >= CS40L2X_DSP1_YMEM_PACK_0
-			&& i <= CS40L2X_DSP1_YMEM_UNPACK32_1022)
-			continue;
-
-		if (i >= CS40L2X_DSP1_YMEM_UNPACK24_0
-			&& i <= CS40L2X_DSP1_YMEM_UNPACK24_2045)
-			continue;
-
-		if (i >= CS40L2X_DSP1_PMEM_0
-			&& i <= CS40L2X_DSP1_PMEM_5114)
-			continue;
-
-		ret = regmap_read(regmap, i, &val);
-		if (ret) {
-			dev_err(dev, "Failed to read register 0x%08X: %d\n",
-			i, ret);
-			return ret;
-		}
-
-		dev_info(dev, "0x%08X = 0x%08X\n", i, val);
-	}
-
-	list_for_each_entry(coeff_desc, &cs40l2x->coeff_desc_head, list) {
-		ret = regmap_read(regmap, coeff_desc->reg, &val);
-		if (ret) {
-			dev_err(dev, "Failed to read %s: %d\n",
-			coeff_desc->name, ret);
-			return ret;
-		}
-
-		dev_info(dev, "%s = %u\n", coeff_desc->name, val);
-	}
-
-	cs40l2x->regdump_done = true;
 
 	return -ETIME;
 }
@@ -6883,6 +6838,7 @@ static void cs40l2x_coeff_file_load(const struct firmware *fw, void *context)
 	if (ret)
 		goto err_mutex;
 #endif
+
 	cs40l2x->vibe_init_success = true;
 
 	dev_info(cs40l2x->dev, "Firmware revision %d.%d.%d\n",
@@ -7762,6 +7718,7 @@ static int cs40l2x_brownout_config(struct cs40l2x_private *cs40l2x)
 		return ret;
 	}
 #endif
+
 	if (!vpbr_enable && !vbbr_enable)
 		return 0;
 
@@ -8305,9 +8262,8 @@ static int cs40l2x_handle_of_data(struct i2c_client *i2c_client,
 	}
 
 	pdata->hiber_enable = of_property_read_bool(np, "cirrus,hiber-enable");
-#if defined(CONFIG_CS40L2X_SAMSUNG_FEATURE)
-	vib_disable = of_property_read_bool(np, "samsung,vib_disable");
-	pr_info("%s: samsung,vib_disable: %d\n", __func__, vib_disable);
+#if defined(CONFIG_SEC_FACTORY)
+	pdata->hiber_enable = 0;
 #endif
 	ret = of_property_read_u32(np, "cirrus,asp-bclk-freq-hz", &out_val);
 	if (!ret)
@@ -8674,8 +8630,6 @@ static irqreturn_t cs40l2x_irq(int irq, void *data)
 	int event_count = 0;
 	int ret, i;
 	irqreturn_t ret_irq = IRQ_NONE;
-	
-	dev_info(dev, "Entering cs40l2x_irq...\n");
 
 	mutex_lock(&cs40l2x->lock);
 
@@ -8712,7 +8666,6 @@ static irqreturn_t cs40l2x_irq(int irq, void *data)
 					cs40l2x_event_regs[i]);
 			goto err_mutex;
 		}
-
 		/* any event handling goes here */
 		switch (val) {
 		case CS40L2X_EVENT_CTRL_NONE:
@@ -8725,9 +8678,6 @@ static irqreturn_t cs40l2x_irq(int irq, void *data)
 		case CS40L2X_EVENT_CTRL_TRIG_STOP:
 			queue_work(cs40l2x->vibe_workqueue,
 					&cs40l2x->vibe_pbq_work);
-#ifdef CONFIG_CS40L2X_SAMSUNG_FEATURE
-			pr_info("%s: TRIG_STOP\n", __func__);
-#endif
 			/* intentionally fall through */
 		case CS40L2X_EVENT_CTRL_GPIO_STOP:
 			if (asp_timeout > 0)
@@ -8760,7 +8710,9 @@ static irqreturn_t cs40l2x_irq(int irq, void *data)
 					cs40l2x_event_regs[i]);
 			goto err_mutex;
 		}
-
+#ifdef CONFIG_CS40L2X_SAMSUNG_FEATURE
+		pr_info("%s CS40L2X_EVENT(0x%x)\n", __func__, val);
+#endif
 		/*
 		 * polling for acknowledgment as with other mailbox registers
 		 * is unnecessary in this case and adds latency, so only send
@@ -8781,11 +8733,21 @@ static irqreturn_t cs40l2x_irq(int irq, void *data)
 
 err_mutex:
 	mutex_unlock(&cs40l2x->lock);
-	dev_info(dev, "Exiting cs40l2x_irq after processing %u event(s)\n",
-			event_count);
 
 	return ret_irq;
 }
+
+static struct regmap_config cs40l2x_regmap = {
+	.reg_bits = 32,
+	.val_bits = 32,
+	.reg_stride = 4,
+	.reg_format_endian = REGMAP_ENDIAN_BIG,
+	.val_format_endian = REGMAP_ENDIAN_BIG,
+	.max_register = CS40L2X_LASTREG,
+	.precious_reg = cs40l2x_precious_reg,
+	.readable_reg = cs40l2x_readable_reg,
+	.cache_type = REGCACHE_NONE,
+};
 
 static int cs40l2x_i2c_probe(struct i2c_client *i2c_client,
 				const struct i2c_device_id *id)
@@ -8926,7 +8888,7 @@ static int cs40l2x_i2c_probe(struct i2c_client *i2c_client,
 	if (cs40l2x->reset_gpio == NULL) {
 		cs40l2x->reset_vldo = devm_regulator_get(dev, "samsung,reset-vldo");
 		if (IS_ERR(cs40l2x->reset_vldo)) {
-			pr_err("can't request VLDO power supply: %ld\n", __func__, 
+			pr_err("can't request VLDO power supply: %ld\n", __func__,
 				PTR_ERR(cs40l2x->reset_vldo));
 			cs40l2x->reset_vldo = NULL;
 			return ret;
@@ -9014,6 +8976,7 @@ static int cs40l2x_i2c_probe(struct i2c_client *i2c_client,
 	cs40l2x->save_vib_event.EVENTS.FOLDER_STATE = 1; // init CLOSE
 #endif
 #endif
+
 	return 0;
 
 #ifdef CONFIG_CS40L2X_SAMSUNG_FEATURE
@@ -9067,6 +9030,7 @@ static int cs40l2x_i2c_remove(struct i2c_client *i2c_client)
 #endif
 #endif /* CONFIG_ANDROID_TIMED_OUTPUT */
 	}
+
 	hrtimer_cancel(&cs40l2x->pbq_timer);
 	hrtimer_cancel(&cs40l2x->asp_timer);
 

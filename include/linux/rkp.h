@@ -2,7 +2,6 @@
 #define _RKP_H
 
 #ifndef __ASSEMBLY__
-#ifndef LINKER_SCRIPT
 #include <linux/uh.h>
 /* uH_RKP Command ID */
 enum __RKP_CMD_ID{
@@ -29,6 +28,8 @@ enum __RKP_CMD_ID{
 	RKP_GET_RO_BITMAP = 0x13,
 	RKP_GET_DBL_BITMAP = 0x14,
 	RKP_GET_RKP_GET_BUFFER_BITMAP = 0x15,
+	/* dynamic load */
+	RKP_DYNAMIC_LOAD = 0x20,
 	/* and KDP cmds */
 	RKP_KDP_X40 = 0x40,
 	RKP_KDP_X41 = 0x41,
@@ -53,6 +54,7 @@ enum __RKP_CMD_ID{
 	RKP_KDP_X54 = 0x54,
 	RKP_KDP_X55 = 0x55,
 	RKP_KDP_X56 = 0x56,
+	RKP_KDP_X60 = 0x60,
 #ifdef CONFIG_RKP_TEST
 	CMD_ID_TEST_GET_PAR = 0x81,
 	CMD_ID_TEST_GET_RO = 0x83,
@@ -77,12 +79,13 @@ enum __RKP_CMD_ID{
 #define SPARSE_UNIT_BIT (30)
 #define SPARSE_UNIT_SIZE (1<<SPARSE_UNIT_BIT)
 
-#define FIMC_LIB_OFFSET_VA		(VMALLOC_START + 0xF6000000 - 0x8000000)
-#define FIMC_LIB_START_VA		(FIMC_LIB_OFFSET_VA + 0x04000000)
-#define FIMC_VRA_LIB_SIZE		(0x80000)
-#define FIMC_DDK_LIB_SIZE		(0x400000)
-#define FIMC_RTA_LIB_SIZE		(0x300000)
-#define FIMC_LIB_SIZE	
+#define RKP_DYN_COMMAND_BREAKDOWN_BEFORE_INIT	0x00
+#define RKP_DYN_COMMAND_INS						0x01
+#define RKP_DYN_COMMAND_RM						0x10
+
+#define RKP_DYN_FIMC				0x02
+#define RKP_DYN_FIMC_COMBINED		0x03
+#define RKP_DYN_MODULE				0x04
 
 struct rkp_init { //copy from uh (app/rkp/rkp.h)
 	u32 magic;
@@ -108,27 +111,22 @@ struct rkp_init { //copy from uh (app/rkp/rkp.h)
 	u64 tramp_valias;
 };
 
-#ifdef CONFIG_RKP_CFP_ROPP_SYSREGKEY
-struct ropp_init {
-	u64 ropp_magic;
-	u64 ropp_master_key;
-	u64 ti_rrk;
-	u64 ts_stack;
-	u64 ts_tasks;
-	u64 ts_pid;
-	u64 ts_thread_group;
-	u64 ts_comm;
-	u64 ts_thread;
-	u64 cpu_fp;
-};
-#endif
-
 typedef struct sparse_bitmap_for_kernel {
 	u64 start_addr;
 	u64 end_addr;
 	u64 maxn;
 	char **map;
 } sparse_bitmap_for_kernel_t;
+
+typedef struct dynamic_load_struct{
+	u32 type;
+	u64 binary_base;
+	u64 binary_size;
+	u64 code_base1;
+	u64 code_size1;
+	u64 code_base2;
+	u64 code_size2;
+} rkp_dynamic_load_t;
 
 #ifdef CONFIG_RKP_KDP
 typedef struct kdp_init_struct {
@@ -152,6 +150,10 @@ typedef struct kdp_init_struct {
 	u32 bp_cred_secptr;
 	u32 task_threadinfo;
 	u64 verifiedbootstate;
+	struct {
+		u64 :64;
+		u64 ss_initialized_va;
+	} selinux;
 } kdp_init_t;
 #endif  /* CONFIG_RKP_KDP */
 
@@ -205,9 +207,8 @@ static inline u64 uh_call_static(u64 app_id, u64 cmd_id, u64 arg1){
 	register u64 arg __asm__("x2") = arg1;
 
 	__asm__ volatile (
-		"smc	0\n"
+		"hvc	0\n"
 		: "+r"(ret), "+r"(cmd), "+r"(arg)
-		::"memory"
 	);
 
 	return ret;
@@ -215,14 +216,9 @@ static inline u64 uh_call_static(u64 app_id, u64 cmd_id, u64 arg1){
 
 // void *rkp_ro_alloc(void);
 static inline void *rkp_ro_alloc(void){
-	u64 addr = 0xDEAD;
-	uh_call_static(UH_APP_RKP, RKP_RKP_ROBUFFER_ALLOC, (u64)&addr);
+	u64 addr = (u64)uh_call_static(UH_APP_RKP, RKP_RKP_ROBUFFER_ALLOC, 0);
 	if(!addr)
 		return 0;
-	if (addr == 0xDEAD) {
-		pr_info("rkp : %llx\n", (u64)&addr);
-		BUG_ON(1);
-	}
 	return (void *)__phys_to_virt(addr);
 }
 
@@ -235,46 +231,40 @@ static inline void rkp_deferred_init(void){
 	uh_call(UH_APP_RKP, RKP_DEFERRED_START, 0, 0, 0, 0);
 }
 
-extern s64 memstart_addr;
-static inline void rkp_robuffer_init(void)
-{
-	uh_call(UH_APP_RKP, RKP_GET_RKP_GET_BUFFER_BITMAP, (u64)&rkp_s_bitmap_buffer, (u64)memstart_addr, 0, 0);
-}
-
-static inline u8 rkp_check_bitmap(u64 pa, sparse_bitmap_for_kernel_t *kernel_bitmap, u8 overflow_ret, u8 uninitialized_ret){
+static inline u8 rkp_check_bitmap(u64 pa, sparse_bitmap_for_kernel_t *kernel_bitmap){
 	u8 val;
 	u64 offset, map_loc, bit_offset;
 	char *map;
 
 	if(!kernel_bitmap || !kernel_bitmap->map)
-		return uninitialized_ret;
+		return 0;
 
 	offset = pa - kernel_bitmap->start_addr;
 	map_loc = ((offset % SPARSE_UNIT_SIZE) / PAGE_SIZE) >> 3;
 	bit_offset = ((offset % SPARSE_UNIT_SIZE) / PAGE_SIZE) % 8;
 
 	if(kernel_bitmap->maxn <= (offset >> SPARSE_UNIT_BIT)) 
-		return overflow_ret;
+		return 0;
 
 	map = kernel_bitmap->map[(offset >> SPARSE_UNIT_BIT)];
 	if(!map)
-		return uninitialized_ret;
+		return 0;
 
-	val = ((u8)map[map_loc] >> bit_offset) & ((u8)1);
+	val = (u8)((*(u64 *)(&map[map_loc])) >> bit_offset) & ((u64)1);
 	return val;
 }
 
 static inline unsigned int is_rkp_ro_page(u64 va){
-	return rkp_check_bitmap(__pa(va), rkp_s_bitmap_buffer, 0, 0);
+	return rkp_check_bitmap(__pa(va), rkp_s_bitmap_buffer);
 }
 
 static inline u8 rkp_is_pg_protected(u64 va){
-	return rkp_check_bitmap(__pa(va), rkp_s_bitmap_ro, 1, 0);
+	return rkp_check_bitmap(__pa(va), rkp_s_bitmap_ro);
 }
 
 static inline u8 rkp_is_pg_dbl_mapped(u64 pa){
-	return rkp_check_bitmap(pa, rkp_s_bitmap_dbl, 0, 0);
+	return rkp_check_bitmap(pa, rkp_s_bitmap_dbl);
 }
-#endif // LINKER_SCRIPT
+
 #endif //__ASSEMBLY__
 #endif //_RKP_H

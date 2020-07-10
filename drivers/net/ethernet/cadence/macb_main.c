@@ -2817,20 +2817,14 @@ static int macb_clk_init(struct platform_device *pdev, struct clk **pclk,
 		*hclk = devm_clk_get(&pdev->dev, "hclk");
 	}
 
-	if (IS_ERR_OR_NULL(*pclk)) {
+	if (IS_ERR(*pclk)) {
 		err = PTR_ERR(*pclk);
-		if (!err)
-			err = -ENODEV;
-
 		dev_err(&pdev->dev, "failed to get macb_clk (%u)\n", err);
 		return err;
 	}
 
-	if (IS_ERR_OR_NULL(*hclk)) {
+	if (IS_ERR(*hclk)) {
 		err = PTR_ERR(*hclk);
-		if (!err)
-			err = -ENODEV;
-
 		dev_err(&pdev->dev, "failed to get hclk (%u)\n", err);
 		return err;
 	}

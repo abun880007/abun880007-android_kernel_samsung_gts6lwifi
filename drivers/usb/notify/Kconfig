@@ -76,11 +76,15 @@ config USB_HOST_SAMSUNG_FEATURE
 	  It is different from LSI BSP code.
 
 config USB_HW_PARAM
-    boolean "USB H/W Parameter"
-    depends on USB_NOTIFY_LAYER
-    help
-      Added USB H/W Parameter for DQA Agent.
-      You need more works for USB PDIC driver.
+    	boolean "USB H/W Parameter"
+    	depends on USB_NOTIFY_LAYER
+    	help
+      	  Added USB H/W Parameter for DQA Agent.
+          You need more works for USB PDIC driver.
+
+config USB_PORT_POWER_OPTIMIZATION
+	default n
+	bool "USB3.0 Link port power optimization"
 
 config USB_INTERFACE_LPM_LIST
         boolean "USB interface class lpm Feature"
@@ -91,11 +95,10 @@ config USB_INTERFACE_LPM_LIST
 	  So we will apply L1 mode to the device that has specific interface classes
 
 config USB_AUDIO_ENHANCED_DETECT_TIME
-	boolean "USB audio enhanced detect time"
+	bool "USB audio enhanced detect time"
 	depends on USB_NOTIFY_LAYER
-	depends on !SEC_FACTORY
 	help
-	 Added uevent for usb audio device(bundle)
-	 uevent includes path, card number, vid, pid
-	 The usb framework gets this uevent.
-	 It is made by samsung.
+	  Added uevent for usb audio device(bundle)
+	  uevent includes path, card number, vid, pid
+	  The usb framework gets this uevent.
+	  It is made by samsung.

@@ -37,6 +37,7 @@
 #include <linux/uio.h>
 #include <linux/atomic.h>
 #include <linux/prefetch.h>
+
 #define __FS_HAS_ENCRYPTION IS_ENABLED(CONFIG_FS_ENCRYPTION)
 #include <linux/fscrypt.h>
 
@@ -221,27 +222,6 @@ static inline struct page *dio_get_page(struct dio *dio,
 	return dio->pages[sdio->head];
 }
 
-/*
- * Warn about a page cache invalidation failure during a direct io write.
- */
-void dio_warn_stale_pagecache(struct file *filp)
-{
-	static DEFINE_RATELIMIT_STATE(_rs, 86400 * HZ, DEFAULT_RATELIMIT_BURST);
-	char pathname[128];
-	struct inode *inode = file_inode(filp);
-	char *path;
-
-	errseq_set(&inode->i_mapping->wb_err, -EIO);
-	if (__ratelimit(&_rs)) {
-		path = file_path(filp, pathname, sizeof(pathname));
-		if (IS_ERR(path))
-			path = "(unknown)";
-		pr_crit("Page cache invalidation failure on direct I/O.  Possible data corruption due to collision with buffered I/O!\n");
-		pr_crit("File: %s PID: %d Comm: %.20s\n", path, current->pid,
-			current->comm);
-	}
-}
-
 /**
  * dio_complete() - called when all DIO BIO I/O has been completed
  * @offset: the byte offset in the file of the completed operation
@@ -313,8 +293,7 @@ static ssize_t dio_complete(struct dio *dio, ssize_t ret, unsigned int flags)
 		err = invalidate_inode_pages2_range(dio->inode->i_mapping,
 					offset >> PAGE_SHIFT,
 					(offset + ret - 1) >> PAGE_SHIFT);
-		if (err)
-			dio_warn_stale_pagecache(dio->iocb->ki_filp);
+		WARN_ON_ONCE(err);
 	}
 
 	if (!(dio->flags & DIO_SKIP_DIO_COUNT))
@@ -472,7 +451,7 @@ static inline void dio_bio_submit(struct dio *dio, struct dio_submit *sdio)
 	dio->refcount++;
 	spin_unlock_irqrestore(&dio->bio_lock, flags);
 
-#ifdef CONFIG_FS_INLINE_ENCRYPTION
+#if defined(CONFIG_FS_INLINE_ENCRYPTION)
 	if (fscrypt_inline_encrypted(dio->inode)) {
 		fscrypt_set_bio_cryptd_dun(dio->inode, bio,
 				fscrypt_get_dun(dio->inode,
@@ -487,7 +466,7 @@ static inline void dio_bio_submit(struct dio *dio, struct dio_submit *sdio)
 		bio_set_pages_dirty(bio);
 
 	dio->bio_disk = bio->bi_disk;
-#ifdef CONFIG_PFK
+#ifdef CONFIG_DDAR
 	bio->bi_dio_inode = dio->inode;
 #endif
 
@@ -502,17 +481,19 @@ static inline void dio_bio_submit(struct dio *dio, struct dio_submit *sdio)
 	sdio->logical_offset_in_bio = 0;
 }
 
+#ifdef CONFIG_DDAR
 struct inode *dio_bio_get_inode(struct bio *bio)
 {
 	struct inode *inode = NULL;
 
 	if (bio == NULL)
 		return NULL;
-#ifdef CONFIG_PFK
+
 	inode = bio->bi_dio_inode;
-#endif
+
 	return inode;
 }
+#endif
 
 /*
  * Release any resources in case of a failure

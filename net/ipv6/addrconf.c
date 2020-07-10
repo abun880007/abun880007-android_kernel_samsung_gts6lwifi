@@ -249,7 +249,6 @@ static struct ipv6_devconf ipv6_devconf __read_mostly = {
 	.enhanced_dad           = 1,
 	.addr_gen_mode		= IN6_ADDR_GEN_MODE_EUI64,
 	.disable_policy		= 0,
-	.accept_ra_prefix_route = 1,
 };
 
 static struct ipv6_devconf ipv6_devconf_dflt __read_mostly = {
@@ -305,7 +304,6 @@ static struct ipv6_devconf ipv6_devconf_dflt __read_mostly = {
 	.enhanced_dad           = 1,
 	.addr_gen_mode		= IN6_ADDR_GEN_MODE_EUI64,
 	.disable_policy		= 0,
-	.accept_ra_prefix_route = 1,
 };
 
 /* Check if link is ready: is it up and is a valid qdisc available */
@@ -1094,6 +1092,41 @@ out:
 	spin_unlock(&addrconf_hash_lock);
 	goto out2;
 }
+
+#ifdef CONFIG_NETPM
+struct net_device *ip6_dev_find(struct net *net, const struct in6_addr *addr)
+{
+	struct net_device *result = NULL;
+	struct inet6_ifaddr *ifp;
+	unsigned int hash = inet6_addr_hash(addr);
+
+	rcu_read_lock();
+	hlist_for_each_entry_rcu(ifp, &inet6_addr_lst[hash], addr_lst) {
+		if (ipv6_addr_equal(&ifp->addr, addr)) {
+			struct net_device *dev = ifp->idev->dev;
+
+			pr_err("netpm: (v6) %s, 1: dev=%s\n", __func__, dev->name);
+
+			if (!net_eq(dev_net(dev), net))
+				continue;
+			result = dev;
+			break;
+		}
+	}
+	if (!result) {
+		struct rt6_info *rt = rt6_lookup(net, addr, NULL, 0, 0);
+
+		if (rt) {
+			result = rt->dst.dev;
+			pr_err("netpm: (v6) %s, 2: dev=%s\n", __func__, result->name);
+			ip6_rt_put(rt);
+		}
+	}
+
+	rcu_read_unlock();
+	return result;
+}
+#endif
 
 enum cleanup_prefix_rt_t {
 	CLEANUP_PREFIX_RT_NOP,    /* no cleanup action for prefix route */
@@ -2224,14 +2257,12 @@ static int ipv6_generate_eui64(u8 *eui, struct net_device *dev)
 	case ARPHRD_TUNNEL6:
 	case ARPHRD_IP6GRE:
 		return addrconf_ifid_ip6tnl(eui, dev);
-	case ARPHRD_RAWIP: {
+	case ARPHRD_PPP: {
 		struct in6_addr lladdr;
-
 		if (ipv6_get_lladdr(dev, &lladdr, IFA_F_TENTATIVE))
 			get_random_bytes(eui, 8);
 		else
 			memcpy(eui, lladdr.s6_addr + 8, 8);
-
 		return 0;
 	}
 	}
@@ -2687,11 +2718,8 @@ void addrconf_prefix_rcv(struct net_device *dev, u8 *opt, int len, bool sllao)
 				flags |= RTF_EXPIRES;
 				expires = jiffies_to_clock_t(rt_expires);
 			}
-			if (dev->ip6_ptr->cnf.accept_ra_prefix_route) {
-				addrconf_prefix_route(&pinfo->prefix,
-						      pinfo->prefix_len,
-						      dev, expires, flags);
-			}
+			addrconf_prefix_route(&pinfo->prefix, pinfo->prefix_len,
+					      dev, expires, flags);
 		}
 		ip6_rt_put(rt);
 	}
@@ -3268,7 +3296,7 @@ static void addrconf_dev_config(struct net_device *dev)
 	    (dev->type != ARPHRD_IPGRE) &&
 	    (dev->type != ARPHRD_TUNNEL) &&
 	    (dev->type != ARPHRD_NONE) &&
-	    (dev->type != ARPHRD_RAWIP)) {
+	    (dev->type != ARPHRD_PPP)) {
 		/* Alas, we support only Ethernet autoconfiguration. */
 		return;
 	}
@@ -6392,13 +6420,6 @@ static const struct ctl_table addrconf_sysctl[] = {
 	{
 		.procname	= "seg6_enabled",
 		.data		= &ipv6_devconf.seg6_enabled,
-		.maxlen         = sizeof(int),
-		.mode           = 0644,
-		.proc_handler   = proc_dointvec,
-	},
-	{
-		.procname	= "accept_ra_prefix_route",
-		.data		= &ipv6_devconf.accept_ra_prefix_route,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec,

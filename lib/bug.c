@@ -192,14 +192,17 @@ enum bug_trap_type report_bug(unsigned long bugaddr, struct pt_regs *regs)
 		return BUG_TRAP_TYPE_WARN;
 	}
 
-	sec_debug_store_bug_string(file, line);
-
 	printk(KERN_DEFAULT "------------[ cut here ]------------\n");
 
+#ifdef CONFIG_SEC_DEBUG_EXTRA_INFO
 	if (file)
-		pr_crit("kernel BUG at %s:%u!\n", file, line);
+		sec_debug_set_extra_info_bug(file, line);
+#endif
+
+	if (file)
+		pr_auto(ASL1, "kernel BUG at %s:%u!\n", file, line);
 	else
-		pr_crit("Kernel BUG at %p [verbose debug info unavailable]\n",
+		pr_auto(ASL1, "Kernel BUG at %p [verbose debug info unavailable]\n",
 			(void *)bugaddr);
 
 	return BUG_TRAP_TYPE_BUG;

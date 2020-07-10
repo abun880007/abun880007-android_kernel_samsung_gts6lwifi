@@ -122,27 +122,10 @@ static ssize_t secure_touch_enable_store(struct device *dev,
 			return -EIO;
 		}
 
-		list_for_each_entry_reverse(input_device, &ts->input_dev->node, node) {
-
-			if (!input_device) {
-				input_err(true, &ts->client->dev, "%s: input_device: null\n", __func__);
-				continue;
-			}
-
-			if (!input_device->name) {
-				input_err(true, &ts->client->dev, "%s: input_device->name: null\n", __func__);
-				continue;
-			}
-			input_dbg(true, &ts->client->dev, "%s: input_device->name is %s\n", __func__, input_device->name);
-
+		list_for_each_entry(input_device, &ts->input_dev->node, node) {
 			if (strncmp(input_device->name, "sec_e-pen", 9) == 0) {
 				if (input_device->close)
 					input_device->close(input_device);
-				break;
-			}
-
-			/* SM8150 Q os issue, break loop at 1st device */
-			if (strncmp(input_device->name, "qpnp_pon", 8) == 0) {
 				break;
 			}
 		}
@@ -181,27 +164,10 @@ static ssize_t secure_touch_enable_store(struct device *dev,
 
 		input_info(true, &ts->client->dev, "%s: secure touch disable\n", __func__);
 
-		list_for_each_entry_reverse(input_device, &ts->input_dev->node, node) {
-
-			if (!input_device) {
-				input_err(true, &ts->client->dev, "%s: input_device: null\n", __func__);
-				continue;
-			}
-
-			if (!input_device->name) {
-				input_err(true, &ts->client->dev, "%s: input_device->name: null\n", __func__);
-				continue;
-			}
-			input_dbg(true, &ts->client->dev, "%s: input_device->name is %s\n", __func__, input_device->name);
-
+		list_for_each_entry(input_device, &ts->input_dev->node, node) {
 			if (strncmp(input_device->name, "sec_e-pen", 9) == 0) {
 				if (input_device->open)
 					input_device->open(input_device);
-				break;
-			}
-
-			/* SM8150 Q os issue, break loop at 1st device */
-			if (strncmp(input_device->name, "qpnp_pon", 8) == 0) {
 				break;
 			}
 		}
@@ -815,7 +781,7 @@ static void sec_ts_set_prox_power_off(struct sec_ts_data *ts, u8 data)
 }
 
 #if defined(CONFIG_TOUCHSCREEN_DUMP_MODE)
-#include <linux/sec_ts_common.h>
+#include <linux/sec_debug.h>
 extern struct tsp_dump_callbacks dump_callbacks;
 static struct delayed_work *p_ghost_check;
 
@@ -1993,14 +1959,14 @@ static void sec_ts_init_proc(struct sec_ts_data *ts)
 	if (!ts->fail_hist_main_proc)
 		goto err_alloc_fail_hist_main;
 
-	entry_cmoffset_all = proc_create("tsp_cmoffset_all", S_IFREG | S_IRUGO, NULL, &tsp_cmoffset_all_file_ops);
+	entry_cmoffset_all = proc_create("tsp_cmoffset_all", S_IFREG | 0444, NULL, &tsp_cmoffset_all_file_ops);
 	if (!entry_cmoffset_all) {
 		input_err(true, &ts->client->dev, "%s: failed to create /proc/tsp_cmoffset_all\n", __func__);
 		goto err_cmoffset_proc_create;
 	}
 	proc_set_size(entry_cmoffset_all, ts->proc_cmoffset_all_size);
 
-	entry_fail_hist_all = proc_create("tsp_fail_hist_all", S_IFREG | S_IRUGO, NULL, &tsp_fail_hist_all_file_ops);
+	entry_fail_hist_all = proc_create("tsp_fail_hist_all", S_IFREG | 0444, NULL, &tsp_fail_hist_all_file_ops);
 	if (!entry_fail_hist_all) {
 		input_err(true, &ts->client->dev, "%s: failed to create /proc/tsp_fail_hist_all\n", __func__);
 		goto err_fail_hist_proc_create;
@@ -3401,9 +3367,6 @@ static void sec_ts_input_close(struct input_dev *dev)
 #ifdef CONFIG_INPUT_SEC_SECURE_TOUCH
 	secure_touch_stop(ts, 1);
 #endif
-#ifdef CONFIG_SAMSUNG_TUI
-	stui_cancel_session();
-#endif
 
 #ifdef USE_POWER_RESET_WORK
 	cancel_delayed_work(&ts->reset_work);
@@ -3628,6 +3591,7 @@ static int sec_ts_pm_resume(struct device *dev)
 #ifdef CONFIG_SAMSUNG_TUI
 extern int stui_i2c_lock(struct i2c_adapter *adap);
 extern int stui_i2c_unlock(struct i2c_adapter *adap);
+extern void epen_disable_mode(int mode);
 
 int stui_tsp_enter(void)
 {
@@ -3635,6 +3599,9 @@ int stui_tsp_enter(void)
 
 	if (!tsp_info)
 		return -EINVAL;
+
+	/* Disable wacom interrupt during tui */
+	epen_disable_mode(1);
 
 	disable_irq(tsp_info->client->irq);
 	sec_ts_unlocked_release_all_finger(tsp_info);
@@ -3661,6 +3628,9 @@ int stui_tsp_exit(void)
 		pr_err("[STUI] stui_i2c_unlock failed : %d\n", ret);
 
 	enable_irq(tsp_info->client->irq);
+
+	/* Enable wacom interrupt after tui exit */
+	epen_disable_mode(0);
 
 	return ret;
 }

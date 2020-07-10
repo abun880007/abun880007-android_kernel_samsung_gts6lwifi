@@ -1,3 +1,12 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:72382b809ba22d383287baa269e0f26f327f92ac8a9428f3c660791f0dcad9fe
-size 277
+ARCH=mips
+BRANCH=android-4.4
+CROSS_COMPILE=mips64el-linux-android-
+DEFCONFIG=ranchu_defconfig
+EXTRA_CMDS=''
+KERNEL_DIR=common
+LINUX_GCC_CROSS_COMPILE_PREBUILTS_BIN=prebuilts/gcc/linux-x86/mips/mips64el-linux-android-4.9/bin
+FILES="
+vmlinux
+System.map
+"
+STOP_SHIP_TRACEPRINTK=1

@@ -30,6 +30,13 @@ config CONSOLE_LOGLEVEL_DEFAULT
 	  usage in the kernel. That is controlled by the MESSAGE_LOGLEVEL_DEFAULT
 	  option.
 
+config PRINTK_PROCESS
+	bool "Show process information on printks"
+	depends on PRINTK
+	help
+	  Selecting this option causes process to be
+	  included in printk output. Or add printk.process=1 at boot-time.
+
 config MESSAGE_LOGLEVEL_DEFAULT
 	int "Default message log level (1-7)"
 	range 1 7
@@ -132,18 +139,6 @@ config DYNAMIC_DEBUG
 
 	  See Documentation/admin-guide/dynamic-debug-howto.rst for additional
 	  information.
-
-config DEBUG_MODULE_LOAD_INFO
-        bool "Use prints for module info under a debug flag"
-	help
-	  If you say Y here the resulting kernel image will include
-          debug prints which was kept under DEBUG_MODULE_LOAD_INFO.
-          This will be used by developer to debug loadable modules in
-	  the kernel.
-	  Say Y here only if you plan to debug the kernel.
-
-	  If unsure, say N.
-
 
 endmenu # "printk and dmesg options"
 
@@ -290,19 +285,9 @@ config PAGE_OWNER
 
 	  If unsure, say N.
 
-config PAGE_OWNER_ENABLE_DEFAULT
-	bool "Enable Track page owner by default"
-	depends on PAGE_OWNER
-	---help---
-	  This keeps track of what call chain is the owner of a page, may
-	  help to find bare alloc_page(s) leaks. If you include this
-	  feature on your build, it is enabled by default. You should pass
-	  "page_owner=off" to boot parameter in order to disable it. Eats
-	  a fair amount of memory if enabled. See tools/vm/page_owner_sort.c
-	  for user-space helper.
-
 config DEBUG_FS
 	bool "Debug Filesystem"
+	select SRCU
 	help
 	  debugfs is a virtual file system that kernel developers use to put
 	  debugging files into.  Enable this option to be able to read and
@@ -848,9 +833,14 @@ config HARDLOCKUP_DETECTOR
 	  chance to run.  The current stack trace is displayed upon detection
 	  and the system will stay locked up.
 
+config HARDLOCKUP_DETECTOR_OTHER_CPU
+	def_bool y
+	depends on LOCKUP_DETECTOR && !HAVE_NMI_WATCHDOG
+	depends on !HARDLOCKUP_DETECTOR
+
 config BOOTPARAM_HARDLOCKUP_PANIC
 	bool "Panic (Reboot) On Hard Lockups"
-	depends on HARDLOCKUP_DETECTOR
+	depends on HARDLOCKUP_DETECTOR || HARDLOCKUP_DETECTOR_OTHER_CPU
 	help
 	  Say Y here to enable the kernel to panic on "hard lockups",
 	  which are bugs that cause the kernel to loop in kernel
@@ -861,7 +851,7 @@ config BOOTPARAM_HARDLOCKUP_PANIC
 
 config BOOTPARAM_HARDLOCKUP_PANIC_VALUE
 	int
-	depends on HARDLOCKUP_DETECTOR
+	depends on HARDLOCKUP_DETECTOR || HARDLOCKUP_DETECTOR_OTHER_CPU
 	range 0 1
 	default 0 if !BOOTPARAM_HARDLOCKUP_PANIC
 	default 1 if BOOTPARAM_HARDLOCKUP_PANIC
@@ -889,17 +879,6 @@ config BOOTPARAM_SOFTLOCKUP_PANIC_VALUE
 	range 0 1
 	default 0 if !BOOTPARAM_SOFTLOCKUP_PANIC
 	default 1 if BOOTPARAM_SOFTLOCKUP_PANIC
-
-config PANIC_ON_RECURSIVE_FAULT
-	bool "Panic on recursive faults during task exit"
-	help
-	  Panic upon the detection of a recursive fault during task exit,
-	  rather than putting the task into an uninterruptible sleep.
-	  This is particularly useful for debugging system hangs in
-	  scenarios where the task experiencing the fault is critical
-	  for system operation, rendering the system inoperable.
-
-	  Say N if unsure.
 
 config DETECT_HUNG_TASK
 	bool "Detect Hung Tasks"
@@ -1009,25 +988,6 @@ config SCHED_INFO
 	bool
 	default n
 
-config PANIC_ON_SCHED_BUG
-	bool "Panic on all bugs encountered by the scheduler"
-	help
-	  Say Y here to panic on all 'BUG:' conditions encountered by the
-	  scheduler, even potentially-recoverable ones such as scheduling
-	  while atomic, sleeping from invalid context, and detection of
-	  broken arch topologies.
-
-	  Say N if unsure.
-
-config PANIC_ON_RT_THROTTLING
-	bool "Panic on RT throttling"
-	help
-	  Say Y here to enable the kernel to panic when a realtime
-	  runqueue is throttled. This may be useful for detecting
-	  and debugging RT throttling issues.
-
-	  Say N if unsure.
-
 config SCHEDSTATS
 	bool "Collect scheduler statistics"
 	depends on DEBUG_KERNEL && PROC_FS
@@ -1066,15 +1026,6 @@ config DEBUG_TIMEKEEPING
 
 	  If unsure, say N.
 
-config DEBUG_TASK_STACK_SCAN_OFF
-	bool "Disable kmemleak task stack scan by default"
-	depends on DEBUG_KMEMLEAK
-	help
-	  Say Y here to disable kmemleak task stack scan by default
-	  at compile time. It can be enabled later if required by
-	  writing to the debugfs entry :
-	  echo "stack=on" > /sys/kernel/debug/kmemleak.
-
 config DEBUG_PREEMPT
 	bool "Debug preemptible kernel"
 	depends on DEBUG_KERNEL && PREEMPT && TRACE_IRQFLAGS_SUPPORT
@@ -1103,28 +1054,6 @@ config DEBUG_SPINLOCK
 	  and certain other kinds of spinlock errors commonly made.  This is
 	  best used in conjunction with the NMI watchdog so that spinlock
 	  deadlocks are also debuggable.
-choice
-        prompt "Perform Action on spinlock bug"
-        depends on DEBUG_SPINLOCK
-
-        default DEBUG_SPINLOCK_BITE_ON_BUG
-
-        config DEBUG_SPINLOCK_BITE_ON_BUG
-                bool "Cause a Watchdog Bite on Spinlock bug"
-                depends on QCOM_WATCHDOG_V2
-                help
-                  On a spinlock bug, cause a watchdog bite so that we can get
-                  the precise state of the system captured at the time of spin
-                  dump. This is mutually exclusive with the below
-                  DEBUG_SPINLOCK_PANIC_ON_BUG config.
-
-        config DEBUG_SPINLOCK_PANIC_ON_BUG
-                bool "Cause a Kernel Panic on Spinlock bug"
-                help
-                  On a spinlock bug, cause a kernel panic so that we can get the complete
-                  information about the system at the time of spin dump in the dmesg.
-                  This is mutually exclusive with the above DEBUG_SPINLOCK_BITE_ON_BUG.
-endchoice
 
 config DEBUG_MUTEXES
 	bool "Mutex debugging: basic checks"
@@ -1278,6 +1207,15 @@ config DEBUG_ATOMIC_SLEEP
 	  held, inside an rcu read side critical section, inside preempt disabled
 	  sections, inside an interrupt, etc...
 
+config DEBUG_ATOMIC_SLEEP_PANIC
+	bool "Panic (Reboot) On Atomic Sleep"
+	depends on DEBUG_ATOMIC_SLEEP
+	depends on SEC_DEBUG && !SAMSUNG_PRODUCT_SHIP
+	help
+	  Say Y here to enable the kernel to panic on "atomic sleep",
+
+	  Say N if you want warning messages only.
+
 config DEBUG_LOCKING_API_SELFTESTS
 	bool "Locking API boot-time self-tests"
 	depends on DEBUG_KERNEL
@@ -1366,7 +1304,7 @@ config DEBUG_KOBJECT
 	depends on DEBUG_KERNEL
 	help
 	  If you say Y here, some extra kobject debugging messages will be sent
-	  to the syslog.
+	  to the syslog. 
 
 config DEBUG_KOBJECT_RELEASE
 	bool "kobject release debugging"
@@ -1631,20 +1569,6 @@ config FAIL_MMC_REQUEST
 	  useful to test the error handling in the mmc block device
 	  and to test how the mmc host driver handles retries from
 	  the block device.
-
-config UFS_FAULT_INJECTION
-	bool "Fault-injection capability for UFS IO"
-	select DEBUG_FS
-	depends on FAULT_INJECTION && SCSI_UFSHCD
-	help
-	 Provide fault-injection capability for UFS IO.
-	 This will make the UFS host controller driver to randomly
-	 abort ongoing commands in the host controller, update OCS
-	 field according to the injected fatal error and can also
-	 forcefully hang the command indefinitely till upper layer
-	 timeout occurs. This is useful to test error handling in
-	 the UFS controller driver and test how the driver handles
-	 the retries from block/SCSI mid layer.
 
 config FAIL_FUTEX
 	bool "Fault-injection capability for futexes"
@@ -1966,31 +1890,6 @@ config TEST_UDELAY
 
 	  If unsure, say N.
 
-config MEMTEST
-	bool "Memtest"
-	depends on HAVE_MEMBLOCK
-	---help---
-	  This option adds a kernel parameter 'memtest', which allows memtest
-	  to be set.
-	        memtest=0, mean disabled; -- default
-	        memtest=1, mean do 1 test pattern;
-	        ...
-	        memtest=17, mean do 17 test patterns.
-	  If you are unsure how to answer this question, answer N.
-
-config MEMTEST_ENABLE_DEFAULT
-	int "Enable Memtest pattern test by default? (0-17)"
-	range 0 17
-	default "0"
-	depends on MEMTEST
-	help
-	  This option helps to select Memtest to be enabled through
-	  kernel defconfig options. Alternatively it can be enabled
-	  using memtest=<patterns> kernel command line.
-
-	  Default value is kept as "0" so that it is kept as disabled.
-	  To enable enter any value between 1-17 range.
-
 config TEST_STATIC_KEYS
 	tristate "Test static keys"
 	default n
@@ -2006,7 +1905,6 @@ config TEST_KMOD
 	depends on m
 	depends on BLOCK && (64BIT || LBDAF)	  # for XFS, BTRFS
 	depends on NETDEVICES && NET_CORE && INET # for TUN
-	depends on BLOCK
 	select TEST_LKM
 	select XFS_FS
 	select TUN
@@ -2062,12 +1960,13 @@ config BUG_ON_DATA_CORRUPTION
 
 	  If unsure, say N.
 
-config PANIC_ON_DATA_CORRUPTION
-	bool "Cause a Kernel Panic When Data Corruption is detected"
+config CC_WERROR
+	bool "Treat all compile warnings as errors"
+	default y
 	help
-	 Select this option to upgrade warnings for potentially
-	 recoverable data corruption scenarios to system-halting panics,
-	 for easier detection and debug.
+	  Select this option to set compiler warnings as errors,
+	  to prevent easily-fixable problems from creeping into
+	  the codebase.
 
 source "samples/Kconfig"
 
@@ -2113,3 +2012,117 @@ config IO_STRICT_DEVMEM
 	  if the driver using a given range cannot be disabled.
 
 	  If in doubt, say Y.
+
+menuconfig DEBUG_SNAPSHOT
+	bool "Debug SnapShot Support"
+	default n
+
+config DEBUG_SNAPSHOT_LINUX_BUILD
+	bool "May be built in LINUX environment"
+	depends on DEBUG_SNAPSHOT
+	default y
+
+config DEBUG_SNAPSHOT_USER_MODE
+	bool "Enable User Mode, Most of debug feature are disabled"
+	depends on DEBUG_SNAPSHOT
+	default n
+
+config DEBUG_SNAPSHOT_CALLSTACK
+	int "shown callstack level"
+	depends on DEBUG_SNAPSHOT
+	range 1 4
+	default 4
+
+config DEBUG_SNAPSHOT_IRQ_DISABLED
+	bool "Enable debugging of interrupt disable event by kevent(EXPERIMENTAL)"
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default n
+
+config DEBUG_SNAPSHOT_SPINLOCK
+	bool "Enable debugging of spinlock event by kevent(EXPERIMENTAL)"
+	depends on DEBUG_SNAPSHOT && DEBUG_SPINLOCK && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default y
+
+config DEBUG_SNAPSHOT_CLK
+	bool "Enable debugging of clock event by kevent(EXPERIMENTAL)"
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default y
+
+config DEBUG_SNAPSHOT_PMU
+	bool "Enable debugging of pmu event by kevent(EXPERIMENTAL)"
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default y
+
+config DEBUG_SNAPSHOT_FREQ
+	bool "Enable debugging of frequence event by kevent(EXPERIMENTAL)"
+	depends on DEBUG_SNAPSHOT && PM_DEVFREQ && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default y
+
+config DEBUG_SNAPSHOT_DM
+	bool "Enable debugging of dvfs manager event by kevent(EXPERIMENTAL)"
+	depends on DEBUG_SNAPSHOT && EXYNOS_DVFS_MANAGER && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default y
+
+config DEBUG_SNAPSHOT_HRTIMER
+	bool "Enable debugging of hrtimer by kevent"
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default y
+
+config DEBUG_SNAPSHOT_REG
+	bool "Enable debugging of accessing register by kevent"
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default n
+
+config DEBUG_SNAPSHOT_REGULATOR
+	bool "Enable debugging of regulator and pmic driver"
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default y
+
+config DEBUG_SNAPSHOT_ACPM
+	bool "Enable debugging of acpm framework"
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default y
+
+config DEBUG_SNAPSHOT_THERMAL
+	bool "Enable debugging of thermal driver"
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE && EXYNOS_THERMAL
+	default y
+
+config DEBUG_SNAPSHOT_I2C
+	bool "Enable debugging of i2c driver"
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default y
+
+config DEBUG_SNAPSHOT_SPI
+	bool "Enable debugging of spi driver"
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default y
+
+config DEBUG_SNAPSHOT_BINDER
+	bool "Enable debugging of binder driver"
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	default y
+
+config DEBUG_SNAPSHOT_PANIC_REBOOT
+	bool "Enable forced reboot after panic for ramdump"
+	depends on DEBUG_SNAPSHOT
+	default y
+
+config DEBUG_SNAPSHOT_WATCHDOG_RESET
+	bool "Support watchdog reset when hardlockup detect"
+	depends on DEBUG_SNAPSHOT && DEBUG_SNAPSHOT_PANIC_REBOOT
+	default y
+
+config DEBUG_SNAPSHOT_CRASH_KEY
+	bool "Support Crash Key to artificial panic for debugging"
+	depends on DEBUG_SNAPSHOT && KEYBOARD_GPIO
+	default y
+
+config DEBUG_SNAPSHOT_ONE_CRASH_KEY
+	bool "Support Crash key for one key model"
+	default n
+
+config DEBUG_SNAPSHOT_MINIMIZED_MODE
+	bool "Support minimized feature configuration"
+	depends on DEBUG_SNAPSHOT_USER_MODE
+	default y

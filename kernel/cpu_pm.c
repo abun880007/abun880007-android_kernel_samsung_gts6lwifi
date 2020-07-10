@@ -22,12 +22,9 @@
 #include <linux/spinlock.h>
 #include <linux/syscore_ops.h>
 
-bool from_suspend;
-
 static ATOMIC_NOTIFIER_HEAD(cpu_pm_notifier_chain);
 
-static int cpu_pm_notify(enum cpu_pm_event event, int nr_to_call, int *nr_calls,
-		void *data)
+static int cpu_pm_notify(enum cpu_pm_event event, int nr_to_call, int *nr_calls)
 {
 	int ret;
 
@@ -37,7 +34,7 @@ static int cpu_pm_notify(enum cpu_pm_event event, int nr_to_call, int *nr_calls,
 	 * RCU know this.
 	 */
 	rcu_irq_enter_irqson();
-	ret = __atomic_notifier_call_chain(&cpu_pm_notifier_chain, event, data,
+	ret = __atomic_notifier_call_chain(&cpu_pm_notifier_chain, event, NULL,
 		nr_to_call, nr_calls);
 	rcu_irq_exit_irqson();
 
@@ -95,17 +92,23 @@ int cpu_pm_enter(void)
 	int nr_calls;
 	int ret = 0;
 
-	ret = cpu_pm_notify(CPU_PM_ENTER, -1, &nr_calls, NULL);
+	ret = cpu_pm_notify(CPU_PM_ENTER, -1, &nr_calls);
 	if (ret)
 		/*
 		 * Inform listeners (nr_calls - 1) about failure of CPU PM
 		 * PM entry who are notified earlier to prepare for it.
 		 */
-		cpu_pm_notify(CPU_PM_ENTER_FAILED, nr_calls - 1, NULL, NULL);
+		cpu_pm_notify(CPU_PM_ENTER_FAILED, nr_calls - 1, NULL);
 
 	return ret;
 }
 EXPORT_SYMBOL_GPL(cpu_pm_enter);
+
+int cpu_pm_enter_pre(void)
+{
+	return cpu_pm_notify(CPU_PM_ENTER_PREPARE, -1, NULL);
+}
+EXPORT_SYMBOL_GPL(cpu_pm_enter_pre);
 
 /**
  * cpu_pm_exit - CPU low power exit notifier
@@ -121,9 +124,15 @@ EXPORT_SYMBOL_GPL(cpu_pm_enter);
  */
 int cpu_pm_exit(void)
 {
-	return cpu_pm_notify(CPU_PM_EXIT, -1, NULL, NULL);
+	return cpu_pm_notify(CPU_PM_EXIT, -1, NULL);
 }
 EXPORT_SYMBOL_GPL(cpu_pm_exit);
+
+int cpu_pm_exit_post(void)
+{
+	return cpu_pm_notify(CPU_PM_EXIT_POST, -1, NULL);
+}
+EXPORT_SYMBOL_GPL(cpu_pm_exit_post);
 
 /**
  * cpu_cluster_pm_enter - CPU cluster low power entry notifier
@@ -141,20 +150,18 @@ EXPORT_SYMBOL_GPL(cpu_pm_exit);
  *
  * Return conditions are same as __raw_notifier_call_chain.
  */
-int cpu_cluster_pm_enter(unsigned long aff_level)
+int cpu_cluster_pm_enter(void)
 {
 	int nr_calls;
 	int ret = 0;
 
-	ret = cpu_pm_notify(CPU_CLUSTER_PM_ENTER, -1, &nr_calls,
-			(void *) aff_level);
+	ret = cpu_pm_notify(CPU_CLUSTER_PM_ENTER, -1, &nr_calls);
 	if (ret)
 		/*
 		 * Inform listeners (nr_calls - 1) about failure of CPU cluster
 		 * PM entry who are notified earlier to prepare for it.
 		 */
-		cpu_pm_notify(CPU_CLUSTER_PM_ENTER_FAILED, nr_calls - 1, NULL,
-				(void *) aff_level);
+		cpu_pm_notify(CPU_CLUSTER_PM_ENTER_FAILED, nr_calls - 1, NULL);
 
 	return ret;
 }
@@ -175,9 +182,9 @@ EXPORT_SYMBOL_GPL(cpu_cluster_pm_enter);
  *
  * Return conditions are same as __raw_notifier_call_chain.
  */
-int cpu_cluster_pm_exit(unsigned long aff_level)
+int cpu_cluster_pm_exit(void)
 {
-	return cpu_pm_notify(CPU_CLUSTER_PM_EXIT, -1, NULL, (void *) aff_level);
+	return cpu_pm_notify(CPU_CLUSTER_PM_EXIT, -1, NULL);
 }
 EXPORT_SYMBOL_GPL(cpu_cluster_pm_exit);
 
@@ -186,19 +193,17 @@ static int cpu_pm_suspend(void)
 {
 	int ret;
 
-	from_suspend = true;
 	ret = cpu_pm_enter();
 	if (ret)
 		return ret;
 
-	ret = cpu_cluster_pm_enter(0);
+	ret = cpu_cluster_pm_enter();
 	return ret;
 }
 
 static void cpu_pm_resume(void)
 {
-	from_suspend = false;
-	cpu_cluster_pm_exit(0);
+	cpu_cluster_pm_exit();
 	cpu_pm_exit();
 }
 

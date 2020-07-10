@@ -13,9 +13,7 @@
 #include <linux/of.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
-#if defined(CONFIG_DRV_SAMSUNG)
 #include <linux/sec_class.h>
-#endif
 #include "led-sep.h"
 
 static struct led_sep *led_sep_one;
@@ -422,7 +420,7 @@ static int led_sep_probe(struct platform_device *pdev)
 	if (sled == NULL)
 		return -ENOMEM;
 
-	sled->sdev = sec_device_create(0, sled, "led");
+	sled->sdev = sec_device_create(sled, "led");
 	if (sled->sdev == NULL) {
 		dev_err(&pdev->dev, "Failed to create device for SEP led\n");
 		return -ENOMEM;

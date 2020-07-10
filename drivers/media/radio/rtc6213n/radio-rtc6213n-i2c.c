@@ -91,6 +91,16 @@ struct tasklet_struct my_tasklet;
  * General Driver Functions - REGISTERs
  **************************************************************************/
 
+int set_fm_lna(struct rtc6213n_device *radio, int state)
+{
+	if (gpio_is_valid(radio->fm_lna_gpio)) {
+		gpio_direction_output(radio->fm_lna_gpio, state);
+		dev_info(&radio->videodev->dev, "%s: state=%d\n", __func__, state);
+	}
+
+	return 0;
+}
+
 /*
  * rtc6213n_get_register - read register
  */
@@ -109,7 +119,6 @@ int rtc6213n_get_register(struct rtc6213n_device *radio, int regnr)
 
 	return 0;
 }
-
 
 /*
  * rtc6213n_set_register - write register
@@ -209,10 +218,12 @@ int rtc6213n_fops_open(struct file *file)
 	mutex_lock(&radio->lock);
 	radio->users++;
 
-	dev_info(&radio->videodev->dev, "%s : user num = %d\n",
+	dev_info(&radio->videodev->dev, "%s: user num = %d\n",
 			__func__, radio->users);
 
 	if (radio->users == 1) {
+		if (radio->use_ext_lna)
+			set_fm_lna(radio, 1);
 		/* start radio */
 		retval = rtc6213n_start(radio);
 		if (retval < 0)
@@ -238,12 +249,27 @@ int rtc6213n_fops_open(struct file *file)
 		if (retval < 0)
 			goto done;
 
+		/* ==== seeking parameter setting ==== */
+		/* seekconfig1 */
+		radio->registers[SEEKCFG1] &= ~SEEKCFG1_CSR0_SEEKRSSITH;
+		radio->registers[SEEKCFG1] |= 0x0c;
+		retval = rtc6213n_set_register(radio, SEEKCFG1);
+		if (retval < 0)
+			goto done;
+		
 		/* seekconfig2 */
 		/* Seeking TH */
-		radio->registers[SEEKCFG2] = radio->seekcfg2;
+		/* 0x4010 is hexdecimal and combination of DC and spike */
+		/* SEEKCFG2[15:8] is DC TH, SEEKCFG2[7:0] is spike TH   */
+		/* DC TH default is 0x40, Spike TH default ix 0x50		*/
+		/* Suggest to set more destrict for filter out garbage  */
+		/* Suggest to adjust DC to 0x38, 0x30, 0x28				*/
+		/* Suggest to keep Spike as 0x10						*/
+		radio->registers[SEEKCFG2] = 0x4010;
 		retval = rtc6213n_set_register(radio, SEEKCFG2);
 		if (retval < 0)
 			goto done;
+		/* ==== seeking parameter setting ==== */
 
 		/* enable RDS / STC interrupt */
 		radio->registers[SYSCFG] |= SYSCFG_CSR0_RDSIRQEN;
@@ -262,7 +288,6 @@ int rtc6213n_fops_open(struct file *file)
 		/* powerconfig */
 		/* Enable FM */
 		radio->registers[POWERCFG] = POWERCFG_CSR0_ENABLE;
-		radio->registers[POWERCFG] |= (radio->blend_ofs << 8);
 		retval = rtc6213n_set_register(radio, POWERCFG);
 		if (retval < 0)
 			goto done;
@@ -283,13 +308,7 @@ int rtc6213n_fops_open(struct file *file)
 			radio->registers[12], radio->registers[13]);
 		dev_info(&radio->videodev->dev, "RTC6213n Tuner8: regE=0x%4.4hx RegF=0x%4.4hx\n",
 			radio->registers[14], radio->registers[15]);
-
-		if (radio->fmlna_gpio > 0) {
-			dev_info(&radio->videodev->dev, "enable lna gpio\n");
-			gpio_direction_output(radio->fmlna_gpio, 1);
-		}
 	}
-
 	dev_info(&radio->videodev->dev, "rtc6213n_fops_open : Exit\n");
 
 done:
@@ -313,14 +332,11 @@ int rtc6213n_fops_release(struct file *file)
 	mutex_lock(&radio->lock);
 	radio->users--;
 	if (radio->users == 0) {
-		
-		if (radio->fmlna_gpio > 0) {
-			dev_info(&radio->videodev->dev, "disable lna gpio\n");
-			gpio_direction_output(radio->fmlna_gpio, 0);
-		}
 		/* stop radio */
 		retval = rtc6213n_stop(radio);
 		tasklet_kill(&my_tasklet);
+		if (radio->use_ext_lna)
+			set_fm_lna(radio, 0);
 	}
 	mutex_unlock(&radio->lock);
 	dev_info(&radio->videodev->dev, "rtc6213n_fops_release Exit retval = %d\n",
@@ -369,8 +385,6 @@ static irqreturn_t rtc6213n_i2c_interrupt(int irq, void *dev_id)
 	unsigned short rds;
 	unsigned char tmpbuf[3];
 	int retval = 0;
-
-	dev_info(&radio->videodev->dev, "rtc6213n_i2c_interrupt\n");
 
 	/* check Seek/Tune Complete */
 	retval = rtc6213n_get_register(radio, STATUS);
@@ -482,7 +496,7 @@ static irqreturn_t rtc6213n_i2c_interrupt(int irq, void *dev_id)
 		wake_up_interruptible(&radio->read_queue);
 
 end:
-	dev_info(&radio->videodev->dev, "rtc6213n_i2c_interrupt end\n");
+
 	return IRQ_HANDLED;
 }
 
@@ -494,6 +508,7 @@ static int rtc6213n_i2c_probe(struct i2c_client *client,
 {
 	struct rtc6213n_device *radio;
 	int retval = 0;
+	u8 i2c_error;
 	int fmint_gpio = 0;
 	int irq;
 	u32 data[VOLUME_NUM];
@@ -534,8 +549,27 @@ static int rtc6213n_i2c_probe(struct i2c_client *client,
 	if (retval < 0)
 		goto err_video;
 
+	dev_info(&client->dev, "%s before retrying\n", __func__);
+
+	radio->registers[BANKCFG] = 0x0000;
+
+	i2c_error = 0;
+	/* Keep in case of any unpredicted control */
+	/* Set 0x16AA */
+	radio->registers[DEVICEID] = 0x16AA;
+	/* released the I2C from unexpected I2C start condition */
+	retval = rtc6213n_set_register(radio, DEVICEID);
+	/* recheck TH : 10 */
+	while ((retval < 0) && (i2c_error < 10)) {
+		retval = rtc6213n_set_register(radio, DEVICEID);
+		i2c_error++;
+	}
+
+	dev_info(&client->dev, "%s retrying %d times\n", __func__, i2c_error);
+
 	/* get device and chip versions */
 	if (rtc6213n_get_all_registers(radio) < 0) {
+		dev_info(&client->dev, "%s get Device ID failed!\n", __func__);
 		retval = -EIO;
 		goto err_video;
 	}
@@ -577,22 +611,6 @@ static int rtc6213n_i2c_probe(struct i2c_client *client,
 			__func__);
 	}
 
-	radio->fmlna_gpio = 0;
-
-	radio->fmlna_gpio = of_get_named_gpio(client->dev.of_node,
-				"fmlna-gpio", 0);
-	if (radio->fmlna_gpio > 0) {
-		dev_info(&client->dev, "%s: uses fmlna_gpio %d", __func__,
-			radio->fmlna_gpio);
-		retval = gpio_request(radio->fmlna_gpio, "fmlna_gpio");
-		if (retval) {
-			dev_err(&client->dev,
-				"%s: Failed to request fmlna_gpio %d error %d\n",
-				__func__, radio->fmlna_gpio, retval);
-		} else
-			gpio_direction_output(radio->fmlna_gpio, 0);
-	}
-
 	if (of_property_read_bool(client->dev.of_node, "volume_db")) {
 		dev_info(&client->dev, "%s: use fm radio volume db\n", __func__);
 		radio->vol_db = true;
@@ -608,11 +626,20 @@ static int rtc6213n_i2c_probe(struct i2c_client *client,
 	} else
 		dev_info(&client->dev, "%s: can not find the volume in the dt\n", __func__);
 
-	if (of_property_read_u32(client->dev.of_node, "seekcfg2", &radio->seekcfg2)) {
-		dev_info(&client->dev, "%s : Unable to find seekcfg2 and set default\n", __func__);
-		radio->seekcfg2 = 0x4050;
-	}
-	dev_info(&client->dev, "%s : seekcfg2 0x%04x\n", __func__, radio->seekcfg2);
+	radio->use_ext_lna = of_property_read_bool(client->dev.of_node, "fm-lna-gpio");
+	if (radio->use_ext_lna) {
+		radio->fm_lna_gpio = of_get_named_gpio(client->dev.of_node, "fm-lna-gpio", 0);
+		if (!gpio_is_valid(radio->fm_lna_gpio))
+			dev_info(&client->dev, "%s: fm lna gpio is invalid(%d)\n", __func__, radio->fm_lna_gpio);
+		else {
+			retval = gpio_request(radio->fm_lna_gpio, "FM_LNA_GPIO");
+			if (retval)
+				dev_err(&client->dev, "%s: fm lna gpio request failed(%d)\n", __func__, radio->fm_lna_gpio);
+			else
+				dev_info(&client->dev, "%s: fm lna gpio(%d)\n", __func__, radio->fm_lna_gpio);
+		}
+	} else 
+		dev_info(&client->dev, "%s: use_ext_lna=%d\n", __func__, radio->use_ext_lna);
 
 	if (!of_property_read_u8(client->dev.of_node, "blend_lvl", &radio->blend_level)) {
 		dev_info(&client->dev, "%s: blend_level = %d\n", __func__,
@@ -622,16 +649,6 @@ static int rtc6213n_i2c_probe(struct i2c_client *client,
 		dev_info(&client->dev, "%s: can not find the blend level in the dt\n",
 		__func__);
 	}
-
-	if (!of_property_read_u32(client->dev.of_node, "blendofs", &radio->blend_ofs)) {
-		dev_info(&client->dev, "%s: blend_ofs = %d\n", __func__,
-				radio->blend_ofs);
-	} else {
-		radio->blend_ofs = 0;
-		dev_info(&client->dev, "%s: can not find the blend level in the dt\n",
-		__func__);
-	}
-
 
 	/* mark Seek/Tune Complete Interrupt enabled */
 	radio->stci_enabled = true;

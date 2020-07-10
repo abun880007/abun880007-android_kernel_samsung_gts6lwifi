@@ -1,42 +1,47 @@
 /*
- * =================================================================
+ * linux/drivers/video/fbdev/exynos/panel/panel_notify.h
  *
- *	Description: Header file for samsung panel notify
- *	Company: Samsung Electronics
+ * Header file for Samsung Common LCD Driver.
  *
- * ================================================================
+ * Copyright (c) 2018 Samsung Electronics
+ * Gwanghui Lee <gwanghui.lee@samsung.com>
  *
- *
- * <one line to give the program's name and a brief idea of what it does.>
- * Copyright (C) 2018, Samsung Electronics. All rights reserved.
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 and
- * only version 2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  */
 
 #ifndef __PANEL_NOTIFY_H__
 #define __PANEL_NOTIFY_H__
 
 enum panel_notifier_event_t {
+	PANEL_EVENT_LCD_CHANGED,
 	PANEL_EVENT_BL_CHANGED,
 };
 
 struct panel_bl_event_data {
-	int bl_level;
-	int aor_data;
+	int brightness;
+	int aor_ratio;
 };
 
+#ifdef CONFIG_PANEL_NOTIFY
 extern int panel_notifier_register(struct notifier_block *nb);
 extern int panel_notifier_unregister(struct notifier_block *nb);
 extern int panel_notifier_call_chain(unsigned long val, void *v);
+#else
+static inline int panel_notifier_register(struct notifier_block *nb)
+{
+	return 0;
+};
 
-#endif /*__PANEL_NOTIFY_H__*/
+static inline int panel_notifier_unregister(struct notifier_block *nb)
+{
+	return 0;
+};
+
+static inline int panel_notifier_call_chain(unsigned long val, void *v)
+{
+	return 0;
+};
+#endif /* CONFIG_PANEL_NOTIFY */
+#endif /* __PANEL_NOTIFY_H__ */

@@ -1,3 +1,13 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:9cb1d190a2fc79249b3da311b045cba74b65d8af7c959ff9fff5c7dcd7f5898d
-size 294
+config SDCARD_FS
+	tristate "sdcard file system"
+	depends on CONFIGFS_FS
+	default y
+	help
+	  Sdcardfs is based on Wrapfs file system.
+
+config SDCARD_FS_FADV_NOACTIVE
+	bool "sdcardfs fadvise noactive support"
+	depends on FADV_NOACTIVE
+	default y
+	help
+	  Sdcardfs supports fadvise noactive mode.

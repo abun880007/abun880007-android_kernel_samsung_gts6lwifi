@@ -55,16 +55,16 @@
 #include <asm/irq_regs.h>
 
 #include <linux/notifier.h>
+#include <linux/sec_debug.h>
 
 /* Whether we react on sysrq keys or just ignore them */
 static int __read_mostly sysrq_enabled = CONFIG_MAGIC_SYSRQ_DEFAULT_ENABLE;
 static bool __read_mostly sysrq_always_enabled;
 
-bool sysrq_on(void)
+static bool sysrq_on(void)
 {
 	return sysrq_enabled || sysrq_always_enabled;
 }
-EXPORT_SYMBOL(sysrq_on);
 
 /*
  * A value of 1 means 'all', other nonzero values are an op mask:
@@ -147,6 +147,9 @@ static void sysrq_handle_crash(int key)
 	rcu_read_unlock();
 	panic_on_oops = 1;	/* force panic */
 	wmb();
+
+	sec_debug_set_sysrq_crash(current);
+
 	*killer = 1;
 }
 static struct sysrq_key_op sysrq_crash_op = {

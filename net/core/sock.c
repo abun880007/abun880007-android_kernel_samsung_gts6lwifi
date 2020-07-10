@@ -1467,9 +1467,6 @@ int sock_getsockopt(struct socket *sock, int level, int optname,
 	{
 		u32 meminfo[SK_MEMINFO_VARS];
 
-		if (get_user(len, optlen))
-			return -EFAULT;
-
 		sk_get_meminfo(sk, meminfo);
 
 		len = min_t(unsigned int, len, sizeof(meminfo));
@@ -1582,8 +1579,9 @@ static void sock_copy(struct sock *nsk, const struct sock *osk)
 #endif
 }
 
+
 static struct sock *sk_prot_alloc(struct proto *prot, gfp_t priority,
-		int family)
+			   int family)
 {
 	struct sock *sk;
 	struct kmem_cache *slab;
@@ -2938,7 +2936,6 @@ void sock_init_data(struct socket *sock, struct sock *sk)
 
 	sk->sk_max_pacing_rate = ~0U;
 	sk->sk_pacing_rate = ~0U;
-	sk->sk_pacing_shift = 10;
 	sk->sk_incoming_cpu = -1;
 	/*
 	 * Before updating sk_refcnt, we must commit prior changes to memory

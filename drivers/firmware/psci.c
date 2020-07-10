@@ -25,7 +25,6 @@
 #include <linux/reboot.h>
 #include <linux/slab.h>
 #include <linux/suspend.h>
-#include <soc/qcom/restart.h>
 
 #include <uapi/linux/psci.h>
 
@@ -254,14 +253,7 @@ static int get_set_conduit_method(struct device_node *np)
 
 static void psci_sys_reset(enum reboot_mode reboot_mode, const char *cmd)
 {
-#ifdef CONFIG_SEC_DEBUG
-	do_early_panic_restart();
-#else
-	if (oops_in_progress)
-		do_early_panic_restart();
-	else
-		invoke_psci_fn(PSCI_0_2_FN_SYSTEM_RESET, 0, 0, 0);
-#endif
+	invoke_psci_fn(PSCI_0_2_FN_SYSTEM_RESET, 0, 0, 0);
 }
 
 static void psci_sys_poweroff(void)
@@ -276,9 +268,8 @@ static int __init psci_features(u32 psci_func_id)
 }
 
 #ifdef CONFIG_CPU_IDLE
-static __maybe_unused DEFINE_PER_CPU_READ_MOSTLY(u32 *, psci_power_state);
+static DEFINE_PER_CPU_READ_MOSTLY(u32 *, psci_power_state);
 
-#ifdef CONFIG_DT_IDLE_STATES
 static int psci_dt_cpu_init_idle(struct device_node *cpu_node, int cpu)
 {
 	int i, ret, count = 0;
@@ -331,10 +322,6 @@ free_mem:
 	kfree(psci_states);
 	return ret;
 }
-#else
-static int psci_dt_cpu_init_idle(struct device_node *cpu_node, int cpu)
-{ return 0; }
-#endif
 
 #ifdef CONFIG_ACPI
 #include <acpi/processor.h>
@@ -410,26 +397,77 @@ int psci_cpu_init_idle(unsigned int cpu)
 	return ret;
 }
 
-static int psci_suspend_finisher(unsigned long state_id)
+static int psci_suspend_finisher(unsigned long index)
 {
-	return psci_ops.cpu_suspend(state_id,
+	u32 *state = __this_cpu_read(psci_power_state);
+
+	return psci_ops.cpu_suspend(state[index - 1],
 				    __pa_symbol(cpu_resume));
 }
-int psci_cpu_suspend_enter(unsigned long state_id)
+
+/**
+ * Pack PSCI power state to integer
+ *
+ * @id : indicates system power mode. 0 means non system power mode.
+ * @type : not used.
+ * @affinity_level : indicates power down scope.
+ */
+static u32 psci_power_state_pack(u32 id, u32 type, u32 affinity_level)
+{
+	return ((id << PSCI_0_2_POWER_STATE_ID_SHIFT)
+			& PSCI_0_2_POWER_STATE_ID_MASK) |
+		((type << PSCI_0_2_POWER_STATE_TYPE_SHIFT)
+		 & PSCI_0_2_POWER_STATE_TYPE_MASK) |
+		((affinity_level << PSCI_0_2_POWER_STATE_AFFL_SHIFT)
+		 & PSCI_0_2_POWER_STATE_AFFL_MASK);
+}
+
+/**
+ * We hope that PSCI framework cover the all platform specific power
+ * states, unfortunately PSCI can support only state managed by cpuidle.
+ * psci_suspend_customized_finisher supports extra power state which
+ * cpuidle does not handle. This function is only for Exynos.
+ */
+static int psci_suspend_customized_finisher(unsigned long index)
+{
+	u32 state;
+	u32 id = 0, type = 0, affinity_level = 0;
+
+	if (index & PSCI_SYSTEM_IDLE)
+		id = 1;
+
+	if (index & PSCI_CLUSTER_SLEEP)
+		affinity_level = 1;
+
+	if (index & PSCI_CP_CALL)
+		affinity_level = 2;
+
+	if (index & PSCI_SYSTEM_SLEEP)
+		affinity_level = 3;
+
+	state = psci_power_state_pack(id, type, affinity_level);
+
+	return psci_ops.cpu_suspend(state, __pa_symbol(cpu_resume));
+}
+
+int psci_cpu_suspend_enter(unsigned long index)
 {
 	int ret;
-
+	u32 *state = __this_cpu_read(psci_power_state);
 	/*
 	 * idle state index 0 corresponds to wfi, should never be called
 	 * from the cpu_suspend operations
 	 */
-	if (WARN_ON_ONCE(!state_id))
+	if (WARN_ON_ONCE(!index))
 		return -EINVAL;
 
-	if (!psci_power_state_loses_context(state_id))
-		ret = psci_ops.cpu_suspend(state_id, 0);
+	if (unlikely(index >= PSCI_CUSTOMIZED_INDEX))
+		return cpu_suspend(index, psci_suspend_customized_finisher);
+
+	if (!psci_power_state_loses_context(state[index - 1]))
+		ret = psci_ops.cpu_suspend(state[index - 1], 0);
 	else
-		ret = cpu_suspend(state_id, psci_suspend_finisher);
+		ret = cpu_suspend(index, psci_suspend_finisher);
 
 	return ret;
 }
@@ -639,6 +677,7 @@ static int __init psci_0_1_init(struct device_node *np)
 {
 	u32 id;
 	int err;
+	u32 ret;
 
 	err = get_set_conduit_method(np);
 
@@ -665,6 +704,12 @@ static int __init psci_0_1_init(struct device_node *np)
 	if (!of_property_read_u32(np, "migrate", &id)) {
 		psci_function_id[PSCI_FN_MIGRATE] = id;
 		psci_ops.migrate = psci_migrate;
+	}
+
+	ret = invoke_psci_fn(ARM_SMCCC_VERSION_FUNC_ID, 0, 0, 0);
+	if (ret == ARM_SMCCC_VERSION_1_1) {
+		pr_info("smccc_version 0x%x\n", SMCCC_VERSION_1_1);
+		psci_ops.smccc_version = SMCCC_VERSION_1_1;
 	}
 
 out_put_node:

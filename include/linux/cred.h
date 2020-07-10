@@ -90,9 +90,9 @@ struct ro_rcu_head {
 	struct rcu_head	rcu;		/* RCU deletion hook */
 	void *bp_cred;
 };
-#define get_rocred_rcu(cred) ((struct ro_rcu_head *)((atomic_t *)cred->use_cnt + 1))
-#define get_usecnt_rcu(use_cnt) ((struct ro_rcu_head *)((atomic_t *)use_cnt + 1))
-#endif /* CONFIG_RKP_KDP */
+#define get_rocred_rcu(cred) ((struct ro_rcu_head *)((atomic_t *)cred->use_cnt+1))
+#define get_usecnt_rcu(use_cnt) ((struct ro_rcu_head *)((atomic_t *)use_cnt+1))
+#endif /*CONFIG_RKP_KDP*/
 
 /*
  * The security context of a task
@@ -160,7 +160,7 @@ struct cred {
 	struct task_struct *bp_task;
 	void *bp_pgd;
 	unsigned long long type;
-#endif
+#endif /*CONFIG_RKP_KDP*/
 } __randomize_layout;
 
 #ifdef CONFIG_RKP_KDP
@@ -181,7 +181,7 @@ enum {
 	RKP_CMD_CMMIT_CREDS,
 	RKP_CMD_OVRD_CREDS,
 };
-#define override_creds(x) rkp_override_creds((struct cred **)&x)
+#define override_creds(x) rkp_override_creds(&x)
 
 #define rkp_cred_fill_params(crd,crd_ro,uptr,tsec,rkp_cmd_type,rkp_use_cnt)	\
 do {						\
@@ -192,6 +192,7 @@ do {						\
 	cred_param.type = rkp_cmd_type;		\
 	cred_param.use_cnt = (u64)rkp_use_cnt;		\
 } while(0)
+
 #endif /*CONFIG_RKP_KDP*/
 
 extern void __put_cred(struct cred *);
@@ -280,7 +281,7 @@ static inline struct cred *get_new_cred(struct cred *cred)
 	atomic_inc(&cred->usage);
 	return cred;
 }
-#endif
+#endif /*CONFIG_RKP_KDP*/
 
 /**
  * get_cred - Get a reference on a set of credentials
@@ -324,7 +325,7 @@ static inline void put_cred(const struct cred *_cred)
 	if (atomic_dec_and_test(&(cred)->usage))
 		__put_cred(cred);
 }
-#endif
+#endif /*CONFIG_RKP_KDP*/
 
 /**
  * current_cred - Access the current task's subjective credentials

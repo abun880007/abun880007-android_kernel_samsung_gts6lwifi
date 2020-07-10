@@ -1537,9 +1537,11 @@ drop:
 		return -EINVAL;
 	}
 
-	if (!(tun->flags & IFF_NO_PI))
-		if (pi.flags & htons(CHECKSUM_UNNECESSARY))
-			skb->ip_summed = CHECKSUM_UNNECESSARY;
+#ifdef CONFIG_MODEM_IF_NET_GRO
+    if (!(tun->flags & IFF_NO_PI))
+        if (pi.flags & htons(CHECKSUM_UNNECESSARY))
+            skb->ip_summed = CHECKSUM_UNNECESSARY;
+#endif
 
 	switch (tun->flags & TUN_TYPE_MASK) {
 	case IFF_TUN:
@@ -2046,7 +2048,9 @@ static struct proto tun_proto = {
 
 static int tun_flags(struct tun_struct *tun)
 {
-	return tun->flags & (TUN_FEATURES | IFF_PERSIST | IFF_TUN | IFF_TAP);
+	// ------------- START of KNOX_VPN ------------------//
+	return tun->flags & (TUN_FEATURES | IFF_PERSIST | IFF_TUN | IFF_TAP | IFF_META_HDR);
+	// ------------- END of KNOX_VPN -------------------//
 }
 
 static ssize_t tun_show_flags(struct device *dev, struct device_attribute *attr,

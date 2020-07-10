@@ -1,9 +1,24 @@
 /*
  * max77705-muic.h - MUIC for the Maxim 77705
  *
+ * Copyright (C) 2015 Samsung Electrnoics
+ * Insun Choi <insun77.choi@samsung.com>
+ *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * This driver is based on max14577-muic.h
+ *
  */
 
 #ifndef __MAX77705_MUIC_H__
@@ -71,12 +86,18 @@ enum max77705_muic_command_opcode {
 
 #define AFC_OP_OUT_LEN 11 /* OPCODE(1) + Result(1) + VBADC(1) + RX Data(8) */
 
+#if defined(CONFIG_HICCUP_CHARGER)
+enum MUIC_HICCUP_MODE {
+	MUIC_HICCUP_MODE_OFF	=	0,
+	MUIC_HICCUP_MODE_NOTY,
+	MUIC_HICCUP_MODE_ON,
+};
+#endif
+
 #if defined(CONFIG_MUIC_MAX77705_CCIC)
 #define MUIC_CCIC_NOTI_ATTACH (1)
 #define MUIC_CCIC_NOTI_DETACH (-1)
 #define MUIC_CCIC_NOTI_UNDEFINED (0)
-
-#define MUIC_IRQ_CCIC_HANDLER (-2)
 
 struct max77705_muic_ccic_evt {
 	int ccic_evt_attached; /* 1: attached, -1: detached, 0: undefined */
@@ -94,7 +115,7 @@ struct max77705_muic_data {
 	struct mutex			muic_mutex;
 	struct wake_lock		muic_wake_lock;
 
-	/* model dependant mfd platform data */
+	/* model dependent mfd platform data */
 	struct max77705_platform_data		*mfd_pdata;
 	struct max77705_usbc_platform_data	*usbc_pdata;
 
@@ -106,7 +127,7 @@ struct max77705_muic_data {
 	int				irq_vbadc;
 	int				irq_vbusdet;
 
-	/* model dependant muic platform data */
+	/* model dependent muic platform data */
 	struct muic_platform_data	*pdata;
 
 	/* muic current attached device */
@@ -129,6 +150,8 @@ struct max77705_muic_data {
 	bool				is_factory_start;
 	bool				is_check_hv;
 	bool				is_charger_ready;
+	bool				is_afc_reset;
+	bool				is_skip_bigdata;
 	bool				is_charger_mode;
 
 	u8				is_boot_dpdnvden;
@@ -138,6 +161,9 @@ struct max77705_muic_data {
 	unsigned char			afc_op_dataout[AFC_OP_OUT_LEN];
 	int				hv_voltage;
 	int				afc_retry;
+
+ 	/* hiccup mode flag */
+ 	int				is_hiccup_mode;
 
 	/* muic status value */
 	u8				status1;
@@ -150,12 +176,12 @@ struct max77705_muic_data {
 	struct delayed_work		debug_work;
 	struct delayed_work		vbus_wa_work;
 
+	/* Fake vbus flag */
+	int				fake_chgtyp;
+
 #if defined(CONFIG_USB_EXTERNAL_NOTIFY)
 	/* USB Notifier */
 	struct notifier_block		usb_nb;
-#endif
-#if defined(CONFIG_HICCUP_CHARGER)
-	bool				is_hiccup_mode;
 #endif
 #if defined(CONFIG_MUIC_MAX77705_CCIC)
 	struct max77705_muic_ccic_evt	ccic_info_data;
@@ -269,7 +295,8 @@ enum {
 	CHGTYP_CDP			= 0x02,
 	/* Dedicated Charger (D+/D- shorted) */
 	CHGTYP_DEDICATED_CHARGER	= 0x03,
-	/* Hiccup mode, Set D+/D- to GND */
+
+ 	/* Hiccup mode, Set D+/D- to GND */
  	CHGTYP_HICCUP_MODE		= 0xfa,
 	/* DCD Timeout, Open D+/D- */
 	CHGTYP_TIMEOUT_OPEN		= 0xfb,
@@ -369,7 +396,6 @@ extern void max77705_muic_handle_detect_dev_hv(struct max77705_muic_data *muic_d
 extern void max77705_muic_disable_afc_protocol(struct max77705_muic_data *muic_data);
 #endif /* CONFIG_HV_MUIC_MAX77705_AFC */
 #if defined(CONFIG_MUIC_MAX77705_CCIC)
-extern int max77705_get_ccic_info(void);
 extern void max77705_muic_register_ccic_notifier(struct max77705_muic_data *muic_data);
 extern void max77705_muic_unregister_ccic_notifier(struct max77705_muic_data *muic_data);
 #endif /* CONFIG_MUIC_MAX77705_CCIC */

@@ -11,8 +11,6 @@ obj-y				+= bus/
 
 obj-$(CONFIG_GENERIC_PHY)	+= phy/
 
-obj-$(CONFIG_VSERVICES_SUPPORT)	+= vservices/
-
 # GPIO must come after pinctrl as gpios may need to mux pins etc
 obj-$(CONFIG_PINCTRL)		+= pinctrl/
 obj-$(CONFIG_GPIOLIB)		+= gpio/
@@ -25,7 +23,6 @@ obj-y				+= pci/dwc/
 
 obj-$(CONFIG_PARISC)		+= parisc/
 obj-$(CONFIG_RAPIDIO)		+= rapidio/
-obj-$(CONFIG_VBUS_NOTIFIER)	+= staging/samsung/sec_notifier/
 obj-y				+= video/
 obj-y				+= idle/
 
@@ -46,8 +43,6 @@ obj-$(CONFIG_DMADEVICES)	+= dma/
 
 # SOC specific infrastructure drivers.
 obj-y				+= soc/
-
-obj-y				+= samsung/
 
 obj-$(CONFIG_VIRTIO)		+= virtio/
 obj-$(CONFIG_XEN)		+= xen/
@@ -71,9 +66,17 @@ obj-y				+= gpu/
 
 obj-$(CONFIG_CONNECTOR)		+= connector/
 
+# mcps module.
+obj-$(CONFIG_MCPS)		+= mcps/
+
 # i810fb and intelfb depend on char/agp/
 obj-$(CONFIG_FB_I810)           += video/fbdev/i810/
 obj-$(CONFIG_FB_INTEL)          += video/fbdev/intelfb/
+
+obj-$(CONFIG_DEV_RIL_BRIDGE)	+= misc/dev_ril_bridge/
+obj-$(CONFIG_USE_MUIC)		+= muic/
+
+obj-$(CONFIG_IFCONN_MANAGER)    += ifconn/
 
 obj-$(CONFIG_PARPORT)		+= parport/
 obj-$(CONFIG_NVM)		+= lightnvm/
@@ -84,7 +87,6 @@ obj-$(CONFIG_DMA_SHARED_BUFFER) += dma-buf/
 obj-$(CONFIG_NUBUS)		+= nubus/
 obj-y				+= macintosh/
 obj-$(CONFIG_IDE)		+= ide/
-obj-$(CONFIG_CRYPTO)		+= crypto/
 obj-$(CONFIG_SCSI)		+= scsi/
 obj-y				+= nvme/
 obj-$(CONFIG_ATA)		+= ata/
@@ -92,7 +94,6 @@ obj-$(CONFIG_TARGET_CORE)	+= target/
 obj-$(CONFIG_MTD)		+= mtd/
 obj-$(CONFIG_SPI)		+= spi/
 obj-$(CONFIG_SPMI)		+= spmi/
-obj-$(CONFIG_SLIMBUS)		+= slimbus/
 obj-$(CONFIG_HSI)		+= hsi/
 obj-y				+= net/
 obj-$(CONFIG_ATM)		+= atm/
@@ -139,10 +140,10 @@ obj-$(CONFIG_CPU_IDLE)		+= cpuidle/
 obj-y				+= mmc/
 obj-$(CONFIG_MEMSTICK)		+= memstick/
 obj-$(CONFIG_NEW_LEDS)		+= leds/
-obj-$(CONFIG_SWITCH)            += switch/
 obj-$(CONFIG_INFINIBAND)	+= infiniband/
 obj-$(CONFIG_SGI_SN)		+= sn/
 obj-y				+= firmware/
+obj-$(CONFIG_CRYPTO)		+= crypto/
 obj-$(CONFIG_SUPERH)		+= sh/
 ifndef CONFIG_ARCH_USES_GETTIMEOFFSET
 obj-y				+= clocksource/
@@ -163,15 +164,14 @@ obj-$(CONFIG_MAILBOX)		+= mailbox/
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/
 obj-$(CONFIG_REMOTEPROC)	+= remoteproc/
 obj-$(CONFIG_RPMSG)		+= rpmsg/
-obj-$(CONFIG_SENSORS_FINGERPRINT)	+= fingerprint/
 
 # Virtualization drivers
 obj-$(CONFIG_VIRT_DRIVERS)	+= virt/
 obj-$(CONFIG_HYPERV)		+= hv/
 
 obj-$(CONFIG_PM_DEVFREQ)	+= devfreq/
+obj-$(CONFIG_BATTERY_SAMSUNG)   += battery_v2/
 obj-$(CONFIG_EXTCON)		+= extcon/
-obj-$(CONFIG_USE_MUIC)		+= muic/
 obj-$(CONFIG_MEMORY)		+= memory/
 obj-$(CONFIG_IIO)		+= iio/
 obj-$(CONFIG_VME_BUS)		+= vme/
@@ -192,45 +192,49 @@ obj-$(CONFIG_FPGA)		+= fpga/
 obj-$(CONFIG_FSI)		+= fsi/
 obj-$(CONFIG_TEE)		+= tee/
 obj-$(CONFIG_MULTIPLEXER)	+= mux/
-obj-$(CONFIG_SENSORS_SSC)	+= sensors/
-obj-$(CONFIG_SENSORS_HRMSENSOR)	+= optics/
-obj-$(CONFIG_SENSORS_MAX86915)	+= optics/
-obj-$(CONFIG_SENSORS_TCS3407)	+= optics/
-obj-$(CONFIG_SENSORS_SFH7832)	+= optics/
-obj-$(CONFIG_ADSP_FACTORY)      += adsp_factory/
-obj-$(CONFIG_ESOC)              += esoc/
-# GNSS driver
-obj-$(CONFIG_GNSS_SIRF)		+= gnsssirf/
-
-ifeq ($(CONFIG_BATTERY_SAMSUNG_V2), y)
-	obj-$(CONFIG_BATTERY_SAMSUNG)	+= battery_v2/
-else
-	obj-$(CONFIG_BATTERY_SAMSUNG)	+= battery/
-endif
-
-# mobicore
-obj-$(CONFIG_TRUSTONIC_TEE)	+= gud/
 
 # CCIC
-obj-y				+= ccic/
+obj-y	+= ccic/
 
 # COMBO REDRIVER
-obj-$(CONFIG_COMBO_REDRIVER)	+= redriver/
 obj-$(CONFIG_COMBO_REDRIVER_PTN36502)	+= redriver/
 
-# Motor
-obj-y				+= motor/
+obj-$(CONFIG_EXYNOS_BTS)	+= bts/
+
+# Mobicore driver
+obj-$(CONFIG_TRUSTONIC_TEE)     += gud/
 
 # FIVE TEE driver
 obj-$(CONFIG_FIVE_TEE_DRIVER)	+= five/
 obj-$(CONFIG_ICD)		+= security/samsung/icdrv/
 
+# vision driver
+obj-$(CONFIG_VISION_SUPPORT)	+= vision/
+
+#Fingerprint
+obj-$(CONFIG_SENSORS_FINGERPRINT)       += fingerprint/
+
+# Sensorhub driver
+obj-$(CONFIG_SENSORS_SSP)	+= sensorhub/
+
+# optics sensor driver
+obj-$(CONFIG_SENSORS_HRMSENSOR)	+= optics/
+obj-$(CONFIG_SENSORS_MAX86915)	+= optics/
+obj-$(CONFIG_SENSORS_TCS3407)	+= optics/
+obj-$(CONFIG_SENSORS_VD6281)	+= optics/
+
+# Motor
+obj-y                           += motor/
+
 # uH
-obj-$(CONFIG_UH)        += uh/
+obj-$(CONFIG_UH)		+= uh/
 
 # streamline
-ifeq ($(CONFIG_GATOR), y)
-	obj-$(CONFIG_GATOR)				+= gator/
-endif
+#ifeq ($(CONFIG_GATOR), y)
+#	obj-$(CONFIG_GATOR)				+= gator/
+#endif
 
 obj-y				+= kperfmon/
+
+obj-$(CONFIG_SEC_EXT)		+= samsung/
+

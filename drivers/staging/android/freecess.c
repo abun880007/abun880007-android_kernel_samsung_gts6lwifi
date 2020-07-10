@@ -155,7 +155,6 @@ int mod_sendmsg(int type, int mod, struct priv_data* data)
 		else
 			payload->flag = data->flag;
 	}
-
 	if ((ret = nlmsg_unicast(kfreecess_mod_sock, skb, payload->dst_portid)) < 0) {
 		pr_err("nlmsg_unicast failed! %s errno %d\n", __func__ , ret);
 		return RET_ERR;
@@ -218,7 +217,6 @@ int binder_report(struct task_struct *p, int code, const char *str, int flag)
 		data.target_uid = task_uid(p).val;
 
 	walltime = ktime_to_us(ktime_get());
-
 	ret = mod_sendmsg(MSG_TO_USER, MOD_BINDER, &data);
 	stat = &freecess_info.mod_reportstat[MOD_BINDER];
 	spin_lock_irqsave(&stat->lock, flags);
@@ -315,27 +313,27 @@ static void recv_handler(struct sk_buff *skb)
 			pr_err("USER_HOOK_CALLBACK %s: dst_portid is %d not kernel!\n", __func__, payload->dst_portid);
 			return;
 		}
-		
+
 		if (!check_mod_type(payload->mod)) {
 			pr_err("USER_HOOK_CALLBACK %s: mod %d is not valid!\n", __func__, payload->mod);
 			return;
 		}
 
 		switch (payload->type) {
-		case LOOPBACK_MSG:
-			atomic_set(&bind_port[payload->mod], payload->src_portid);
-			freecess_fw_version = FREECESS_PEER_VERSION(payload->version);
-			dump_kfreecess_msg(payload);
-			mod_sendmsg(LOOPBACK_MSG, payload->mod, NULL);
-			break;
-		case MSG_TO_KERN:
-			if (mod_recv_handler[payload->mod])
-				mod_recv_handler[payload->mod](payload, sizeof(struct kfreecess_msg_data));
-			break;
+			case LOOPBACK_MSG:
+				atomic_set(&bind_port[payload->mod], payload->src_portid);
+				freecess_fw_version = FREECESS_PEER_VERSION(payload->version);
+				dump_kfreecess_msg(payload);
+				mod_sendmsg(LOOPBACK_MSG, payload->mod, NULL);
+				break;
+			case MSG_TO_KERN:
+				if (mod_recv_handler[payload->mod])
+					mod_recv_handler[payload->mod](payload, sizeof(struct kfreecess_msg_data));
+				break;
 
-		default:
-			pr_err("msg type is valid %d\n", payload->type);
-			break;
+			default:
+				pr_err("msg type is valid %d\n", payload->type);
+				break;
 		}
 	}
 }
@@ -554,6 +552,7 @@ static int __init kfreecess_init(void)
 
 	for(i = 1; i<MOD_END; i++)
 		atomic_set(&bind_port[i], 0);
+
 
 	freecess_rootdir = proc_mkdir("freecess", NULL);
 	if (!freecess_rootdir)

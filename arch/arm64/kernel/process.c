@@ -47,6 +47,7 @@
 #include <linux/hw_breakpoint.h>
 #include <linux/personality.h>
 #include <linux/notifier.h>
+#include <linux/debug-snapshot.h>
 #include <trace/events/power.h>
 #include <linux/percpu.h>
 
@@ -63,10 +64,6 @@
 #include <linux/stackprotector.h>
 unsigned long __stack_chk_guard __read_mostly;
 EXPORT_SYMBOL(__stack_chk_guard);
-#endif
-
-#ifdef CONFIG_RKP_CFP_ROPP
-#include <linux/rkp_cfp.h>
 #endif
 
 /*
@@ -90,16 +87,6 @@ void arch_cpu_idle(void)
 	cpu_do_idle();
 	local_irq_enable();
 	trace_cpu_idle_rcuidle(PWR_EVENT_EXIT, smp_processor_id());
-}
-
-void arch_cpu_idle_enter(void)
-{
-	idle_notifier_call_chain(IDLE_START);
-}
-
-void arch_cpu_idle_exit(void)
-{
-	idle_notifier_call_chain(IDLE_END);
 }
 
 #ifdef CONFIG_HOTPLUG_CPU
@@ -151,7 +138,9 @@ void machine_power_off(void)
 
 /*
  * Restart requires that the secondary CPUs stop performing any activity
- * while the primary CPU resets the system. Systems with multiple CPUs must
+ * while the primary CPU resets the system. Systems with a single CPU can
+ * use soft_restart() as their machine descriptor's .restart hook, since that
+ * will cause the only available CPU to reset. Systems with multiple CPUs must
  * provide a HW restart implementation, to ensure that all CPUs reset at once.
  * This is required so that any code running after reset on the primary CPU
  * doesn't have to co-ordinate with other CPUs to ensure they aren't still
@@ -171,6 +160,8 @@ void machine_restart(char *cmd)
 	if (efi_enabled(EFI_RUNTIME_SERVICES))
 		efi_reboot(reboot_mode, NULL);
 
+	dbg_snapshot_post_reboot(cmd);
+
 	/* Now call the architecture specific reboot code. */
 	if (arm_pm_restart)
 		arm_pm_restart(reboot_mode, cmd);
@@ -184,6 +175,10 @@ void machine_restart(char *cmd)
 	while (1);
 }
 
+#ifdef CONFIG_SEC_DEBUG_AVOID_UNNECESSARY_TRAP
+extern unsigned long long incorrect_addr;
+#endif
+
 /*
  * dump a block of kernel memory from around the given address
  */
@@ -191,14 +186,33 @@ static void show_data(unsigned long addr, int nbytes, const char *name)
 {
 	int	i, j;
 	int	nlines;
+#ifdef CONFIG_SEC_DEBUG_AVOID_UNNECESSARY_TRAP
+	int	nbytes_offset = nbytes;
+#endif
 	u32	*p;
 
 	/*
 	 * don't attempt to dump non-kernel addresses or
 	 * values that are probably just small negative numbers
 	 */
-	if (addr < KIMAGE_VADDR || addr > -256UL)
-		return;
+	if (addr < PAGE_OFFSET || addr > -256UL) {
+		/*
+		 * If kaslr is enabled, Kernel code is able to
+		 * located in VMALLOC address.
+		 */
+		if (IS_ENABLED(CONFIG_RANDOMIZE_BASE)) {
+#ifdef CONFIG_VMAP_STACK
+			if (!is_vmalloc_addr((const void *)addr))
+				return;
+#else
+			if (addr < (unsigned long)KERNEL_START ||
+			    addr > (unsigned long)KERNEL_END)
+				return;
+#endif
+		} else {
+			return;
+		}
+	}
 
 	printk("\n%s: %#lx:\n", name, addr);
 
@@ -210,35 +224,56 @@ static void show_data(unsigned long addr, int nbytes, const char *name)
 	nbytes += (addr & (sizeof(u32) - 1));
 	nlines = (nbytes + 31) / 32;
 
-
 	for (i = 0; i < nlines; i++) {
 		/*
 		 * just display low 16 bits of address to keep
 		 * each line of the dump < 80 characters
 		 */
-		printk("%04lx ", (unsigned long)p & 0xffff);
+		printk("%04lx :", (unsigned long)p & 0xffff);
 		for (j = 0; j < 8; j++) {
 			u32	data;
+
+#ifdef CONFIG_SEC_DEBUG_AVOID_UNNECESSARY_TRAP
+			if ((incorrect_addr != 0) && (((unsigned long long)p >= (incorrect_addr - nbytes_offset)) && ((unsigned long long)p <= (incorrect_addr + nbytes_offset)))) {
+				if (j == 7)
+					pr_cont(" ********\n");
+				else
+					pr_cont(" ********");
+			}
+			else if (probe_kernel_address(p, data)) {
+#else
 			if (probe_kernel_address(p, data)) {
-				pr_cont(" ********");
+#endif
+				if (j == 7)
+					pr_cont(" ********\n");
+				else
+					pr_cont(" ********");
 			} else {
-				pr_cont(" %08x", data);
+				if (j == 7)
+					pr_cont(" %08X\n", data);
+				else
+					pr_cont(" %08X", data);
 			}
 			++p;
 		}
-		pr_cont("\n");
 	}
 }
 
 static void show_extra_register_data(struct pt_regs *regs, int nbytes)
 {
 	mm_segment_t fs;
+	unsigned int i;
 
 	fs = get_fs();
 	set_fs(KERNEL_DS);
 	show_data(regs->pc - nbytes, nbytes * 2, "PC");
 	show_data(regs->regs[30] - nbytes, nbytes * 2, "LR");
 	show_data(regs->sp - nbytes, nbytes * 2, "SP");
+	for (i = 0; i < 30; i++) {
+		char name[4];
+		snprintf(name, sizeof(name), "X%u", i);
+		show_data(regs->regs[i] - nbytes, nbytes * 2, name);
+	}
 	set_fs(fs);
 }
 
@@ -257,10 +292,27 @@ void __show_regs(struct pt_regs *regs)
 		top_reg = 29;
 	}
 
+	if (!user_mode(regs)) {
+		dbg_snapshot_save_context(regs);
+		/*
+		 *  If you want to see more kernel events after panic,
+		 *  you should modify dbg_snapshot_set_enable's function 2nd parameter
+		 *  to true.
+		 */
+		dbg_snapshot_set_enable("log_kevents", false);
+	}
+
+	pr_info("TIF_FOREIGN_FPSTATE: %d, FP/SIMD depth %d, cpu: %d\n",
+			test_thread_flag(TIF_FOREIGN_FPSTATE),
+			atomic_read(&current->thread.fpsimd_kernel_state.depth),
+			current->thread.fpsimd_kernel_state.cpu);
+
 	show_regs_print_info(KERN_DEFAULT);
-	print_symbol("pc : %s\n", regs->pc);
-	print_symbol("lr : %s\n", lr);
-	printk("sp : %016llx pstate : %08llx\n", sp, regs->pstate);
+	print_symbol("PC is at %s\n", instruction_pointer(regs));
+	print_symbol("LR is at %s\n", lr);
+	printk("pc : [<%016llx>] lr : [<%016llx>] pstate: %08llx\n",
+	       regs->pc, lr, regs->pstate);
+	printk("sp : %016llx\n", sp);
 
 	i = top_reg;
 
@@ -276,7 +328,7 @@ void __show_regs(struct pt_regs *regs)
 		pr_cont("\n");
 	}
 	if (!user_mode(regs))
-		show_extra_register_data(regs, 64);
+		show_extra_register_data(regs, 256);
 	printk("\n");
 }
 
@@ -324,28 +376,6 @@ int arch_dup_task_struct(struct task_struct *dst, struct task_struct *src)
 
 asmlinkage void ret_from_fork(void) asm("ret_from_fork");
 
-#ifdef CONFIG_RKP_CFP_ROPP
-static inline void ropp_change_key(struct task_struct *p)
-{
-#ifdef CONFIG_RKP_CFP_ROPP_SYSREGKEY
-	task_thread_info(p)->rrk = get_random_long();
-
-#ifdef SYSREG_DEBUG
-	task_thread_info(p)->rrk = ropp_fixed_key ^ ropp_master_key;
-#endif
-
-#elif defined CONFIG_RKP_CFP_ROPP_RANDKEY
-	task_thread_info(p)->rrk = get_random_long();
-#elif defined CONFIG_RKP_CFP_ROPP_FIXKEY
-	task_thread_info(p)->rrk = ropp_fixed_key;
-#elif defined CONFIG_RKP_CFP_ROPP_ZEROKEY
-	task_thread_info(p)->rrk = 0x0;
-#else
-	#error "Please choose one ROPP key scheme"
-#endif
-}
-#endif
-
 int copy_thread(unsigned long clone_flags, unsigned long stack_start,
 		unsigned long stk_sz, struct task_struct *p)
 {
@@ -391,16 +421,9 @@ int copy_thread(unsigned long clone_flags, unsigned long stack_start,
 		if (IS_ENABLED(CONFIG_ARM64_UAO) &&
 		    cpus_have_const_cap(ARM64_HAS_UAO))
 			childregs->pstate |= PSR_UAO_BIT;
-
-		if (arm64_get_ssbd_state() == ARM64_SSBD_FORCE_DISABLE)
-			childregs->pstate |= PSR_SSBS_BIT;
-
 		p->thread.cpu_context.x19 = stack_start;
 		p->thread.cpu_context.x20 = stk_sz;
 	}
-#ifdef CONFIG_RKP_CFP_ROPP
-	ropp_change_key(p);
-#endif
 	p->thread.cpu_context.pc = (unsigned long)ret_from_fork;
 	p->thread.cpu_context.sp = (unsigned long)childregs;
 

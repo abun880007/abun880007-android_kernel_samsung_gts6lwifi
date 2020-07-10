@@ -688,8 +688,7 @@ void device_add_disk(struct device *parent, struct gendisk *disk)
 
 	/* Register BDI before referencing it from bdev */
 	bdi = disk->queue->backing_dev_info;
-	retval = bdi_register_owner(bdi, disk_to_dev(disk));
-	WARN_ON(retval);
+	bdi_register_owner(bdi, disk_to_dev(disk));
 
 	blk_register_region(disk_devt(disk), disk->minors, NULL,
 			    exact_match, exact_lock, disk);
@@ -702,11 +701,9 @@ void device_add_disk(struct device *parent, struct gendisk *disk)
 	 */
 	WARN_ON_ONCE(!blk_get_queue(disk->queue));
 
-	if (!retval) {
-		retval = sysfs_create_link(&disk_to_dev(disk)->kobj,
-				&bdi->dev->kobj, "bdi");
-		WARN_ON(retval);
-	}
+	retval = sysfs_create_link(&disk_to_dev(disk)->kobj, &bdi->dev->kobj,
+				   "bdi");
+	WARN_ON(retval);
 
 	disk_add_events(disk);
 	blk_integrity_add(disk);
@@ -1161,6 +1158,7 @@ static ssize_t disk_discard_alignment_show(struct device *dev,
 	return sprintf(buf, "%d\n", queue_discard_alignment(disk->queue));
 }
 
+/* IOPP-bigdata-v2.0.4.14 */
 #undef DISCARD
 
 #define DISCARD	(WRITE + 1)
@@ -1221,12 +1219,11 @@ static ssize_t disk_ios_show(struct device *dev,
 	return ret;
 }
 
-
 /* IOPP-iomon-v1.0.4.14 */
 #define SEC2MB(x) ((unsigned long)((x) / 2 / 1024))
-static ssize_t iomon_show(struct device *dev,
-		struct device_attribute *attr,
-		char *buf)
+static ssize_t iomon_show(struct device *dev, 
+			  struct device_attribute *attr, 
+			  char *buf)
 {
 	struct gendisk *disk = dev_to_disk(dev);
 	struct hd_struct *hd = dev_to_part(dev);
@@ -1241,31 +1238,31 @@ static ssize_t iomon_show(struct device *dev,
 	nwrite = part_in_flight_write(hd);
 
 	ret = sprintf(buf, "rc %lu rmb %lu "
-			"wc %lu wmb %lu dc %lu dmb %lu "
-			"inp %u %u "
-			"iot %u %llu \n",
-			part_stat_read(hd, ios[READ]),
-			SEC2MB(part_stat_read(hd, sectors[READ])),
+		"wc %lu wmb %lu dc %lu dmb %lu "
+		"inp %u %u "
+		"iot %u %llu \n",
+		part_stat_read(hd, ios[READ]),
+		SEC2MB(part_stat_read(hd, sectors[READ])),
 
-			part_stat_read(hd, ios[WRITE]) -
-			part_stat_read(hd, discard_ios) - part_stat_read(hd, flush_ios),
-			SEC2MB(part_stat_read(hd, sectors[WRITE])) -
-			SEC2MB(part_stat_read(hd, discard_sectors)),
-			part_stat_read(hd, discard_ios),
-			SEC2MB(part_stat_read(hd, discard_sectors)),
+		part_stat_read(hd, ios[WRITE]) -
+		part_stat_read(hd, discard_ios) - part_stat_read(hd, flush_ios),
+		SEC2MB(part_stat_read(hd, sectors[WRITE])) -
+		SEC2MB(part_stat_read(hd, discard_sectors)),
+		part_stat_read(hd, discard_ios),
+		SEC2MB(part_stat_read(hd, discard_sectors)),
 
-			nread,
-			nwrite,
+		nread,
+		nwrite,
 
-			jiffies_to_msecs(part_stat_read(hd, io_ticks)),
-			disk->queue->in_flight_time / USEC_PER_MSEC);
+		jiffies_to_msecs(part_stat_read(hd, io_ticks)),
+		disk->queue->in_flight_time / USEC_PER_MSEC);
 
 	return ret;
 }
 
 static ssize_t iomon_store(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t count)
+			   struct device_attribute *attr,
+			   const char *buf, size_t count)
 {
 	struct gendisk *disk = dev_to_disk(dev);
 	struct hd_struct *hd = dev_to_part(dev);
@@ -1284,24 +1281,24 @@ static ssize_t iomon_store(struct device *dev,
 
 	if(!strcmp(action, "c") || !strcmp(action, "s") || !strcmp(action, "e")) {
 		ologk("rc %lu rmb %lu "
-				"wc %lu wmb %lu dc %lu dmb %lu "
-				"inp %u %u "
-				"iot %u %llu ",
-				part_stat_read(hd, ios[READ]),
-				SEC2MB(part_stat_read(hd, sectors[READ])),
+			"wc %lu wmb %lu dc %lu dmb %lu "
+			"inp %u %u "
+			"iot %u %llu ",
+			part_stat_read(hd, ios[READ]),
+			SEC2MB(part_stat_read(hd, sectors[READ])),
 
-				part_stat_read(hd, ios[WRITE]) -
-				part_stat_read(hd, discard_ios) - part_stat_read(hd, flush_ios),
-				SEC2MB(part_stat_read(hd, sectors[WRITE])) -
-				SEC2MB(part_stat_read(hd, discard_sectors)),
-				part_stat_read(hd, discard_ios),
-				SEC2MB(part_stat_read(hd, discard_sectors)),
+			part_stat_read(hd, ios[WRITE]) - 
+			part_stat_read(hd, discard_ios) - part_stat_read(hd, flush_ios),
+			SEC2MB(part_stat_read(hd, sectors[WRITE])) - 
+			SEC2MB(part_stat_read(hd, discard_sectors)),
+			part_stat_read(hd, discard_ios),
+			SEC2MB(part_stat_read(hd, discard_sectors)),
 
-				nread,
-				nwrite,
+			nread,
+			nwrite,
 
-				jiffies_to_msecs(part_stat_read(hd, io_ticks)),
-				disk->queue->in_flight_time / USEC_PER_MSEC);
+			jiffies_to_msecs(part_stat_read(hd, io_ticks)),
+			disk->queue->in_flight_time / USEC_PER_MSEC);
 	}
 
 	return count;
@@ -1438,8 +1435,8 @@ static ssize_t iobd_show(struct device *dev,
 
 	return ret;
 }
-#undef DISCARD
 
+#undef DISCARD
 
 static DEVICE_ATTR(range, S_IRUGO, disk_range_show, NULL);
 static DEVICE_ATTR(ext_range, S_IRUGO, disk_ext_range_show, NULL);
@@ -1613,16 +1610,17 @@ static int disk_uevent(struct device *dev, struct kobj_uevent_env *env)
 	struct hd_struct *part;
 	int cnt = 0;
 
-	disk_part_iter_init(&piter, disk, 0);
-	while((part = disk_part_iter_next(&piter)))
-		cnt++;
-	disk_part_iter_exit(&piter);
-	add_uevent_var(env, "NPARTS=%u", cnt);
-
-	if (disk->interfaces == GENHD_IF_USB) {
-		add_uevent_var(env, "MEDIAPRST=%d", disk->media_present);
-		pr_info("%s %d, disk->media_present=%d, cnt=%d, disk->disk_name=%s\n",
-				__func__, __LINE__, disk->media_present, cnt, disk->disk_name);
+	if (disk->flags & GENHD_FL_IF_USB) {
+		disk_part_iter_init(&piter, disk, 0);
+		while ((part = disk_part_iter_next(&piter)))
+			cnt++;
+		disk_part_iter_exit(&piter);
+		add_uevent_var(env, "NPARTS=%u", cnt);
+		add_uevent_var(env, "MEDIAPRST=%d",
+			(disk->flags & GENHD_FL_MEDIA_PRESENT) ? 1 : 0);
+		pr_info("%s %d, disk flag media_present=%d, cnt=%d\n",
+			__func__, __LINE__,
+			(disk->flags & GENHD_FL_MEDIA_PRESENT), cnt);
 	}
 	return 0;
 }
@@ -1724,6 +1722,7 @@ static const struct file_operations proc_diskstats_operations = {
 	.release	= seq_release,
 };
 
+/* IOPP-iod-v1.0.4.14 */
 #define PG2KB(x) ((unsigned long)((x) << (PAGE_SHIFT - 10)))
 static int iostats_show(struct seq_file *seqf, void *v)
 {
@@ -2242,12 +2241,12 @@ static void disk_check_events(struct disk_events *ev,
 	int nr_events = 0, i;
 
 #ifdef CONFIG_USB_STORAGE_DETECT
-	events = 0;
-	if (disk->interfaces != GENHD_IF_USB)
-	/* check events */
+	if (!(disk->flags & GENHD_FL_IF_USB))
+		/* check events */
 		events = disk->fops->check_events(disk, clearing);
+	else
+		events = 0;
 #else
-	/* check events */
 	events = disk->fops->check_events(disk, clearing);
 #endif
 
@@ -2275,8 +2274,11 @@ static void disk_check_events(struct disk_events *ev,
 			envp[nr_events++] = disk_uevents[i];
 
 #ifdef CONFIG_USB_STORAGE_DETECT
-	if (nr_events && disk->interfaces != GENHD_IF_USB)
-		kobject_uevent_env(&disk_to_dev(disk)->kobj, KOBJ_CHANGE, envp);
+	if (!(disk->flags & GENHD_FL_IF_USB)) {
+		if (nr_events)
+			kobject_uevent_env(&disk_to_dev(disk)->kobj,
+					KOBJ_CHANGE, envp);
+	}
 #else
 	if (nr_events)
 		kobject_uevent_env(&disk_to_dev(disk)->kobj, KOBJ_CHANGE, envp);

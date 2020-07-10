@@ -44,18 +44,13 @@ extern int s2mm005_write_byte_16(const struct i2c_client *i2c, u16 reg, u8 val);
 extern void s2mm005_rprd_mode_change(struct s2mm005_data *usbpd_data, u8 mode);
 extern void s2mm005_manual_JIGON(struct s2mm005_data *usbpd_data, int mode);
 extern void s2mm005_manual_LPM(struct s2mm005_data *usbpd_data, int cmd);
-#if defined(CONFIG_CCIC_S2MM005_ANALOG_AUDIO)
-extern void s2mm005_manual_ACC_LPM(struct s2mm005_data *usbpd_data);
-#endif
 extern void s2mm005_control_option_command(struct s2mm005_data *usbpd_data, int cmd);
 extern void s2mm005_set_upsm_mode(void);
-extern void s2mm005_set_cabletype_as_TA(void);
 ////////////////////////////////////////////////////////////////////////////////
 // external functions in s2mm005_cc.c
 ////////////////////////////////////////////////////////////////////////////////
 extern void process_cc_attach(void * data, u8 *plug_attach_done);
 extern void process_cc_detach(void * data);
-extern void process_message_role(void *data);
 extern void process_cc_get_int_status(void *data, uint32_t *pPRT_MSG, MSG_IRQ_STATUS_Type *MSG_IRQ_State);
 extern void process_cc_rid(void * data);
 extern void ccic_event_work(void *data, int dest, int id, int attach, int event,
@@ -71,14 +66,8 @@ extern int dual_role_set_prop(struct dual_role_phy_instance *dual_role,
 			      const unsigned int *val);
 extern int dual_role_is_writeable(struct dual_role_phy_instance *drp,
 				  enum dual_role_property prop);
-#elif defined(CONFIG_TYPEC)
-void typec_role_swap_check(struct work_struct *wk);
-int s2mm005_port_type_set(const struct typec_capability *cap, enum typec_port_type port_type);
-int s2mm005_get_pd_support(struct s2mm005_data *usbpd_data);
-extern int s2mm005_pr_set(const struct typec_capability *cap, enum typec_role role);
-extern int s2mm005_dr_set(const struct typec_capability *cap, enum typec_data_role role);
-#endif
 extern void dp_detach(void *data);
+#endif
 ////////////////////////////////////////////////////////////////////////////////
 // external functions in ccic_alternate.c
 ////////////////////////////////////////////////////////////////////////////////
@@ -86,22 +75,18 @@ extern void send_alternate_message(void * data, int cmd);
 extern void receive_alternate_message(void * data, VDM_MSG_IRQ_STATUS_Type *VDM_MSG_IRQ_State);
 extern int ccic_register_switch_device(int mode);
 extern void acc_detach_check(struct work_struct *work);
-extern void send_unstructured_vdm_message(void *data, int cmd);
-extern void receive_unstructured_vdm_message(void *data, SSM_MSG_IRQ_STATUS_Type *SSM_MSG_IRQ_State);
-extern void send_role_swap_message(void *data, int cmd);
-extern void send_attention_message(void *data, int cmd);
-extern void do_alternate_mode_step_by_step(void *data, int cmd);
-extern void set_usb_phy_completion(int kind);
+extern void send_unstructured_vdm_message(void * data, int cmd);
+extern void receive_unstructured_vdm_message(void * data, SSM_MSG_IRQ_STATUS_Type *SSM_MSG_IRQ_State);
+extern void send_role_swap_message(void * data, int cmd);
+extern void send_attention_message(void * data, int cmd);
+extern void do_alternate_mode_step_by_step(void * data, int cmd);
 extern void set_enable_alternate_mode(int mode);
 extern void set_clear_discover_mode(void);
 extern void set_host_turn_on_event(int mode);
-extern int get_diplayport_status(void);
 ////////////////////////////////////////////////////////////////////////////////
 // external functions in s2mm005_pd.c
 ////////////////////////////////////////////////////////////////////////////////
-extern void select_pdo(int num);
 extern void s2mm005_select_pdo(int num);
-extern void (*fp_select_pdo)(int num);
 extern void vbus_turn_on_ctrl(bool enable);
 extern void process_pd(void *data, u8 plug_attach_done, u8 *pdic_attach, MSG_IRQ_STATUS_Type *MSG_IRQ_State);
 

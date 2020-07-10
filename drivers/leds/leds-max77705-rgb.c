@@ -7,10 +7,6 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-
-#define DRIVER_NAME		"leds-max77705-rgb"
-#define pr_fmt(fmt)		DRIVER_NAME ": " fmt
-
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/i2c.h>
@@ -344,6 +340,7 @@ static struct max77705_rgb_platform_data
 			*max77705_rgb_parse_dt(struct device *dev)
 {
 	struct max77705_rgb_platform_data *pdata;
+	struct device_node *nproot = dev->parent->of_node;
 	struct device_node *np;
 	int ret;
 	int i;
@@ -364,7 +361,7 @@ static struct max77705_rgb_platform_data
 	if (unlikely(pdata == NULL))
 		return ERR_PTR(-ENOMEM);
 
-	np = of_find_node_by_name(NULL, "rgb");
+	np = of_find_node_by_name(nproot, "rgb");
 	if (unlikely(np == NULL)) {
 		dev_err(dev, "rgb node not found\n");
 		devm_kfree(dev, pdata);
@@ -395,7 +392,7 @@ static struct max77705_rgb_platform_data
 	if (led_device_type == 0) {
 		switch (octa_color) {
 		case 0:
-			strncpy(octa, "_u", OCTA_LEN);
+			strncpy(octa, "_uu", OCTA_LEN);
 			break;
 		case 1:
 			strncpy(octa, "_bk", OCTA_LEN);
@@ -605,8 +602,6 @@ static ssize_t store_max77705_rgb_pattern(struct device *dev,
 
 	case CHARGING:
 		max77705_rgb_set_state(&max77705_rgb->led[RED], led_dynamic_current, LED_ALWAYS_ON);
-		/* temp */
-		max77705_rgb_set_state(&max77705_rgb->led[GREEN], led_dynamic_current, LED_ALWAYS_ON);
 		break;
 	case CHARGING_ERR:
 		max77705_rgb_blink(dev, 500, 500);
@@ -626,8 +621,7 @@ static ssize_t store_max77705_rgb_pattern(struct device *dev,
 	case POWERING:
 		max77705_rgb_ramp(dev, 800, 800);
 		max77705_rgb_blink(dev, 200, 200);
-		//max77705_rgb_set_state(&max77705_rgb->led[BLUE], led_dynamic_current, LED_ALWAYS_ON);
-		max77705_rgb_set_state(&max77705_rgb->led[RED], led_dynamic_current, LED_BLINK);
+		max77705_rgb_set_state(&max77705_rgb->led[BLUE], led_dynamic_current, LED_ALWAYS_ON);
 		max77705_rgb_set_state(&max77705_rgb->led[GREEN], led_dynamic_current, LED_BLINK);
 		break;
 	default:
@@ -666,6 +660,8 @@ static ssize_t store_max77705_rgb_blink(struct device *dev,
 	u8 led_b_brightness = 0;
 	unsigned int led_total_br = 0;
 	unsigned int led_max_br = 0;
+	u8 led_en = 0;
+	int led_num = 0;
 	int ret;
 
 	ret = sscanf(buf, "0x%8x %5d %5d", &led_brightness,
@@ -738,17 +734,30 @@ static ssize_t store_max77705_rgb_blink(struct device *dev,
 		}
 	}
 
-	if (led_r_brightness)
-		max77705_rgb_set_state(&max77705_rgb->led[RED], led_r_brightness, LED_BLINK);
+	if (led_r_brightness) {
+		max77705_rgb_set_state(&max77705_rgb->led[RED], led_r_brightness, LED_DISABLE);
+		led_num = max77705_rgb_number(&max77705_rgb->led[RED], &max77705_rgb);
+		led_en |= LED_BLINK << 2*led_num;
+	}
 
-	if (led_g_brightness)
-		max77705_rgb_set_state(&max77705_rgb->led[GREEN], led_g_brightness, LED_BLINK);
+	if (led_g_brightness) {
+		max77705_rgb_set_state(&max77705_rgb->led[GREEN], led_g_brightness, LED_DISABLE);
+		led_num = max77705_rgb_number(&max77705_rgb->led[GREEN], &max77705_rgb);
+		led_en |= LED_BLINK << 2*led_num;
+	}
 
-	if (led_b_brightness)
-		max77705_rgb_set_state(&max77705_rgb->led[BLUE], led_b_brightness, LED_BLINK);
+	if (led_b_brightness) {
+		max77705_rgb_set_state(&max77705_rgb->led[BLUE], led_b_brightness, LED_DISABLE);
+		led_num = max77705_rgb_number(&max77705_rgb->led[BLUE], &max77705_rgb);
+		led_en |= LED_BLINK << 2*led_num;
+	}
 
 	/*Set LED blink mode*/
 	max77705_rgb_blink(dev, delay_on_time, delay_off_time);
+
+	ret = max77705_update_reg(max77705_rgb->i2c, MAX77705_RGBLED_REG_LEDEN, led_en, 0xff);
+	if (ret < 0)
+		dev_err(dev, "can't write FLASH_EN : %d\n", ret);
 
 	pr_info("leds-max77705-rgb: %s, delay_on_time: %d, delay_off_time: %d, color: 0x%x, lowpower: %i\n",
 			__func__, delay_on_time, delay_off_time, led_brightness, led_lowpower_mode);
@@ -903,50 +912,6 @@ static ssize_t led_blink_store(struct device *dev,
 	return count;
 }
 
-static ssize_t rgb_tuning_show(struct device *dev,
-				struct device_attribute *attr,
-				char *buf)
-{
-	int red, green, blue;
-
-	if (led_lowpower_mode) {
-		red = brightness_ratio_r_low;
-		green = brightness_ratio_g_low;
-		blue = brightness_ratio_b_low;
-	} else {
-		red = brightness_ratio_r;
-		green = brightness_ratio_g;
-		blue = brightness_ratio_b;
-	}
-
-	return sprintf(buf, "%s: %s [RED: %d, GREEN: %d, BLUE: %d LOWPOWER: %d]\n",
-			DRIVER_NAME, __func__, red,
-			green, blue, led_lowpower_mode);
-}
-
-static ssize_t rgb_tuning_store(struct device *dev,
-			struct device_attribute *attr,
-			const char *buf, size_t count)
-{
-	int ret, red, green, blue, lowpower;
-
-	ret = sscanf(buf, "%d %d %d %d", &red, &green, &blue, &lowpower);
-
-	led_lowpower_mode = lowpower;
-
-	if (led_lowpower_mode) {
-		brightness_ratio_r_low = red;
-		brightness_ratio_g_low = green;
-		brightness_ratio_b_low = blue;
-	} else {
-		brightness_ratio_r = red;
-		brightness_ratio_g = green;
-		brightness_ratio_b = blue;
-	}
-
-	return count;
-}
-
 /* permission for sysfs node */
 static DEVICE_ATTR(delay_on, 0640, led_delay_on_show, led_delay_on_store);
 static DEVICE_ATTR(delay_off, 0640, led_delay_off_show, led_delay_off_store);
@@ -963,7 +928,6 @@ static DEVICE_ATTR(led_pattern, 0660, show_max77705_rgb_pattern, store_max77705_
 static DEVICE_ATTR(led_blink, 0660, show_max77705_rgb_blink,  store_max77705_rgb_blink);
 static DEVICE_ATTR(led_brightness, 0660, show_max77705_rgb_brightness, store_max77705_rgb_brightness);
 static DEVICE_ATTR(led_lowpower, 0660, show_max77705_rgb_lowpower,  store_max77705_rgb_lowpower);
-static DEVICE_ATTR(led_tuning, 0660, rgb_tuning_show, rgb_tuning_store);
 #endif
 
 static struct attribute *led_class_attrs[] = {
@@ -986,7 +950,6 @@ static struct attribute *sec_led_attributes[] = {
 	&dev_attr_led_blink.attr,
 	&dev_attr_led_brightness.attr,
 	&dev_attr_led_lowpower.attr,
-	&dev_attr_led_tuning.attr,
 	NULL,
 };
 
@@ -1005,8 +968,7 @@ static int max77705_rgb_probe(struct platform_device *pdev)
 
 	pr_info("leds-max77705-rgb: %s\n", __func__);
 
-//	octa_color = get_lcd_info("window_color");
-	octa_color = 0;
+	octa_color = get_lcd_info("window_color");
 #ifdef CONFIG_OF
 	pdata = max77705_rgb_parse_dt(dev);
 	if (unlikely(IS_ERR(pdata)))
@@ -1054,7 +1016,7 @@ static int max77705_rgb_probe(struct platform_device *pdev)
 		}
 	}
 
-	led_dev = sec_device_create(0, max77705_rgb, "led");
+	led_dev = sec_device_create(max77705_rgb, "led");
 	if (IS_ERR(led_dev)) {
 		dev_err(dev, "Failed to create device for samsung specific led\n");
 		goto create_err_flash;
@@ -1090,8 +1052,13 @@ static int max77705_rgb_remove(struct platform_device *pdev)
 	struct max77705_rgb *max77705_rgb = platform_get_drvdata(pdev);
 	int i;
 
-	for (i = 0; i < 4; i++)
+	sysfs_remove_group(&led_dev->kobj, &sec_led_attr_group);
+	sec_device_destroy(led_dev->devt);
+	for (i = 0; i < 4; i++) {
+		sysfs_remove_group(&max77705_rgb->led[i].dev->kobj,
+						&common_led_attr_group);
 		led_classdev_unregister(&max77705_rgb->led[i]);
+	}
 
 	return 0;
 }

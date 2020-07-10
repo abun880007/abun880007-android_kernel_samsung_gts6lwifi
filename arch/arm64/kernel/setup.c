@@ -63,15 +63,12 @@
 #include <asm/efi.h>
 #include <asm/xen/hypervisor.h>
 #include <asm/mmu_context.h>
-#include <asm/system_misc.h>
+
+#if defined(CONFIG_ECT)
+#include <soc/samsung/ect_parser.h>
+#endif
 
 phys_addr_t __fdt_pointer __initdata;
-
-unsigned int boot_reason;
-EXPORT_SYMBOL(boot_reason);
-
-unsigned int cold_boot;
-EXPORT_SYMBOL(cold_boot);
 
 /*
  * Standard memory resources
@@ -112,6 +109,34 @@ void __init smp_setup_processor_id(void)
 	set_my_cpu_offset(0);
 	pr_info("Booting Linux on physical CPU 0x%lx\n", (unsigned long)mpidr);
 }
+
+#if defined(CONFIG_ECT)
+int __init early_init_dt_scan_ect(unsigned long node, const char *uname,
+		int depth, void *data)
+{
+	int address = 0, size = 0;
+	const __be32 *paddr, *psize;
+
+	if (depth != 1 || (strcmp(uname, "ect") != 0))
+		return 0;
+
+	paddr = of_get_flat_dt_prop(node, "parameter_address", &address);
+	if (paddr == NULL)
+		return 0;
+
+	psize = of_get_flat_dt_prop(node, "parameter_size", &size);
+	if (psize == NULL)
+		return -1;
+
+	pr_info("[ECT] Address %x, Size %x\b", be32_to_cpu(*paddr), be32_to_cpu(*psize));
+	set_memsize_reserved_name("ECT_param");
+	memblock_reserve(be32_to_cpu(*paddr), be32_to_cpu(*psize));
+	unset_memsize_reserved_name();
+	ect_init(be32_to_cpu(*paddr), be32_to_cpu(*psize));
+
+	return 1;
+}
+#endif
 
 bool arch_match_cpu_phys_id(int cpu, u64 phys_id)
 {
@@ -184,15 +209,10 @@ static void __init smp_build_mpidr_hash(void)
 		pr_warn("Large number of MPIDR hash buckets detected\n");
 }
 
-const char * __init __weak arch_read_machine_name(void)
-{
-	return of_flat_dt_get_machine_name();
-}
-
 static void __init setup_machine_fdt(phys_addr_t dt_phys)
 {
 	void *dt_virt = fixmap_remap_fdt(dt_phys);
-	const char *machine_name;
+	const char *name;
 
 	if (!dt_virt || !early_init_dt_scan(dt_virt)) {
 		pr_crit("\n"
@@ -205,12 +225,17 @@ static void __init setup_machine_fdt(phys_addr_t dt_phys)
 			cpu_relax();
 	}
 
-	machine_name = arch_read_machine_name();
-	if (!machine_name)
+	name = of_flat_dt_get_machine_name();
+	if (!name)
 		return;
 
-	pr_info("Machine: %s\n", machine_name);
-	dump_stack_set_arch_desc("%s (DT)", machine_name);
+	pr_info("Machine model: %s\n", name);
+	dump_stack_set_arch_desc("%s (DT)", name);
+
+#if defined(CONFIG_ECT)
+	/* Scan dvfs paramter information, address that loaded on DRAM and size */
+	of_scan_flat_dt(early_init_dt_scan_ect, NULL);
+#endif
 }
 
 static void __init request_standard_resources(void)
@@ -253,8 +278,6 @@ static void __init request_standard_resources(void)
 }
 
 u64 __cpu_logical_map[NR_CPUS] = { [0 ... NR_CPUS-1] = INVALID_HWID };
-
-void __init __weak init_random_pool(void) { }
 
 void __init setup_arch(char **cmdline_p)
 {
@@ -340,8 +363,6 @@ void __init setup_arch(char **cmdline_p)
 			"This indicates a broken bootloader or old kernel\n",
 			boot_args[1], boot_args[2], boot_args[3]);
 	}
-
-	init_random_pool();
 }
 
 static int __init topology_init(void)
@@ -359,7 +380,7 @@ static int __init topology_init(void)
 
 	return 0;
 }
-postcore_initcall(topology_init);
+subsys_initcall(topology_init);
 
 /*
  * Dump out kernel offset information on panic.

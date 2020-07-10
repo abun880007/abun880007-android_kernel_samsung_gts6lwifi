@@ -40,7 +40,8 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 	/* FIXME not zeroing the page */
 	pmd_t *rkp_ropage = NULL;
 
-	if (mm == &init_mm && (rkp_ropage = (pmd_t *)rkp_ro_alloc()))
+	rkp_ropage = (pmd_t *)rkp_ro_alloc();
+	if (rkp_ropage)
 		return rkp_ropage;
 	else
 #endif
@@ -51,7 +52,7 @@ static inline void pmd_free(struct mm_struct *mm, pmd_t *pmd)
 {
 	BUG_ON((unsigned long)pmd & (PAGE_SIZE-1));
 #ifdef CONFIG_UH_RKP
-	if (is_rkp_ro_page((unsigned long)pmd))
+	if (is_rkp_ro_page((u64)pmd))
 		rkp_ro_free((void *)pmd);
 	else
 #endif
@@ -93,7 +94,7 @@ static inline void pud_free(struct mm_struct *mm, pud_t *pud)
 {
 	BUG_ON((unsigned long)pud & (PAGE_SIZE-1));
 #ifdef CONFIG_UH_RKP
-	if (is_rkp_ro_page((unsigned long)pud))
+	if (is_rkp_ro_page((u64)pud))
 		rkp_ro_free((void *)pud);
 	else
 #endif
@@ -122,6 +123,10 @@ extern void pgd_free(struct mm_struct *mm, pgd_t *pgd);
 static inline pte_t *
 pte_alloc_one_kernel(struct mm_struct *mm, unsigned long addr)
 {
+#ifdef CONFIG_UH_RKP
+	if (addr_rkp_ro(addr))
+		return (pte_t *)rkp_ro_alloc();
+#endif
 	return (pte_t *)__get_free_page(PGALLOC_GFP);
 }
 

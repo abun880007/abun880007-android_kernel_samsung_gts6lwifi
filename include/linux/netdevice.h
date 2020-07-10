@@ -1901,6 +1901,9 @@ struct net_device {
 	struct lock_class_key	*qdisc_tx_busylock;
 	struct lock_class_key	*qdisc_running_key;
 	bool			proto_down;
+#ifdef CONFIG_NETPM
+	bool netpm_use;
+#endif
 };
 #define to_net_dev(d) container_of(d, struct net_device, dev)
 
@@ -2140,10 +2143,13 @@ struct napi_gro_cb {
 	/* Used in GRE, set in fou/gue_gro_receive */
 	u8	is_fou:1;
 
+	/* Used to determine if flush_id can be ignored */
+	u8	is_atomic:1;
+
 	/* Number of gro_receive callbacks this packet already went through */
 	u8 recursion_counter:4;
 
-	/* 2 bit hole */
+	/* 1 bit hole */
 
 	/* used to support CHECKSUM_COMPLETE for tunneling protocols */
 	__wsum	csum;
@@ -2768,15 +2774,12 @@ extern int netdev_flow_limit_table_len;
  */
 struct softnet_data {
 	struct list_head	poll_list;
-	struct napi_struct	*current_napi;
 	struct sk_buff_head	process_queue;
 
 	/* stats */
 	unsigned int		processed;
 	unsigned int		time_squeeze;
 	unsigned int		received_rps;
-	unsigned int            gro_coalesced;
-
 #ifdef CONFIG_RPS
 	struct softnet_data	*rps_ipi_list;
 #endif
@@ -2802,6 +2805,10 @@ struct softnet_data {
 	unsigned int		dropped;
 	struct sk_buff_head	input_pkt_queue;
 	struct napi_struct	backlog;
+
+#ifdef CONFIG_MODEM_IF_NET_GRO
+	struct napi_struct	*current_napi;
+#endif
 
 };
 
@@ -3282,7 +3289,10 @@ struct sk_buff *napi_get_frags(struct napi_struct *napi);
 gro_result_t napi_gro_frags(struct napi_struct *napi);
 struct packet_offload *gro_find_receive_by_type(__be16 type);
 struct packet_offload *gro_find_complete_by_type(__be16 type);
-extern struct napi_struct *get_current_napi_context(void);
+
+#if defined(CONFIG_SEC_SIPC_MODEM_IF) || defined(CONFIG_SEC_SIPC_DUAL_MODEM_IF)
+struct napi_struct *napi_get_current(void);
+#endif
 
 static inline void napi_free_frags(struct napi_struct *napi)
 {
@@ -3346,6 +3356,7 @@ static __always_inline int ____dev_forward_skb(struct net_device *dev,
 	return 0;
 }
 
+
 void dev_queue_xmit_nit(struct sk_buff *skb, struct net_device *dev);
 
 extern int		netdev_budget;
@@ -3362,9 +3373,6 @@ void netdev_run_todo(void);
  */
 static inline void dev_put(struct net_device *dev)
 {
-	if (!dev->pcpu_refcnt)
-		return;
-
 	this_cpu_dec(*dev->pcpu_refcnt);
 }
 
@@ -3869,6 +3877,9 @@ void netdev_stats_to_stats64(struct rtnl_link_stats64 *stats64,
 extern int		netdev_max_backlog;
 extern int		netdev_tstamp_prequeue;
 extern int		weight_p;
+#ifdef CONFIG_NET_SUPPORT_DROPDUMP
+extern int		netdev_support_dropdump;
+#endif
 extern int		dev_weight_rx_bias;
 extern int		dev_weight_tx_bias;
 extern int		dev_rx_weight;
@@ -4067,6 +4078,14 @@ static inline void netdev_class_remove_file(const struct class_attribute *class_
 
 extern const struct kobj_ns_type_operations net_ns_type_operations;
 
+extern ssize_t netdev_show_rps_map(struct netdev_rx_queue *queue, char *buf);
+extern ssize_t netdev_store_rps_map(struct netdev_rx_queue *queue,
+			     const char *buf, size_t len);
+extern ssize_t netdev_show_rps_dev_flow_table_cnt(struct netdev_rx_queue *queue,
+					   char *buf);
+extern ssize_t netdev_store_rps_dev_flow_table_cnt(struct netdev_rx_queue *queue,
+					    const char *buf, size_t len);
+
 const char *netdev_drivername(const struct net_device *dev);
 
 void linkwatch_run_queue(void);
@@ -4136,7 +4155,6 @@ static inline bool net_gso_ok(netdev_features_t features, int gso_type)
 	BUILD_BUG_ON(SKB_GSO_SCTP    != (NETIF_F_GSO_SCTP >> NETIF_F_GSO_SHIFT));
 	BUILD_BUG_ON(SKB_GSO_ESP != (NETIF_F_GSO_ESP >> NETIF_F_GSO_SHIFT));
 	BUILD_BUG_ON(SKB_GSO_UDP != (NETIF_F_GSO_UDP >> NETIF_F_GSO_SHIFT));
-	BUILD_BUG_ON(SKB_GSO_UDP_L4 != (NETIF_F_GSO_UDP_L4 >> NETIF_F_GSO_SHIFT));
 
 	return (features & feature) == feature;
 }
@@ -4474,5 +4492,7 @@ do {								\
  */
 #define PTYPE_HASH_SIZE	(16)
 #define PTYPE_HASH_MASK	(PTYPE_HASH_SIZE - 1)
+
+#include <uapi/linux/net_dropdump.h>
 
 #endif	/* _LINUX_NETDEVICE_H */

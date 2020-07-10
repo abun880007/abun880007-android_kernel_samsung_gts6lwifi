@@ -47,7 +47,6 @@ struct s2mpb03_platform_data {
 	int num_regulators;
 	struct	s2mpb03_regulator_data *regulators;
 	int	device_type;
-	bool	en_sw_init;
 };
 
 struct s2mpb03 {
@@ -93,7 +92,6 @@ enum S2MPB03_regulators {
 #define S2MPB03_RAMP_DELAY	12000
 
 #define S2MPB03_ENABLE_TIME_LDO		150
-#define S2MPB03_ENABLE_TIME_BUCK		150
 
 #define S2MPB03_ENABLE_SHIFT	0x07
 #define S2MPB03_LDO_N_VOLTAGES	(S2MPB03_LDO_VSEL_MASK + 1)

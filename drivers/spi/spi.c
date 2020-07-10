@@ -725,15 +725,6 @@ int spi_register_board_info(struct spi_board_info const *info, unsigned n)
 
 static void spi_set_cs(struct spi_device *spi, bool enable)
 {
-#ifdef ENABLE_SENSORS_FPRINT_SECURE
-	if (spi->master->bus_num == CONFIG_SENSORS_FP_SPI_NUMBER)
-		return;
-#endif
-#ifdef CONFIG_ESE_SECURE
-	if (spi->master->bus_num == CONFIG_ESE_SPI_NUMBER)
-		return;
-#endif
-
 	if (spi->mode & SPI_CS_HIGH)
 		enable = !enable;
 
@@ -1246,10 +1237,15 @@ static void __spi_pump_messages(struct spi_controller *ctlr, bool in_kthread)
 		ret = ctlr->prepare_transfer_hardware(ctlr);
 		if (ret) {
 			dev_err(&ctlr->dev,
-				"failed to prepare transfer hardware\n");
+				"failed to prepare transfer hardware: %d\n",
+				ret);
 
 			if (ctlr->auto_runtime_pm)
 				pm_runtime_put(ctlr->dev.parent);
+
+			ctlr->cur_msg->status = ret;
+			spi_finalize_current_message(ctlr);
+
 			mutex_unlock(&ctlr->io_mutex);
 			return;
 		}
@@ -1276,7 +1272,10 @@ static void __spi_pump_messages(struct spi_controller *ctlr, bool in_kthread)
 		goto out;
 	}
 
+	dbg_snapshot_spi(ctlr, ctlr->cur_msg, DSS_FLAG_IN);
 	ret = ctlr->transfer_one_message(ctlr, ctlr->cur_msg);
+	dbg_snapshot_spi(ctlr, ctlr->cur_msg, DSS_FLAG_OUT);
+
 	if (ret) {
 		dev_err(&ctlr->dev,
 			"failed to transfer one message from queue\n");

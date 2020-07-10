@@ -43,9 +43,6 @@ int main(void)
 #ifdef CONFIG_ARM64_SW_TTBR0_PAN
   DEFINE(TSK_TI_TTBR0,		offsetof(struct task_struct, thread_info.ttbr0));
 #endif
-#ifdef CONFIG_RKP_CFP_ROPP
-  DEFINE(TSK_TI_RRK,		offsetof(struct task_struct, thread_info.rrk));
-#endif
   DEFINE(TSK_STACK,		offsetof(struct task_struct, stack));
   BLANK();
   DEFINE(THREAD_CPU_CONTEXT,	offsetof(struct task_struct, thread.cpu_context));
@@ -89,6 +86,7 @@ int main(void)
   BLANK();
   DEFINE(VM_EXEC,	       	VM_EXEC);
   BLANK();
+  DEFINE(PRESERVE_STACK_SIZE,	PRESERVE_STACK_SIZE);
   DEFINE(PAGE_SZ,	       	PAGE_SIZE);
   BLANK();
   DEFINE(DMA_BIDIRECTIONAL,	DMA_BIDIRECTIONAL);

@@ -65,13 +65,6 @@ static bool sec_direct_chg_set_direct_charge(
 		(charger->ta_alert_mode == OCP_NONE)) {
 		pr_info("%s: charger_mode is same(%s)\n", __func__,
 			sec_direct_charger_mode_str[charger->charger_mode_direct]);
-#if defined(CONFIG_FUELGAUGE_S2MU106)
-		if (charger_mode == SEC_BAT_CHG_MODE_CHARGING) {
-			value.intval = charger_mode;
-			psy_do_property("s2mu106-fuelgauge", set,
-				POWER_SUPPLY_PROP_CHARGING_ENABLED, value);
-		}
-#endif
 		return false;
 	}
 
@@ -88,12 +81,6 @@ static bool sec_direct_chg_set_direct_charge(
 	psy_do_property(charger->pdata->direct_charger_name, set,
 		POWER_SUPPLY_PROP_CHARGING_ENABLED, value);
 
-#if defined(CONFIG_FUELGAUGE_S2MU106)
-	value.intval = charger_mode;
-	psy_do_property("s2mu106-fuelgauge", set,
-		POWER_SUPPLY_PROP_CHARGING_ENABLED, value);
-#endif
-
 	return true;
 }
 
@@ -105,18 +92,11 @@ static bool sec_direct_chg_set_switching_charge(
 	pr_info("%s: charger_mode(%s->%s)\n", __func__,
 		sec_direct_charger_mode_str[charger->charger_mode_main],
 		sec_direct_charger_mode_str[charger_mode]);
+	charger->charger_mode_main = charger_mode;
 
-	if ((charger->charger_mode_main != charger_mode)
-#if defined(CONFIG_LSI_IFPMIC)
-		|| (charger_mode == SEC_BAT_CHG_MODE_BUCK_OFF)
-#endif
-		) {
-		charger->charger_mode_main = charger_mode;
-
-		value.intval = charger_mode;
-		psy_do_property(charger->pdata->main_charger_name, set,
-			POWER_SUPPLY_PROP_CHARGING_ENABLED, value);
-	}
+	value.intval = charger_mode;
+	psy_do_property(charger->pdata->main_charger_name, set,
+		POWER_SUPPLY_PROP_CHARGING_ENABLED, value);
 
 	return true;
 }
@@ -151,7 +131,6 @@ static int sec_direct_chg_check_charging_source(struct sec_direct_charger_info *
 				POWER_SUPPLY_PROP_CAPACITY, value);
 	charger->capacity = value.intval;
 
-#if defined(CONFIG_WIRELESS_TX_MODE)
 	psy_do_property("battery", get,
 				POWER_SUPPLY_EXT_PROP_WIRELESS_TX_ENABLE, value);
 	charger->wc_tx_enable = value.intval;
@@ -159,7 +138,6 @@ static int sec_direct_chg_check_charging_source(struct sec_direct_charger_info *
 		pr_info("@TX_Mode %s: Source Switching charger during Tx mode\n", __func__);
 		return SEC_DIRECT_CHG_CHARGING_SOURCE_SWITCHING;
 	}
-#endif
 
 	psy_do_property("battery", get,
 				POWER_SUPPLY_PROP_TEMP, value);
@@ -399,10 +377,6 @@ static int sec_direct_chg_get_property(struct power_supply *psy,
 				val->intval = false;
 			break;
 		case POWER_SUPPLY_EXT_PROP_MEASURE_INPUT:
-			psy_do_property(charger->pdata->direct_charger_name, get, ext_psp, value);
-			val->intval = value.intval;
-			break;
-		case POWER_SUPPLY_EXT_PROP_DIRECT_VOLTAGE_MAX:
 			psy_do_property(charger->pdata->direct_charger_name, get, ext_psp, value);
 			val->intval = value.intval;
 			break;
@@ -752,7 +726,7 @@ static void sec_direct_charger_shutdown(struct platform_device *pdev)
 
 	pr_info("%s: ++\n", __func__);
 
-	value.intval = false;
+	value.intval = SEC_BAT_CHG_MODE_CHARGING_OFF;
 	psy_do_property(charger->pdata->direct_charger_name, set,
 		POWER_SUPPLY_PROP_CHARGING_ENABLED, value);
 

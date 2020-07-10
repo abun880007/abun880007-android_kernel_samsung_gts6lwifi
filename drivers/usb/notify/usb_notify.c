@@ -8,6 +8,7 @@
  */
 
  /* usb notify layer v3.2 */
+#define NOTIFY_VERSION "3.2"
 
 #define pr_fmt(fmt) "usb_notify: " fmt
 
@@ -23,7 +24,6 @@
 #include <linux/wakelock.h>
 #include <linux/kthread.h>
 #include <linux/usb_notify.h>
-#include <sound/core.h>
 #include "dock_notify.h"
 #include "usb_notify_sysfs.h"
 
@@ -63,6 +63,7 @@ struct otg_booting_delay {
 struct typec_info {
 	int data_role;
 	int power_role;
+	int pd;
 };
 
 struct usb_notify {
@@ -87,6 +88,7 @@ struct usb_notify {
 	int disable_v_drive;
 	unsigned long c_type;
 	int c_status;
+	int sec_whitelist_enable;
 #if defined(CONFIG_USB_HW_PARAM)
 	unsigned long long hw_param[USB_CCIC_HW_PARAM_MAX];
 #endif
@@ -124,6 +126,7 @@ static int check_event_type(enum otg_notify_events event)
 	case NOTIFY_EVENT_GAMEPAD_CONNECT:
 	case NOTIFY_EVENT_LANHUB_CONNECT:
 	case NOTIFY_EVENT_POWER_SOURCE:
+	case NOTIFY_EVENT_PD_CONTRACT:
 		ret |= NOTIFY_EVENT_EXTRA;
 		break;
 	case NOTIFY_EVENT_VBUS:
@@ -236,6 +239,8 @@ const char *event_string(enum otg_notify_events event)
 		return "lanhub_connect";
 	case NOTIFY_EVENT_POWER_SOURCE:
 		return "power_role_source";
+	case NOTIFY_EVENT_PD_CONTRACT:
+		return "pd_contract";
 	default:
 		return "undefined";
 	}
@@ -900,11 +905,11 @@ static void otg_notify_state(struct otg_notify *n,
 		if (enable) {
 			send_external_notify(EXTERNAL_NOTIFY_MDMBLOCK_PRE, 1);
 			/*whilte list start*/
-			n->sec_whitelist_enable = 1;
+			u_notify->sec_whitelist_enable = 1;
 			send_external_notify(EXTERNAL_NOTIFY_MDMBLOCK_POST, 1);
 		} else {
 			/*whilte list end*/
-			n->sec_whitelist_enable = 0;
+			u_notify->sec_whitelist_enable = 0;
 		}
 		goto no_save_event;
 	default:
@@ -1031,6 +1036,12 @@ static void extra_notify_state(struct otg_notify *n,
 			u_notify->typec_status.power_role = HNOTIFY_SINK;
 		send_external_notify(EXTERNAL_NOTIFY_POWERROLE,
 				u_notify->typec_status.power_role);
+		break;
+	case NOTIFY_EVENT_PD_CONTRACT:
+		if (enable)
+			u_notify->typec_status.pd = enable;
+		else
+			u_notify->typec_status.pd = 0;
 		break;
 	default:
 		break;
@@ -1192,28 +1203,27 @@ int set_notify_disable(struct usb_notify_dev *udev, int disable)
 
 	switch (disable) {
 	case NOTIFY_BLOCK_TYPE_ALL:
-		send_external_notify(EXTERNAL_NOTIFY_HOSTBLOCK_EARLY, 1);
 		if (is_host_cable_enable(n) ||
 			is_client_cable_enable(n)) {
-
 			pr_info("%s event=%s(%lu) disable\n", __func__,
 				event_string(VIRT_EVENT(u_notify->c_type)),
 					VIRT_EVENT(u_notify->c_type));
 			if (is_host_cable_enable(n)) {
 				if (!n->auto_drive_vbus &&
 					(u_notify->typec_status.power_role
-							== HNOTIFY_SOURCE) &&
+						 == HNOTIFY_SOURCE) &&
 					check_event_type(u_notify->c_type)
-							& NOTIFY_EVENT_NEED_VBUSDRIVE)
-					send_otg_notify(n, NOTIFY_EVENT_DRIVE_VBUS, 0);
+						& NOTIFY_EVENT_NEED_VBUSDRIVE)
+					send_otg_notify(n,
+						NOTIFY_EVENT_DRIVE_VBUS, 0);
 			} else {
 				if (u_notify->typec_status.power_role
-							== HNOTIFY_SOURCE)
-					send_otg_notify(n, NOTIFY_EVENT_DRIVE_VBUS, 0);
+						== HNOTIFY_SOURCE)
+					send_otg_notify(n,
+							NOTIFY_EVENT_DRIVE_VBUS, 0);
 			}
-
 			send_otg_notify(n, VIRT_EVENT(u_notify->c_type), 0);
-		} else {
+		}else {
 			if (u_notify->typec_status.power_role
 					== HNOTIFY_SOURCE)
 				send_otg_notify(n,
@@ -1228,7 +1238,6 @@ int set_notify_disable(struct usb_notify_dev *udev, int disable)
 #endif
 		break;
 	case NOTIFY_BLOCK_TYPE_HOST:
-		send_external_notify(EXTERNAL_NOTIFY_HOSTBLOCK_EARLY, 1);
 		if (is_host_cable_enable(n)) {
 
 			pr_info("%s event=%s(%lu) disable\n", __func__,
@@ -1237,7 +1246,7 @@ int set_notify_disable(struct usb_notify_dev *udev, int disable)
 
 			if (!n->auto_drive_vbus &&
 				(u_notify->typec_status.power_role
-						== HNOTIFY_SOURCE) &&
+					== HNOTIFY_SOURCE) &&
 				check_event_type(u_notify->c_type)
 						& NOTIFY_EVENT_NEED_VBUSDRIVE)
 				send_otg_notify(n, NOTIFY_EVENT_DRIVE_VBUS, 0);
@@ -1245,12 +1254,10 @@ int set_notify_disable(struct usb_notify_dev *udev, int disable)
 			send_otg_notify(n, VIRT_EVENT(u_notify->c_type), 0);
 		} else {
 			if (u_notify->typec_status.power_role
-						== HNOTIFY_SOURCE)
+					== HNOTIFY_SOURCE)
 				send_otg_notify(n, NOTIFY_EVENT_DRIVE_VBUS, 0);
 		}
-
 		send_otg_notify(n, NOTIFY_EVENT_HOST_DISABLE, 1);
-
 #ifdef CONFIG_USB_NOTIFY_PROC_LOG
 		usb_notify = NOTIFY_EVENT_HOST_DISABLE;
 		usb_notify_state = NOTIFY_EVENT_BLOCKED;
@@ -1297,15 +1304,14 @@ int set_notify_disable(struct usb_notify_dev *udev, int disable)
 				VIRT_EVENT(u_notify->c_type));
 		if (!n->auto_drive_vbus &&
 			(u_notify->typec_status.power_role
-					== HNOTIFY_SOURCE) &&
+				 == HNOTIFY_SOURCE) &&
 			check_event_type(u_notify->c_type)
-					& NOTIFY_EVENT_NEED_VBUSDRIVE)
+				& NOTIFY_EVENT_NEED_VBUSDRIVE)
 			send_otg_notify(n, NOTIFY_EVENT_DRIVE_VBUS, 1);
 
 		send_otg_notify(n, VIRT_EVENT(u_notify->c_type), 1);
 		break;
 	case NOTIFY_BLOCK_TYPE_NONE:
-		send_external_notify(EXTERNAL_NOTIFY_HOSTBLOCK_EARLY, 0);
 		send_otg_notify(n, NOTIFY_EVENT_ALL_DISABLE, 0);
 #ifdef CONFIG_USB_NOTIFY_PROC_LOG
 		usb_notify = NOTIFY_EVENT_ALL_DISABLE;
@@ -1313,36 +1319,33 @@ int set_notify_disable(struct usb_notify_dev *udev, int disable)
 		store_usblog_notify(NOTIFY_EVENT,
 			(void *)&usb_notify, (void *)&usb_notify_state);
 #endif
-
 		if (!is_host_cable_block(n) && !is_client_cable_block(n)) {
 			if (u_notify->typec_status.power_role
 					== HNOTIFY_SOURCE)
 				send_otg_notify(n, NOTIFY_EVENT_DRIVE_VBUS, 1);
 			goto skip;
 		}
-
+		
 		if (check_event_type(u_notify->c_type)
 				& NOTIFY_EVENT_NEED_HOST && n->unsupport_host)
 			goto skip;
-
 		pr_info("%s event=%s(%lu) enable\n", __func__,
 			event_string(VIRT_EVENT(u_notify->c_type)),
 				VIRT_EVENT(u_notify->c_type));
 		if (is_host_cable_block(n)) {
 			if (!n->auto_drive_vbus &&
 				(u_notify->typec_status.power_role
-						== HNOTIFY_SOURCE) &&
+						 == HNOTIFY_SOURCE) &&
 				check_event_type(u_notify->c_type)
-						& NOTIFY_EVENT_NEED_VBUSDRIVE)
+					& NOTIFY_EVENT_NEED_VBUSDRIVE)
 				send_otg_notify(n, NOTIFY_EVENT_DRIVE_VBUS, 1);
 		} else {
 			if (u_notify->typec_status.power_role
-						== HNOTIFY_SOURCE)
+					== HNOTIFY_SOURCE)
 				send_otg_notify(n, NOTIFY_EVENT_DRIVE_VBUS, 1);
 		}
-
 		send_otg_notify(n, VIRT_EVENT(u_notify->c_type), 1);
-		break;
+	break;
 	}
 skip:
 	return 0;
@@ -1462,7 +1465,7 @@ int usb_check_whitelist_for_mdm(struct usb_device *dev)
 		return 1;
 	}
 
-	if (o_notify->sec_whitelist_enable) {
+	if (u_notify->sec_whitelist_enable) {
 		whitelist_array = u_notify->udev.whitelist_array_for_mdm;
 		if (usb_match_any_interface_for_mdm(dev, whitelist_array)) {
 			dev_info(&dev->dev, "the device is matched with whitelist!\n");
@@ -1501,6 +1504,26 @@ void set_notify_mdm(struct usb_notify_dev *udev, int disable)
 		break;
 	}
 }
+
+int get_typec_status(struct otg_notify *n, int event)
+{
+	struct usb_notify *u_notify = (struct usb_notify *)(n->u_notify);
+	int ret = -ENODEV;
+
+	if (u_notify == NULL) {
+		pr_err("u_notify is NULL\n");
+		goto end;
+	}
+
+	if (event == NOTIFY_EVENT_POWER_SOURCE) {
+		/* SINK == 0, SOURCE == 1 */
+		ret = u_notify->typec_status.power_role;
+	} else
+		ret = u_notify->typec_status.pd;
+end:
+	return ret;
+}
+EXPORT_SYMBOL(get_typec_status);
 
 void send_otg_notify(struct otg_notify *n,
 				unsigned long event, int enable)
@@ -1643,35 +1666,6 @@ int register_ovc_func(struct otg_notify *n,
 	return ret;
 }
 EXPORT_SYMBOL(register_ovc_func);
-
-int get_booster(struct otg_notify *n)
-{
-	struct usb_notify *u_notify;
-	int ret = 0;
-
-	if (!n) {
-		pr_err("%s otg_notify is null\n", __func__);
-		return -ENODEV;
-	}
-
-	u_notify = (struct usb_notify *)(n->u_notify);
-	if (!u_notify) {
-		pr_err("%s u_notify structure is null\n", __func__);
-		return NOTIFY_NONE_MODE;
-	}
-
-	if (!u_notify_core) {
-		ret = create_usb_notify();
-		if (ret) {
-			pr_err("unable create_usb_notify\n");
-			return -EFAULT;
-		}
-	}
-	pr_info("%s usb booster=%d\n", __func__, u_notify->ndev.booster);
-	ret = u_notify->ndev.booster;
-	return ret;
-}
-EXPORT_SYMBOL(get_booster);
 
 int get_usb_mode(struct otg_notify *n)
 {
@@ -1978,117 +1972,6 @@ end2:
 }
 EXPORT_SYMBOL(is_blocked);
 
-struct dev_table {
-	struct usb_device_id dev;
-	int index;
-};
-
-static struct dev_table known_usbaudio_device_table[] = {
-	{ .dev = { USB_DEVICE(0x04e8, 0xa051), },
-	},
-	{ .dev = { USB_DEVICE(0x04e8, 0xa054), },
-	},
-	{ .dev = { USB_DEVICE(0x04e8, 0xa05b), },
-	},
-	{ .dev = { USB_DEVICE(0x04e8, 0xa058), },
-	},
-	{ .dev = { USB_DEVICE(0x04e8, 0xa057), },
-	},
-	{ .dev = { USB_DEVICE(0x04e8, 0xa059), },
-	},
-	{}
-};
-
-static int is_known_usbaudio(struct usb_device *dev)
-{
-	struct dev_table *id;
-	int ret = 0;
-
-	/* check VID, PID */
-	for (id = known_usbaudio_device_table; id->dev.match_flags; id++) {
-		if ((id->dev.match_flags & USB_DEVICE_ID_MATCH_VENDOR) &&
-		(id->dev.match_flags & USB_DEVICE_ID_MATCH_PRODUCT) &&
-		id->dev.idVendor == le16_to_cpu(dev->descriptor.idVendor) &&
-		id->dev.idProduct == le16_to_cpu(dev->descriptor.idProduct)) {
-			ret = 1;
-			break;
-		}
-	}
-	return ret;
-}
-
-void send_usb_audio_uevent(struct usb_device *dev)
-{
-	struct otg_notify *o_notify = get_otg_notify();
-	char *envp[6];
-	char *type = {"TYPE=usbaudio"};
-	char *state = {"STATE=ADD"};
-	char vidpid_vuf[15];
-	char path_buf[50];
-	int index = 0;
-#ifdef CONFIG_USB_AUDIO_ENHANCED_DETECT_TIME
-	char cardnum_buf[10];
-	int cardnum = 0;
-#endif
-
-	if (!is_known_usbaudio(dev))
-		goto err;
-
-	envp[index++] = type;
-	envp[index++] = state;
-
-	snprintf(vidpid_vuf, sizeof(vidpid_vuf),
-		"ID=%04X/%04X", le16_to_cpu(dev->descriptor.idVendor),
-				le16_to_cpu(dev->descriptor.idProduct));
-
-	envp[index++] = vidpid_vuf;
-
-	snprintf(path_buf, sizeof(path_buf),
-		"PATH=/dev/bus/usb/%03d/%03d", dev->bus->busnum, dev->devnum);
-
-	envp[index++] = path_buf;
-
-#ifdef CONFIG_USB_AUDIO_ENHANCED_DETECT_TIME
-	cardnum = get_next_snd_card_number(THIS_MODULE);
-	if (cardnum < 0) {
-		pr_err("%s cardnum error\n", __func__);
-		goto err;
-	}
-	snprintf(cardnum_buf, sizeof(cardnum_buf),
-		"CARDNUM=%d", cardnum);
-
-	envp[index++] = cardnum_buf;
-#endif
-
-	envp[index++] = NULL;
-
-	if (send_usb_notify_uevent(o_notify, envp)) {
-		pr_err("%s error\n", __func__);
-		goto err;
-	}
-	pr_info("%s\n", __func__);
-err:
-	return;
-}
-EXPORT_SYMBOL(send_usb_audio_uevent);
-
-int send_usb_notify_uevent(struct otg_notify *n, char *envp_ext[])
-{
-	struct usb_notify *u_notify = (struct usb_notify *)(n->u_notify);
-	int ret = 0;
-
-	if (!u_notify) {
-		pr_err("%s u_notify is null\n", __func__);
-		ret = -EFAULT;
-		goto err;
-	}
-
-	ret = usb_notify_dev_uevent(&u_notify->udev, envp_ext);
-err:
-	return ret;
-}
-EXPORT_SYMBOL(send_usb_notify_uevent);
-
 #if defined(CONFIG_USB_HW_PARAM)
 unsigned long long *get_hw_param(struct otg_notify *n,
 	enum usb_hw_param index)
@@ -2204,3 +2087,4 @@ module_exit(usb_notify_exit);
 MODULE_AUTHOR("Samsung USB Team");
 MODULE_DESCRIPTION("USB Notify Layer");
 MODULE_LICENSE("GPL");
+MODULE_VERSION(NOTIFY_VERSION);

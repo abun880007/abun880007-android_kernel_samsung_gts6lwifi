@@ -254,6 +254,10 @@ struct fsxattr {
 #define FS_IOC_FSGETXATTR		_IOR ('X', 31, struct fsxattr)
 #define FS_IOC_FSSETXATTR		_IOW ('X', 32, struct fsxattr)
 
+#if defined(CONFIG_SDP) && !defined(CONFIG_FSCRYPT_SDP)
+#define FS_IOC_INVAL_MAPPING		_IO('f', 13)	/* CONFIG_EPM FMP */
+#endif
+
 #ifdef CONFIG_DDAR
 #define FS_IOC_GET_DD_POLICY			_IO('P', 0x00)
 #define FS_IOC_SET_DD_POLICY			_IO('P', 0x01)
@@ -270,8 +274,7 @@ struct fsxattr {
 #define FS_POLICY_FLAGS_PAD_16		0x02
 #define FS_POLICY_FLAGS_PAD_32		0x03
 #define FS_POLICY_FLAGS_PAD_MASK	0x03
-#define FS_POLICY_FLAG_DIRECT_KEY	0x04	/* use master key directly */
-#define FS_POLICY_FLAGS_VALID		0x07
+#define FS_POLICY_FLAGS_VALID		0x03
 
 /* Encryption algorithms */
 #define FS_ENCRYPTION_MODE_INVALID		0
@@ -281,9 +284,9 @@ struct fsxattr {
 #define FS_ENCRYPTION_MODE_AES_256_CTS		4
 #define FS_ENCRYPTION_MODE_AES_128_CBC		5
 #define FS_ENCRYPTION_MODE_AES_128_CTS		6
-#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7 /* Removed, do not use. */
-#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8 /* Removed, do not use. */
-#define FS_ENCRYPTION_MODE_ADIANTUM		9
+#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7
+#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8
+#define FS_ENCRYPTION_MODE_PRIVATE              127
 
 #ifdef CONFIG_FS_INLINE_ENCRYPTION
 #define FS_ENCRYPTION_MODE_PRIVATE		127
@@ -313,11 +316,6 @@ struct fscrypt_key {
 	__u8 raw[FS_MAX_KEY_SIZE];
 	__u32 size;
 };
-
-#if defined(CONFIG_SDP) && !defined(CONFIG_FSCRYPT_SDP)
-#define FS_IOC_INVAL_MAPPING		_IO('f', 13)	/* CONFIG_EPM FMP */
-#endif
-
 
 /*
  * Inode flags (FS_IOC_GETFLAGS / FS_IOC_SETFLAGS)

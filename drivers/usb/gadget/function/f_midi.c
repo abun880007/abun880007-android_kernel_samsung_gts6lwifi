@@ -1048,11 +1048,6 @@ static int f_midi_bind(struct usb_configuration *c, struct usb_function *f)
 		f->ss_descriptors = usb_copy_descriptors(midi_function);
 		if (!f->ss_descriptors)
 			goto fail_f_midi;
-		if (gadget_is_superspeed_plus(c->cdev->gadget)) {
-			f->ssp_descriptors = usb_copy_descriptors(midi_function);
-			if (!f->ssp_descriptors)
-				goto fail_f_midi;
-		}
 	}
 
 	kfree(midi_function);
@@ -1392,7 +1387,7 @@ static struct usb_function *f_midi_alloc(struct usb_function_instance *fi)
 	++opts->refcnt;
 	mutex_unlock(&opts->lock);
 
-	midi->func.name		= "gmidi function";
+	midi->func.name		= "midi";
 	midi->func.bind		= f_midi_bind;
 	midi->func.unbind	= f_midi_unbind;
 	midi->func.set_alt	= f_midi_set_alt;

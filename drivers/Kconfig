@@ -21,9 +21,15 @@ source "drivers/block/Kconfig"
 
 source "drivers/nvme/Kconfig"
 
+source "drivers/mcps/Kconfig"
+
 # misc before ide - BLK_DEV_SGIIOC4 depends on SGI_IOC4
 
 source "drivers/misc/Kconfig"
+
+source "drivers/muic/Kconfig"
+
+source "drivers/ifconn/Kconfig"
 
 source "drivers/ide/Kconfig"
 
@@ -59,8 +65,6 @@ source "drivers/spi/Kconfig"
 
 source "drivers/spmi/Kconfig"
 
-source "drivers/slimbus/Kconfig"
-
 source "drivers/hsi/Kconfig"
 
 source "drivers/pps/Kconfig"
@@ -70,8 +74,6 @@ source "drivers/ptp/Kconfig"
 source "drivers/pinctrl/Kconfig"
 
 source "drivers/gpio/Kconfig"
-
-source "drivers/gnsssirf/Kconfig"
 
 source "drivers/w1/Kconfig"
 
@@ -141,8 +143,6 @@ source "drivers/hv/Kconfig"
 
 source "drivers/xen/Kconfig"
 
-source "drivers/vservices/Kconfig"
-
 source "drivers/staging/Kconfig"
 
 source "drivers/platform/Kconfig"
@@ -177,11 +177,11 @@ source "drivers/vme/Kconfig"
 
 source "drivers/pwm/Kconfig"
 
-source "drivers/gpu/msm/Kconfig"
-
 source "drivers/irqchip/Kconfig"
 
 source "drivers/ipack/Kconfig"
+
+source "drivers/battery_v2/Kconfig"
 
 source "drivers/reset/Kconfig"
 
@@ -219,41 +219,29 @@ source "drivers/tee/Kconfig"
 
 source "drivers/mux/Kconfig"
 
-source "drivers/sensors/Kconfig"
-
-source "drivers/optics/Kconfig"
-
-source "drivers/esoc/Kconfig"
-
-source "drivers/samsung/Kconfig"
-
-source "drivers/battery/Kconfig"
-
-source "drivers/battery_v2/Kconfig"
-
-source "drivers/staging/samsung/sec_notifier/Kconfig"
-
-source "drivers/muic/Kconfig"
-
-source "drivers/muic/universal/Kconfig"
-
 source "drivers/ccic/Kconfig"
 
 source "drivers/redriver/Kconfig"
 
-source "drivers/adsp_factory/Kconfig"
+source "drivers/bts/Kconfig"
+
+source "drivers/vision/Kconfig"
+
+source "drivers/sensorhub/brcm/Kconfig"
+
+source "drivers/optics/Kconfig"
 
 source "drivers/motor/Kconfig"
-
-source "drivers/gud/Kconfig"
 
 source "drivers/fingerprint/Kconfig"
 
 source "drivers/five/Kconfig"
 
-source "drivers/gator/Kconfig"
+#source "drivers/gator/Kconfig"
 
 source "drivers/security/samsung/icdrv/Kconfig"
+
+source "drivers/samsung/Kconfig"
 
 source "drivers/kperfmon/Kconfig"
 

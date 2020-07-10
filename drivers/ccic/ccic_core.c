@@ -22,10 +22,7 @@
 
 #include <linux/device.h>
 #include <linux/module.h>
-#if defined(CONFIG_DRV_SAMSUNG)
 #include <linux/sec_class.h>
-#endif
-//#include <linux/sec_sysfs.h>
 #include <linux/ccic/ccic_core.h>
 #include <linux/ccic/ccic_sysfs.h>
 #include <linux/power_supply.h>
@@ -42,64 +39,6 @@ struct device *ccic_device;
 static struct switch_dev switch_dock = {
 	.name = "ccic_dock",
 };
-
-void enable_dp_switch_regulator(int mode)
-{
-	struct device_node *np = NULL;
-	const char *ss_vdd;
-	int ret = 0;
-	struct regulator *vdd085_usb;
-
-	pr_info("usb: %s, mode : %d\n", __func__, mode);
-
-	/* VDD_USB_3P0_AP is on for DP SWITCH */
-	np = of_find_compatible_node(NULL, NULL, "samsung,usb-notifier");
-	if (!np) {
-		pr_err("%s: failed to get the battery device node\n", __func__);
-		return;
-	} else {
-		if (of_property_read_string(np, "hs-regulator", (char const **)&ss_vdd) < 0) {
-			pr_err("%s - get ss_vdd error\n", __func__);
-			return;
-		}
-
-		vdd085_usb = regulator_get(NULL, ss_vdd);
-		if (IS_ERR(vdd085_usb) || vdd085_usb == NULL) {
-			pr_err("%s - vdd085_usb regulator_get fail\n", __func__);
-			return;
-		}
-	}
-
-	switch (mode) {
-	case 0:
-		if (!regulator_is_enabled(vdd085_usb)) {
-			ret = regulator_enable(vdd085_usb);
-			if (ret) {
-				pr_err("%s - enable vdd085_usb ldo enable failed, ret=%d\n",
-				       __func__, ret);
-				regulator_put(vdd085_usb);
-				return;
-			}
-		}
-		regulator_put(vdd085_usb);
-		break;
-	case 1:
-		if (regulator_is_enabled(vdd085_usb)) {
-			ret = regulator_disable(vdd085_usb);
-			if (ret) {
-				pr_err("%s - enable vdd085_usb ldo enable failed, ret=%d\n",
-				__func__, ret);
-				regulator_put(vdd085_usb);
-				return;
-			}
-		}
-		regulator_put(vdd085_usb);
-		break;
-	default:
-		break;
-	}
-}
-EXPORT_SYMBOL(enable_dp_switch_regulator);
 
 int ccic_register_switch_device(int mode)
 {
@@ -154,13 +93,14 @@ int ccic_core_register_chip(pccic_data_t pccic_data)
 	int ret = 0;
 
 	pr_info("%s\n", __func__);
-	if (!ccic_device || IS_ERR(ccic_device)) {
+	if (IS_ERR(ccic_device)) {
 		pr_err("%s ccic_device is not present try again\n", __func__);
 		ret = -ENODEV;
 		goto out;
 	}
 
 	dev_set_drvdata(ccic_device, pccic_data);
+
 	/* create sysfs group */
 	ret = sysfs_create_group(&ccic_device->kobj, &ccic_sysfs_group);
 	if (ret)
@@ -169,16 +109,25 @@ out:
 	return ret;
 }
 
+void ccic_core_unregister_chip(void)
+{
+	pr_info("%s\n", __func__);
+	if (IS_ERR(ccic_device)) {
+		pr_err("%s ccic_device is not present try again\n", __func__);
+		return;
+	}
+	sysfs_remove_group(&ccic_device->kobj, &ccic_sysfs_group);
+	dev_set_drvdata(ccic_device, NULL);
+}
+
 int ccic_core_init(void)
 {
 	int ret = 0;
 
 	pr_info("%s\n", __func__);
 
-#if defined(CONFIG_DRV_SAMSUNG)
-	ccic_device = sec_device_create(0, NULL, "ccic");
-#endif
-	if (!ccic_device || IS_ERR(ccic_device)) {
+	ccic_device = sec_device_create(NULL, "ccic");
+	if (IS_ERR(ccic_device)) {
 		pr_err("%s Failed to create device(switch)!\n", __func__);
 		ret = -ENODEV;
 		goto out;
@@ -188,7 +137,6 @@ int ccic_core_init(void)
 out:
 	return ret;
 }
-
 void *ccic_core_get_drvdata(void)
 {
 	pccic_data_t pccic_data = NULL;

@@ -48,13 +48,8 @@
 #include <linux/nodemask.h>
 #include <linux/moduleparam.h>
 #include <linux/uaccess.h>
-#include <linux/bug.h>
-#include <linux/delay.h>
+#include <linux/debug-snapshot.h>
 #include <linux/nmi.h>
-
-#ifdef CONFIG_SEC_DEBUG
-#include <linux/sec_debug.h>
-#endif
 
 #include "workqueue_internal.h"
 
@@ -918,26 +913,6 @@ struct task_struct *wq_worker_sleeping(struct task_struct *task)
 }
 
 /**
- * wq_worker_last_func - retrieve worker's last work function
- *
- * Determine the last function a worker executed. This is called from
- * the scheduler to get a worker's last known identity.
- *
- * CONTEXT:
- * spin_lock_irq(rq->lock)
- *
- * Return:
- * The last work function %current executed as a worker, NULL if it
- * hasn't executed any work yet.
- */
-work_func_t wq_worker_last_func(struct task_struct *task)
-{
-	struct worker *worker = kthread_data(task);
-
-	return worker->last_func;
-}
-
-/**
  * worker_set_flags - set worker flags and adjust nr_running accordingly
  * @worker: self
  * @flags: flags to set
@@ -1302,12 +1277,6 @@ fail:
 	if (work_is_canceling(work))
 		return -ENOENT;
 	cpu_relax();
-	/*
-	 * The queueing is in progress in another context. If we keep
-	 * taking the pool->lock in a busy loop, the other context may
-	 * never get the lock. Give 1 usec delay to avoid this contention.
-	 */
-	udelay(1);
 	return -EAGAIN;
 }
 
@@ -2143,12 +2112,9 @@ __acquires(&pool->lock)
 	 */
 	lockdep_invariant_state(true);
 	trace_workqueue_execute_start(work);
-
-#ifdef CONFIG_SEC_DEBUG_SCHED_LOG
-	sec_debug_sched_msg("@%pS", worker->current_func);
-#endif
-
+	dbg_snapshot_work(worker, worker->task, worker->current_func, DSS_FLAG_IN);
 	worker->current_func(work);
+	dbg_snapshot_work(worker, worker->task, worker->current_func, DSS_FLAG_OUT);
 	/*
 	 * While we must be careful to not use "work" after this, the trace
 	 * point will only record its address.
@@ -2181,9 +2147,6 @@ __acquires(&pool->lock)
 	/* clear cpu intensive status */
 	if (unlikely(cpu_intensive))
 		worker_clr_flags(worker, WORKER_CPU_INTENSIVE);
-
-	/* tag the worker for identification in schedule() */
-	worker->last_func = worker->current_func;
 
 	/* we're done with it, release */
 	hash_del(&worker->hentry);
@@ -3996,37 +3959,6 @@ static int wq_clamp_max_active(int max_active, unsigned int flags,
 	return clamp_val(max_active, 1, lim);
 }
 
-/*
- * Workqueues which may be used during memory reclaim should have a rescuer
- * to guarantee forward progress.
- */
-static int init_rescuer(struct workqueue_struct *wq)
-{
-	struct worker *rescuer;
-	int ret;
-
-	if (!(wq->flags & WQ_MEM_RECLAIM))
-		return 0;
-
-	rescuer = alloc_worker(NUMA_NO_NODE);
-	if (!rescuer)
-		return -ENOMEM;
-
-	rescuer->rescue_wq = wq;
-	rescuer->task = kthread_create(rescuer_thread, rescuer, "%s", wq->name);
-	ret = PTR_ERR_OR_ZERO(rescuer->task);
-	if (ret) {
-		kfree(rescuer);
-		return ret;
-	}
-
-	wq->rescuer = rescuer;
-	kthread_bind_mask(rescuer->task, cpu_possible_mask);
-	wake_up_process(rescuer->task);
-
-	return 0;
-}
-
 struct workqueue_struct *__alloc_workqueue_key(const char *fmt,
 					       unsigned int flags,
 					       int max_active,
@@ -4089,8 +4021,29 @@ struct workqueue_struct *__alloc_workqueue_key(const char *fmt,
 	if (alloc_and_link_pwqs(wq) < 0)
 		goto err_free_wq;
 
-	if (wq_online && init_rescuer(wq) < 0)
-		goto err_destroy;
+	/*
+	 * Workqueues which may be used during memory reclaim should
+	 * have a rescuer to guarantee forward progress.
+	 */
+	if (flags & WQ_MEM_RECLAIM) {
+		struct worker *rescuer;
+
+		rescuer = alloc_worker(NUMA_NO_NODE);
+		if (!rescuer)
+			goto err_destroy;
+
+		rescuer->rescue_wq = wq;
+		rescuer->task = kthread_create(rescuer_thread, rescuer, "%s",
+					       wq->name);
+		if (IS_ERR(rescuer->task)) {
+			kfree(rescuer);
+			goto err_destroy;
+		}
+
+		wq->rescuer = rescuer;
+		kthread_bind_mask(rescuer->task, cpu_possible_mask);
+		wake_up_process(rescuer->task);
+	}
 
 	if ((wq->flags & WQ_SYSFS) && workqueue_sysfs_register(wq))
 		goto err_destroy;
@@ -5524,8 +5477,12 @@ static void wq_watchdog_timer_fn(unsigned long data)
 
 	rcu_read_unlock();
 
-	if (lockup_detected)
+	if (lockup_detected) {
 		show_workqueue_state();
+#ifdef CONFIG_SEC_DEBUG_WORKQUEUE_LOCKUP_PANIC
+		BUG();
+#endif
+	}
 
 	wq_watchdog_reset_touched();
 	mod_timer(&wq_watchdog_timer, jiffies + thresh);
@@ -5731,8 +5688,6 @@ int __init workqueue_init(void)
 	 * archs such as power and arm64.  As per-cpu pools created
 	 * previously could be missing node hint and unbound pools NUMA
 	 * affinity, fix them up.
-	 *
-	 * Also, while iterating workqueues, create rescuers if requested.
 	 */
 	wq_numa_init();
 
@@ -5744,12 +5699,8 @@ int __init workqueue_init(void)
 		}
 	}
 
-	list_for_each_entry(wq, &workqueues, list) {
+	list_for_each_entry(wq, &workqueues, list)
 		wq_update_unbound_numa(wq, smp_processor_id(), true);
-		WARN(init_rescuer(wq),
-		     "workqueue: failed to create early rescuer for %s",
-		     wq->name);
-	}
 
 	mutex_unlock(&wq_pool_mutex);
 

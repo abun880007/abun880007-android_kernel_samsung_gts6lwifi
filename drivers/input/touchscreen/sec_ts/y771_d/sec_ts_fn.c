@@ -102,7 +102,6 @@ static void touch_aging_mode(void *device_data);
 static void fp_int_control(void *device_data);
 static void get_crc_check(void *device_data);
 static void run_prox_intensity_read_all(void *device_data);
-static void get_idle_sensing_fault(void *device_data);
 static void set_low_power_sensitivity(void *device_data);
 static void set_sip_mode(void *device_data);
 static void not_support_cmd(void *device_data);
@@ -206,7 +205,6 @@ static struct sec_cmd sec_cmds[] = {
 	{SEC_CMD_H("fp_int_control", fp_int_control),},
 	{SEC_CMD("get_crc_check", get_crc_check),},
 	{SEC_CMD("run_prox_intensity_read_all", run_prox_intensity_read_all),},
-	{SEC_CMD("get_idle_sensing_fault", get_idle_sensing_fault),},
 	{SEC_CMD_H("set_low_power_sensitivity", set_low_power_sensitivity),},
 	{SEC_CMD_H("set_sip_mode", set_sip_mode),},	
 	{SEC_CMD("not_support_cmd", not_support_cmd),},
@@ -5425,115 +5423,6 @@ err:
 	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
-/* only for davinci */
-static void get_idle_sensing_fault(void *device_data)
-{
-	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
-	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
-	char buff[16] = { 0 };
-	int ret;
-	int chk_idle_sensing = 0;	/* pass */
-	int i = 0;
-	u8 wdata[1] = { 0x46 };
-	u8 rdata[4] = { 0 };
-	u8 *rawdata[3] = { 0 };
-	int raw_size = (ts->tx_count * ts->rx_count) * 2;
-
-	input_info(true, &ts->client->dev, "%s : size(%d)\n", __func__, raw_size);
-
-	sec_cmd_set_default_result(sec);
-
-	for (i = 0; i <3; i++)
-		rawdata[i] = kzalloc(raw_size, GFP_KERNEL);
-
-	if (!rawdata[0])
-		goto NG;
-	
-	if (!rawdata[1]) {
-		kfree(rawdata[0]);
-		goto NG;
-	}
-	
-	if (!rawdata[2]) {
-		kfree(rawdata[0]);
-		kfree(rawdata[1]);
-		goto NG;
-	}
-
-	sec_ts_fix_tmode(ts, TOUCH_SYSTEM_MODE_TOUCH, TOUCH_MODE_STATE_IDLE);
-
-	ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_MUTU_RAW_TYPE, wdata, 1);
-	if (ret < 0) {
-		input_err(true, &ts->client->dev, "%s: SEC_TS_CMD_MUTU_RAW_TYPE fail!\n", __func__);
-		goto I2C_FAIL;
-	}
-
-	sec_ts_delay(30);
-
-	ret = ts->sec_ts_i2c_read(ts, SEC_TS_READ_TS_STATUS, rdata, 4);
-	if (ret < 0) {
-		input_err(true, &ts->client->dev, "%s: SEC_TS_READ_TS_STATUS fail!\n", __func__);
-		goto I2C_FAIL;
-	}
-	input_info(true, &ts->client->dev, "%s: READ STATUS DATA[0x%X/0x%X/0x%X/0x%X]\n",
-				__func__, rdata[0], rdata[1], rdata[2], rdata[3]);
-
-	sec_ts_delay(50);
-
-
-	for (i = 0; i < 3; i++) {
-		ret = ts->sec_ts_i2c_read(ts, SEC_TS_READ_TOUCH_RAWDATA, rawdata[i], raw_size);
-		if (ret < 0) {
-			input_err(true, &ts->client->dev, "%s: SEC_TS_READ_TOUCH_RAWDATA fail!\n", __func__);
-			goto I2C_FAIL;
-		}
-		sec_ts_delay(50);
-	}
-
-	for (i = 0 ; i < (ts->rx_count * 2 * 2) ; i += 2) {
-		s16 tmp1 = rawdata[0][i] << 8 | rawdata[0][i + 1];
-		s16 tmp2 = rawdata[1][i] << 8 | rawdata[1][i + 1];
-		s16 tmp3 = rawdata[2][i] << 8 | rawdata[2][i + 1];
-	
-		input_info(false, &ts->client->dev,
-				"%s: rdata1[%d] = [0x%X], rdata2[%d] = [0x%X], rdata3[%d] = [0x%X]\n",
-				__func__, i/2, tmp1, i/2, tmp2, i/2, tmp3);
-	
-		if ((tmp1 != tmp2) || (tmp1 != tmp3))
-			break;
-	}
-
-	if (i == (ts->rx_count * 2 * 2))
-		chk_idle_sensing = 1; /* fail */
-
-	input_info(true, &ts->client->dev, "chk_idle_sensing %s\n",
-						chk_idle_sensing ? "FAIL" : "PASS");
-
-	for (i = 0 ; i < 3 ; i++)
-		kfree(rawdata[i]);
-
-	snprintf(buff, sizeof(buff), "%d", chk_idle_sensing);
-	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
-	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
-		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "IDLE_SENSING_FAULT");
-	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
-	return;
-
-I2C_FAIL:
-	for (i = 0 ; i < 3 ; i++)
-		kfree(rawdata[i]);
-
-NG:
-	snprintf(buff, sizeof(buff), "NG");
-	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
-	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
-		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "IDLE_SENSING_FAULT");
-	sec->cmd_state = SEC_CMD_STATUS_FAIL;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
-
-}
-
 static void factory_cmd_result_all(void *device_data)
 {
 	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
@@ -5571,7 +5460,6 @@ static void factory_cmd_result_all(void *device_data)
 
 	get_wet_mode(sec);
 	get_cmoffset_set_proximity(sec);
-	get_idle_sensing_fault(sec);
 
 	sec->cmd_all_factory_state = SEC_CMD_STATUS_OK;
 

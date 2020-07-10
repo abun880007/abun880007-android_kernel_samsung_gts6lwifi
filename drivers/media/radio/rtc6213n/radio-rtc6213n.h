@@ -211,9 +211,9 @@ struct rtc6213n_device {
 	bool vol_db;
 	int rx_vol[VOLUME_NUM];
 	unsigned char blend_level;
-	unsigned int seekcfg2;
-	unsigned int blend_ofs;
-	int fmlna_gpio;
+
+	bool use_ext_lna;
+	int fm_lna_gpio;
 };
 
 /**************************************************************************

@@ -31,7 +31,6 @@
 #include <linux/string.h>
 #include <linux/mm.h>
 #include <linux/fs.h>
-#include <linux/bio.h>
 
 struct linux_binprm;
 struct cred;
@@ -57,10 +56,6 @@ struct msg_queue;
 struct xattr;
 struct xfrm_sec_ctx;
 struct mm_struct;
-#ifdef CONFIG_RKP_KDP
-/* For understanding size of struct cred*/
-#include <linux/rkp.h>
-#endif
 
 /* If capable should audit the security request */
 #define SECURITY_CAP_NOAUDIT 0
@@ -73,10 +68,6 @@ struct ctl_table;
 struct audit_krule;
 struct user_namespace;
 struct timezone;
-
-enum lsm_event {
-	LSM_POLICY_CHANGE,
-};
 
 #ifdef CONFIG_RKP_KDP
 #define rocred_uc_read(x) atomic_read(x->use_cnt)
@@ -101,10 +92,14 @@ static inline u8 rkp_ro_page(unsigned long addr)
 		return rkp_is_pg_protected(addr);
 }
 extern int security_integrity_current(void);
+
 #else
 #define security_integrity_current()  0
 #endif /*CONFIG_RKP_KDP*/
 
+enum lsm_event {
+	LSM_POLICY_CHANGE,
+};
 
 /* These functions are in security/commoncap.c */
 extern int cap_capable(const struct cred *cred, struct user_namespace *ns,
@@ -303,8 +298,6 @@ int security_old_inode_init_security(struct inode *inode, struct inode *dir,
 				     const struct qstr *qstr, const char **name,
 				     void **value, size_t *len);
 int security_inode_create(struct inode *dir, struct dentry *dentry, umode_t mode);
-int security_inode_post_create(struct inode *dir, struct dentry *dentry,
-					umode_t mode);
 int security_inode_link(struct dentry *old_dentry, struct inode *dir,
 			 struct dentry *new_dentry);
 int security_inode_unlink(struct inode *dir, struct dentry *dentry);
@@ -693,13 +686,6 @@ static inline int security_old_inode_init_security(struct inode *inode,
 }
 
 static inline int security_inode_create(struct inode *dir,
-					 struct dentry *dentry,
-					 umode_t mode)
-{
-	return 0;
-}
-
-static inline int security_inode_post_create(struct inode *dir,
 					 struct dentry *dentry,
 					 umode_t mode)
 {

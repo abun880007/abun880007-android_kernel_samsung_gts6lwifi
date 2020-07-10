@@ -157,13 +157,23 @@ static ssize_t task_state_proc_write(struct file *file,
 	int i;
 	int ret;
 
+	if (count > 8 * 2048)
+		return -EINVAL;
+
 	kbuf = kmalloc(count + 1, GFP_KERNEL);
 	if (!kbuf)
 		return -ENOMEM;
 
-	if (copy_from_user(kbuf, buffer, count))
+	if (copy_from_user(kbuf, buffer, count)) {
+		kfree(kbuf);
 		return -EFAULT;
+	}
 	argv = argv_split(GFP_KERNEL, kbuf, &argc);
+
+	kfree(kbuf);
+
+	if (!argv)
+		return -EFAULT;
 
 	mutex_lock(&pid_array_mutex);
 	pid_array_len = argc;
@@ -187,6 +197,7 @@ static ssize_t task_state_proc_write(struct file *file,
 
 	return count;
 }
+
 static int state_proc_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, state_proc_show, NULL);

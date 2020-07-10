@@ -11,3 +11,4 @@ config TOUCHSCREEN_SEC_TS_Y771_D
 
           To compile this driver as a module, choose M here: the
           module will be called sec_ts.
+

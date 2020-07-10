@@ -26,6 +26,9 @@ aes-ce-blk-y := aes-glue-ce.o aes-ce.o
 obj-$(CONFIG_CRYPTO_GHASH_ARM64_CE) += ghash-ce.o
 ghash-ce-y := ghash-ce-glue.o ghash-ce-core.o
 
+# KASAN White list
+KASAN_SANITIZE_sha2-ce-glue.o := n
+
 #Keep this at the bottom
 obj-$(CONFIG_CRYPTO_FIPS) += last_file_asm.o
 
@@ -36,11 +39,7 @@ obj-$(CONFIG_CRYPTO_AES_ARM64_NEON_BLK) += aes-neon-blk.o
 aes-neon-blk-y := aes-glue-neon.o aes-neon.o
 
 obj-$(CONFIG_CRYPTO_SHA256_ARM64) += sha256-arm64.o
-ifdef CONFIG_RKP_CFP_ROPP
-sha256-arm64-y := sha256-glue.o sha256-core-ropp.o
-else
 sha256-arm64-y := sha256-glue.o sha256-core.o
-endif
 
 obj-$(CONFIG_CRYPTO_AES_ARM64) += aes-arm64.o
 aes-arm64-y := aes-cipher-core.o aes-cipher-glue.o

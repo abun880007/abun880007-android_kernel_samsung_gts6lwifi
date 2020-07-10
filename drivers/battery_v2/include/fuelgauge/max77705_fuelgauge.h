@@ -24,6 +24,8 @@
 #include <linux/regulator/machine.h>
 #include "../sec_charging_common.h"
 
+#include <linux/sec_batt.h>
+
 /* Slave address should be shifted to the right 1bit.
  * R/W bit should NOT be included.
  */
@@ -33,10 +35,6 @@
 #define ALERT_EN 0x04
 #define CAPACITY_SCALE_DEFAULT_CURRENT 1000
 #define CAPACITY_SCALE_HV_CURRENT 600
-
-extern unsigned int lpcharge;
-extern int charging_night_mode;
-extern int fg_reset;
 
 enum max77705_vempty_mode {
 	VEMPTY_MODE_HW = 0,
@@ -137,7 +135,6 @@ struct battery_data_t {
 	u32 ichgterm_2nd;
 	u32 misccfg_2nd;
 	u32 fullsocthr_2nd;
-	u32 rcomp0_offset;
 };
 
 /* FullCap learning setting */
@@ -227,7 +224,6 @@ struct max77705_fuelgauge_data {
 #if defined(CONFIG_BATTERY_CISD)
 	bool valert_count_flag;
 #endif
-	u8 reg_b2[2];
 };
 
 #endif /* __MAX77705_FUELGAUGE_H */

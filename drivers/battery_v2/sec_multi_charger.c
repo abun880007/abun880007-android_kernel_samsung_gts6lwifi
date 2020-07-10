@@ -249,6 +249,8 @@ static void sec_multi_chg_check_input_current(struct sec_multi_charger_info *cha
 
 		psy_do_property(charger->pdata->sub_charger_name, set,
 			POWER_SUPPLY_PROP_CHARGING_ENABLED, value);
+
+		sec_multi_chg_set_charging_current(charger);
 	}
 }
 
@@ -257,7 +259,7 @@ static int sec_multi_chg_check_enable(struct sec_multi_charger_info *charger)
 	union power_supply_propval value;
 	bool sub_is_charging = charger->sub_is_charging;
 
-	if ((charger->cable_type == SEC_BATTERY_CABLE_NONE) ||
+	if (is_nocharge_type(charger->cable_type) ||
 		(charger->status == POWER_SUPPLY_STATUS_DISCHARGING) ||
 		charger->chg_mode != SEC_BAT_CHG_MODE_CHARGING) {
 		pr_info("%s: skip multi charging routine\n", __func__);
@@ -317,7 +319,7 @@ static int sec_multi_chg_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_HEALTH:
 		psy_do_property(charger->pdata->battery_name, get,
 			POWER_SUPPLY_PROP_HEALTH, value);
-		if (charger->cable_type != SEC_BATTERY_CABLE_NONE &&
+		if (!is_nocharge_type(charger->cable_type) && 
 			value.intval != POWER_SUPPLY_HEALTH_UNDERVOLTAGE)
 			psy_do_property(charger->pdata->sub_charger_name, get, psp, value);
 	case POWER_SUPPLY_PROP_STATUS:
@@ -562,7 +564,7 @@ static int sec_multi_charger_parse_dt(struct device *dev,
 	int ret = 0, temp_value = 0;
 	int len;
 	const u32 *p;
-
+	
 	if (!np) {
 		pr_err("%s: np NULL\n", __func__);
 		return 1;
@@ -734,7 +736,7 @@ static int sec_multi_charger_resume(struct device *dev)
 	return 0;
 }
 
-static void sec_multi_charger_shutdown(struct platform_device *pdev)
+static void sec_multi_charger_shutdown(struct device *dev)
 {
 }
 
@@ -756,13 +758,13 @@ static struct platform_driver sec_multi_charger_driver = {
 		.name = "sec-multi-charger",
 		.owner = THIS_MODULE,
 		.pm = &sec_multi_charger_pm_ops,
+		.shutdown = sec_multi_charger_shutdown,
 #ifdef CONFIG_OF
 		.of_match_table = sec_multi_charger_dt_ids,
 #endif
 	},
 	.probe = sec_multi_charger_probe,
 	.remove = sec_multi_charger_remove,
-	.shutdown = sec_multi_charger_shutdown,
 };
 
 static int __init sec_multi_charger_init(void)

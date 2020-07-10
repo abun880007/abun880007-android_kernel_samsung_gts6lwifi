@@ -561,11 +561,14 @@ struct usb_device *usb_alloc_dev(struct usb_device *parent,
 	unsigned raw_port = port1;
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	if (!dev)
+	if (!dev) {
+		pr_info("%s kzalloc failed\n", __func__);
 		return NULL;
+	}
 
 	if (!usb_get_hcd(usb_hcd)) {
 		kfree(dev);
+		pr_info("%s usb_get_hcd failed\n", __func__);
 		return NULL;
 	}
 	/* Root hubs aren't true devices, so don't allocate HCD resources */
@@ -573,6 +576,7 @@ struct usb_device *usb_alloc_dev(struct usb_device *parent,
 		!usb_hcd->driver->alloc_dev(usb_hcd, dev)) {
 		usb_put_hcd(bus_to_hcd(bus));
 		kfree(dev);
+		pr_info("%s hcd->alloc_dev failed\n", __func__);
 		return NULL;
 	}
 
@@ -825,59 +829,6 @@ int usb_get_current_frame_number(struct usb_device *dev)
 	return usb_hcd_get_frame_number(dev);
 }
 EXPORT_SYMBOL_GPL(usb_get_current_frame_number);
-
-int usb_sec_event_ring_setup(struct usb_device *dev,
-	unsigned int intr_num)
-{
-	if (dev->state == USB_STATE_NOTATTACHED)
-		return 0;
-
-	return usb_hcd_sec_event_ring_setup(dev, intr_num);
-}
-EXPORT_SYMBOL(usb_sec_event_ring_setup);
-
-int usb_sec_event_ring_cleanup(struct usb_device *dev,
-	unsigned int intr_num)
-{
-	return usb_hcd_sec_event_ring_cleanup(dev, intr_num);
-}
-EXPORT_SYMBOL(usb_sec_event_ring_cleanup);
-
-phys_addr_t
-usb_get_sec_event_ring_phys_addr(struct usb_device *dev,
-	unsigned int intr_num, dma_addr_t *dma)
-{
-	if (dev->state == USB_STATE_NOTATTACHED)
-		return 0;
-
-	return usb_hcd_get_sec_event_ring_phys_addr(dev, intr_num, dma);
-}
-EXPORT_SYMBOL(usb_get_sec_event_ring_phys_addr);
-
-phys_addr_t usb_get_xfer_ring_phys_addr(struct usb_device *dev,
-	struct usb_host_endpoint *ep, dma_addr_t *dma)
-{
-	if (dev->state == USB_STATE_NOTATTACHED)
-		return 0;
-
-	return usb_hcd_get_xfer_ring_phys_addr(dev, ep, dma);
-}
-EXPORT_SYMBOL(usb_get_xfer_ring_phys_addr);
-
-int usb_get_controller_id(struct usb_device *dev)
-{
-	if (dev->state == USB_STATE_NOTATTACHED)
-		return -EINVAL;
-
-	return usb_hcd_get_controller_id(dev);
-}
-EXPORT_SYMBOL(usb_get_controller_id);
-
-int usb_stop_endpoint(struct usb_device *dev, struct usb_host_endpoint *ep)
-{
-	return usb_hcd_stop_endpoint(dev, ep);
-}
-EXPORT_SYMBOL(usb_stop_endpoint);
 
 /*-------------------------------------------------------------------*/
 /*

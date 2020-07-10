@@ -22,9 +22,7 @@
 #include <linux/input.h>
 #include <linux/delay.h>
 
-#if defined(CONFIG_SEC_SYSFS)
-#include <linux/sec_sysfs.h>
-#elif defined(CONFIG_DRV_SAMSUNG)
+#if defined(CONFIG_DRV_SAMSUNG)
 #include <linux/sec_class.h>
 #else
 extern struct class *sec_class;
@@ -138,13 +136,6 @@ static ssize_t epen_firm_version_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct wacom_i2c *wac_i2c = container_of(sec, struct wacom_i2c, sec);
 	struct i2c_client *client = wac_i2c->client;
-#ifdef CONFIG_SEC_FACTORY
-	if (wac_i2c->pdata->ic_type == 9021) {
-		wac_i2c->fw_ver_ic = 0;
-
-		wacom_i2c_query(wac_i2c);
-	}
-#endif
 
 	input_info(true, &client->dev, "%s: 0x%x|0x%X\n", __func__,
 		   wac_i2c->fw_ver_ic, wac_i2c->fw_ver_bin);
@@ -1139,12 +1130,6 @@ void epen_disable_mode(int mode)
 
 	if (wac_i2c->epen_blocked == mode){
 		input_info(true, &client->dev, "%s: duplicate call %d!\n", __func__, mode);
-		return;
-	}
-
-	if (wac_i2c->pdata->flag_for_d) {
-		input_info(true, &client->dev,
-			   "%s: does not control wacom power\n", __func__);
 		return;
 	}
 
@@ -2640,8 +2625,9 @@ int set_wacom_ble_charge_mode(bool mode)
 
 	input_info(true, &wac_i2c->client->dev, "%s start(%d)\n", __func__, mode);
 
+	mutex_lock(&wac_i2c->ble_charge_mode_lock);
 	if (!mode) {
-		ret = wacom_ble_charge_mode(wac_i2c, EPEN_BLE_C_KEEP_OFF);
+		ret = wacom_ble_charge_mode(wac_i2c, EPEN_BLE_C_DIABLE);
 		if (!ret)
 			wac_i2c->ble_block_flag = true;
 	} else {
@@ -2650,6 +2636,7 @@ int set_wacom_ble_charge_mode(bool mode)
 		ret = wacom_ble_charge_mode(wac_i2c, EPEN_BLE_C_ENABLE);
 #endif
 	}
+	mutex_unlock(&wac_i2c->ble_charge_mode_lock);
 
 	input_info(true, &wac_i2c->client->dev, "%s done(%d)\n", __func__, mode);
 

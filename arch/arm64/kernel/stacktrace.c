@@ -22,14 +22,13 @@
 #include <linux/sched/debug.h>
 #include <linux/sched/task_stack.h>
 #include <linux/stacktrace.h>
-#include <linux/kasan.h>
 
 #include <asm/irq.h>
 #include <asm/stack_pointer.h>
 #include <asm/stacktrace.h>
 
-#ifdef CONFIG_RKP_CFP_ROPP
-#include <linux/rkp_cfp.h>
+#ifdef CONFIG_SEC_DEBUG_INFINITY_BACKTRACE
+#include <linux/sec_debug.h>
 #endif
 
 /*
@@ -58,16 +57,12 @@ int notrace unwind_frame(struct task_struct *tsk, struct stackframe *frame)
 	if (!on_accessible_stack(tsk, fp))
 		return -EINVAL;
 
-	kasan_disable_current();
 	frame->fp = READ_ONCE_NOCHECK(*(unsigned long *)(fp));
 	frame->pc = READ_ONCE_NOCHECK(*(unsigned long *)(fp + 8));
-	kasan_enable_current();
-#ifdef CONFIG_RKP_CFP_ROPP
-	if (frame->pc) {
-		if (frame->pc < 0xffffff8008000000 || frame->pc >= 0xffffff800c000000)
-			frame->pc = ropp_enable_backtrace(frame->pc, tsk);
-		else if (frame->pc >= 0xffffff8008000000 && frame->pc < 0xffffff800c000000 && ((frame->pc & 0x3) != 0))
-			frame->pc = ropp_enable_backtrace(frame->pc, tsk);
+
+#ifdef CONFIG_SEC_DEBUG_LIMIT_BACKTRACE
+	if (fp == frame->fp) {
+		return -EINVAL;
 	}
 #endif
 

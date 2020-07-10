@@ -6,10 +6,10 @@ obj-$(CONFIG_BRCMSMAC)	+= brcm80211/
 
 ifneq ($(CONFIG_BCM4375),)
 obj-$(CONFIG_BCM4375)   += bcmdhd_100_15/
-obj-$(CONFIG_ARCH_SM8150) += bcmdhd_100_15/dhd_custom_memprealloc.o
-obj-$(CONFIG_ARCH_SM8150) += bcmdhd_100_15/dhd_custom_msm.o
+obj-$(CONFIG_SOC_EXYNOS9820) += bcmdhd_100_15/dhd_custom_memprealloc.o
+obj-$(CONFIG_SOC_EXYNOS9820) += bcmdhd_100_15/dhd_custom_exynos.o
 else
 obj-$(CONFIG_BCM4375)   += bcmdhd_100_10/
-obj-$(CONFIG_ARCH_SM8150) += bcmdhd_100_10/dhd_custom_memprealloc.o
-obj-$(CONFIG_ARCH_SM8150) += bcmdhd_100_10/dhd_custom_msm.o
+obj-$(CONFIG_SOC_EXYNOS9820) += bcmdhd_100_10/dhd_custom_memprealloc.o
+obj-$(CONFIG_SOC_EXYNOS9820) += bcmdhd_100_10/dhd_custom_exynos.o
 endif

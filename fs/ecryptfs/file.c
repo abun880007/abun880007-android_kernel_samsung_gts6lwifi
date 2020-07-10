@@ -104,13 +104,11 @@ ecryptfs_filldir(struct dir_context *ctx, const char *lower_name,
 		 */
 		return 0;
 	}
-
 	buf->caller->pos = buf->ctx.pos;
 	rc = !dir_emit(buf->caller, name, name_size, ino, d_type);
 	kfree(name);
 	if (!rc)
 		buf->entries_written++;
-
 	return rc;
 }
 

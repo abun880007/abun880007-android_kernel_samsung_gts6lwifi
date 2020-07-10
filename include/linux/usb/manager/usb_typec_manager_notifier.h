@@ -52,8 +52,6 @@ typedef enum {
 	MANAGER_NOTIFY_MUIC_TIMEOUT_OPEN_DEVICE,
 	MANAGER_NOTIFY_MUIC_UART,
 
-	MANAGER_NOTIFY_CCIC_SENSORHUB,
-	MANAGER_NOTIFY_CCIC_WACOM,
 /* CCIC */
 	MANAGER_NOTIFY_CCIC_INITIAL = 20,
 	MANAGER_NOTIFY_CCIC_MUIC,
@@ -62,6 +60,8 @@ typedef enum {
 	MANAGER_NOTIFY_CCIC_SUB_BATTERY,
 	MANAGER_NOTIFY_CCIC_DP,
 	MANAGER_NOTIFY_CCIC_USBDP,
+	MANAGER_NOTIFY_CCIC_SENSORHUB,
+	MANAGER_NOTIFY_CCIC_WACOM,
 
 /* VBUS */
 	MANAGER_NOTIFY_VBUS_USB = 30,
@@ -74,12 +74,6 @@ typedef enum {
 	VBUS_NOTY,
 	USB_STATE_NOTY,
 } manager_notify_t;
-
-typedef enum {
-	USB_CON = 'C',
-	USB_DIS = 'D',
-} usb_state_t;
-
 
 typedef enum {
 	PD_USB_TYPE,
@@ -164,12 +158,11 @@ typedef struct _manager_data_t
 	int wVbus_det;
 	int is_MPSM;
 	void *pd;
-	int cur_rid;
 #if defined(CONFIG_USB_HW_PARAM)
 	int water_count;
 	int dry_count;
-	int usb210_count;
-	int usb310_count;
+	int usb_highspeed_count;
+	int usb_superspeed_count;
 	int waterChg_count;
 	unsigned long waterDet_duration;
 	unsigned long waterDet_time;
@@ -179,19 +172,26 @@ typedef struct _manager_data_t
 	unsigned long wVbusLow_time;
 #endif
 	int water_cable_type;
+	int alt_is_support;
+	int dp_is_support;
 	int dp_attach_state;
 	int dp_cable_type;
 	int dp_hpd_state;
 	int dp_is_connect;
 	int dp_hs_connect;
 	int dp_check_done;
-	struct notifier_block manager_external_notifier_nb;
+	struct notifier_block manager_external_notifier_nb; 
 }manager_data_t;
 
+
+#define CCIC_BATTERY	(1<<0)
+#define CCIC_USB	(1<<1)
+#define CCIC_DP		(1<<2)
 
 #define MANAGER_NOTIFIER_BLOCK(name)	\
 	struct notifier_block (name)
 
+extern void manager_notifier_usbdp_support(void);
 extern void manager_notifier_test(void *);
 
 
@@ -200,8 +200,5 @@ extern void manager_notifier_test(void *);
 extern int manager_notifier_register(struct notifier_block *nb,
 		notifier_fn_t notifier, manager_notifier_device_t listener);
 extern int manager_notifier_unregister(struct notifier_block *nb);
-#if defined(CONFIG_CCIC_NOTIFIER)
-extern void manual_turn_off_usb(void);
-#endif
 
 #endif /* __USB_TYPEC_MANAGER_NOTIFIER_H__ */

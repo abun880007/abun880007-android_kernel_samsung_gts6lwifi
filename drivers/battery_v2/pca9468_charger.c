@@ -3315,7 +3315,7 @@ static void pca9468_pps_request_work(struct work_struct *work)
 						 pps_work.work);
 
 	int ret = 0;
-#if defined(CONFIG_CHARGER_MAX77705)	// In Maxim IF-PMIC, periodic pps request runs on F/W
+#if defined(CONFIG_BATTERY_SAMSUNG)
 	int vin, iin;
 
 	/* this is for wdt */
@@ -4074,9 +4074,6 @@ static int pca9468_chg_get_property(struct power_supply *psy,
 				else
 					val->intval = ret;
 			}
-			break;
-		case POWER_SUPPLY_EXT_PROP_DIRECT_VOLTAGE_MAX:
-			val->intval = pca9468->float_voltage;
 			break;
 		default:
 			return -EINVAL;

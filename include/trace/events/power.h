@@ -32,11 +32,62 @@ DECLARE_EVENT_CLASS(cpu,
 		  (unsigned long)__entry->cpu_id)
 );
 
+DEFINE_EVENT(cpu, cpupm,
+
+	TP_PROTO(unsigned int state, unsigned int cpu_id),
+
+	TP_ARGS(state, cpu_id)
+);
+
 DEFINE_EVENT(cpu, cpu_idle,
 
 	TP_PROTO(unsigned int state, unsigned int cpu_id),
 
 	TP_ARGS(state, cpu_id)
+);
+
+TRACE_EVENT(sugov_slack_func,
+
+	TP_PROTO(int cpu),
+
+	TP_ARGS(cpu),
+
+	TP_STRUCT__entry(
+		__field(int, cpu)
+	),
+
+	TP_fast_assign(
+		__entry->cpu = cpu;
+	),
+
+	TP_printk("cpu=%d SLACK EXPIRED", __entry->cpu)
+);
+
+TRACE_EVENT(sugov_slack,
+
+	TP_PROTO(int cpu, unsigned long util,
+		unsigned long min, unsigned long action, int ret),
+
+	TP_ARGS(cpu, util, min, action, ret),
+
+	TP_STRUCT__entry(
+		__field(int, cpu)
+		__field(unsigned long, util)
+		__field(unsigned long, min)
+		__field(unsigned long, action)
+		__field(int, ret)
+	),
+
+	TP_fast_assign(
+		__entry->cpu = cpu;
+		__entry->util = util;
+		__entry->min = min;
+		__entry->action = action;
+		__entry->ret = ret;
+	),
+
+	TP_printk("cpu=%d util=%ld min=%ld action=%ld ret=%d", __entry->cpu,
+			__entry->util, __entry->min, __entry->action, __entry->ret)
 );
 
 TRACE_EVENT(powernv_throttle,
@@ -173,46 +224,78 @@ TRACE_EVENT(cpu_frequency_limits,
 		  (unsigned long)__entry->cpu_id)
 );
 
-TRACE_EVENT(cpu_frequency_switch_start,
+TRACE_EVENT(cpu_frequency_filter,
 
-	TP_PROTO(unsigned int start_freq, unsigned int end_freq,
-		 unsigned int cpu_id),
+	TP_PROTO(unsigned int target_freq, unsigned int req_type),
 
-	TP_ARGS(start_freq, end_freq, cpu_id),
+	TP_ARGS(target_freq, req_type),
 
 	TP_STRUCT__entry(
-		__field(	u32,		start_freq	)
-		__field(	u32,		end_freq	)
-		__field(	u32,		cpu_id		)
+		__field(	u32,		target_freq	)
+		__field(	u32,		req_type	)
 	),
 
 	TP_fast_assign(
-		__entry->start_freq = start_freq;
-		__entry->end_freq = end_freq;
-		__entry->cpu_id = cpu_id;
+		__entry->target_freq = target_freq;
+		__entry->req_type = req_type;
 	),
 
-	TP_printk("start=%lu end=%lu cpu_id=%lu",
-		  (unsigned long)__entry->start_freq,
-		  (unsigned long)__entry->end_freq,
-		  (unsigned long)__entry->cpu_id)
+	TP_printk("eff: target=%lu req_type=%lu",
+		  (unsigned long)__entry->target_freq,
+		  (unsigned long)__entry->req_type)
 );
 
-TRACE_EVENT(cpu_frequency_switch_end,
+TRACE_EVENT(sugov_kair_freq,
+	    TP_PROTO(unsigned int cpu, unsigned long util, unsigned long max,
+		     int l1_rand, unsigned int legacy_freq, unsigned int freq),
+	    TP_ARGS(cpu, util, max, l1_rand, legacy_freq, freq),
+	    TP_STRUCT__entry(
+		    __field(	unsigned int,	cpu)
+		    __field(	unsigned long,	util)
+		    __field(	unsigned long,	max)
+		    __field(	int,		l1_rand)
+		    __field(	unsigned int,	legacy_freq)
+		    __field(	unsigned int,	freq)
+	    ),
+	    TP_fast_assign(
+		    __entry->cpu = cpu;
+		    __entry->util = util;
+		    __entry->max = max;
+		    __entry->l1_rand = l1_rand;
+		    __entry->legacy_freq = legacy_freq;
+		    __entry->freq = freq;
+	    ),
+	    TP_printk("cpu=%u util=%lu max=%lu l1_rand=%d legacy_freq=%u kair_freq=%u",
+		      __entry->cpu,
+		      __entry->util,
+		      __entry->max,
+		      __entry->l1_rand,
+		      __entry->legacy_freq,
+		      __entry->freq)
+);
 
-	TP_PROTO(unsigned int cpu_id),
+TRACE_EVENT(cpu_frequency_sugov,
 
-	TP_ARGS(cpu_id),
+	TP_PROTO(unsigned int freq, unsigned long util, unsigned int cpu_id),
+
+	TP_ARGS(freq, util, cpu_id),
 
 	TP_STRUCT__entry(
-		__field(	u32,		cpu_id		)
+		__field(	u32,		freq	)
+		__field(	u32,		util	)
+		__field(	u32,		cpu_id	)
 	),
 
 	TP_fast_assign(
+		__entry->freq = freq;
+		__entry->util = util;
 		__entry->cpu_id = cpu_id;
 	),
 
-	TP_printk("cpu_id=%lu", (unsigned long)__entry->cpu_id)
+	TP_printk("freq=%lu util=%lu cpu_id=%lu",
+		  (unsigned long)__entry->freq,
+		  (unsigned long)__entry->util,
+		  (unsigned long)__entry->cpu_id)
 );
 
 TRACE_EVENT(device_pm_callback_start,
@@ -591,261 +674,297 @@ DEFINE_EVENT(dev_pm_qos_request, dev_pm_qos_remove_request,
 	TP_ARGS(name, type, new_value)
 );
 
-TRACE_EVENT(sugov_util_update,
-	    TP_PROTO(int cpu,
-		     unsigned long util, unsigned long avg_cap,
-		     unsigned long max_cap, unsigned long nl, unsigned long pl,
-		     unsigned int flags),
-	    TP_ARGS(cpu, util, avg_cap, max_cap, nl, pl, flags),
-	    TP_STRUCT__entry(
-		    __field(	int,		cpu)
-		    __field(	unsigned long,	util)
-		    __field(	unsigned long,	avg_cap)
-		    __field(	unsigned long,	max_cap)
-		    __field(	unsigned long,	nl)
-		    __field(	unsigned long,	pl)
-		    __field(	unsigned int,	flags)
-	    ),
-	    TP_fast_assign(
-		    __entry->cpu = cpu;
-		    __entry->util = util;
-		    __entry->avg_cap = avg_cap;
-		    __entry->max_cap = max_cap;
-		    __entry->nl = nl;
-		    __entry->pl = pl;
-		    __entry->flags = flags;
-	    ),
-	    TP_printk("cpu=%d util=%lu avg_cap=%lu max_cap=%lu nl=%lu pl=%lu flags=0x%x",
-		      __entry->cpu, __entry->util, __entry->avg_cap,
-		      __entry->max_cap, __entry->nl,
-		      __entry->pl, __entry->flags)
-);
+TRACE_EVENT(ocp_max_limit,
 
-TRACE_EVENT(sugov_kair_freq,
-	    TP_PROTO(unsigned int cpu, unsigned long util, unsigned long max,
-		     int l1_rand, unsigned int legacy_freq, unsigned int freq),
-	    TP_ARGS(cpu, util, max, l1_rand, legacy_freq, freq),
-	    TP_STRUCT__entry(
-		    __field(	unsigned int,	cpu)
-		    __field(	unsigned long,	util)
-		    __field(	unsigned long,	max)
-		    __field(	int,		l1_rand)
-		    __field(	unsigned int,	legacy_freq)
-		    __field(	unsigned int,	freq)
-	    ),
-	    TP_fast_assign(
-		    __entry->cpu = cpu;
-		    __entry->util = util;
-		    __entry->max = max;
-		    __entry->l1_rand = l1_rand;
-		    __entry->legacy_freq = legacy_freq;
-		    __entry->freq = freq;
-	    ),
-	    TP_printk("cpu=%u util=%lu max=%lu l1_rand=%d legacy_freq=%u kair_freq=%u",
-		      __entry->cpu,
-		      __entry->util,
-		      __entry->max,
-		      __entry->l1_rand,
-		      __entry->legacy_freq,
-		      __entry->freq)
-);
+	TP_PROTO(unsigned int clipped_freq, bool start),
 
-TRACE_EVENT(sugov_next_freq,
-	    TP_PROTO(unsigned int cpu, unsigned long util, unsigned long max,
-		     unsigned int freq),
-	    TP_ARGS(cpu, util, max, freq),
-	    TP_STRUCT__entry(
-		    __field(	unsigned int,	cpu)
-		    __field(	unsigned long,	util)
-		    __field(	unsigned long,	max)
-		    __field(	unsigned int,	freq)
-	    ),
-	    TP_fast_assign(
-		    __entry->cpu = cpu;
-		    __entry->util = util;
-		    __entry->max = max;
-		    __entry->freq = freq;
-	    ),
-	    TP_printk("cpu=%u util=%lu max=%lu freq=%u",
-		      __entry->cpu,
-		      __entry->util,
-		      __entry->max,
-		      __entry->freq)
-);
-
-
-TRACE_EVENT(bw_hwmon_meas,
-
-	TP_PROTO(const char *name, unsigned long mbps,
-		 unsigned long us, int wake),
-
-	TP_ARGS(name, mbps, us, wake),
+	TP_ARGS(clipped_freq, start),
 
 	TP_STRUCT__entry(
-		__string(	name,			name	)
-		__field(	unsigned long,		mbps	)
-		__field(	unsigned long,		us	)
-		__field(	int,			wake	)
+		__field(	u32,		clipped_freq	)
+		__field(	bool,		start	)
 	),
 
 	TP_fast_assign(
-		__assign_str(name, name);
-		__entry->mbps = mbps;
-		__entry->us = us;
-		__entry->wake = wake;
+		__entry->clipped_freq = clipped_freq;
+		__entry->start = start;
 	),
 
-	TP_printk("dev: %s, mbps = %lu, us = %lu, wake = %d",
-		__get_str(name),
-		__entry->mbps,
-		__entry->us,
-		__entry->wake)
+	TP_printk("clipped_freq=%lu %s",
+		  (unsigned long)__entry->clipped_freq,
+		  (__entry->start)?"begin":"end")
 );
 
-TRACE_EVENT(bw_hwmon_update,
+TRACE_EVENT(emc_cpu_load,
 
-	TP_PROTO(const char *name, unsigned long mbps, unsigned long freq,
-		 unsigned long up_thres, unsigned long down_thres),
+	TP_PROTO(int cpu, int load, int max_load),
 
-	TP_ARGS(name, mbps, freq, up_thres, down_thres),
+	TP_ARGS(cpu, load, max_load),
 
 	TP_STRUCT__entry(
-		__string(	name,			name		)
-		__field(	unsigned long,		mbps		)
-		__field(	unsigned long,		freq		)
-		__field(	unsigned long,		up_thres	)
-		__field(	unsigned long,		down_thres	)
+		__field(int, cpu)
+		__field(int, load)
+		__field(int, max_load)
 	),
 
 	TP_fast_assign(
-		__assign_str(name, name);
-		__entry->mbps = mbps;
-		__entry->freq = freq;
-		__entry->up_thres = up_thres;
-		__entry->down_thres = down_thres;
+		__entry->cpu = cpu;
+		__entry->load = load;
+		__entry->max_load = max_load;
 	),
 
-	TP_printk("dev: %s, mbps = %lu, freq = %lu, up = %lu, down = %lu",
-		__get_str(name),
-		__entry->mbps,
-		__entry->freq,
-		__entry->up_thres,
-		__entry->down_thres)
+	TP_printk("cpu=%d load=%d, max_load=%d",
+		__entry->cpu, __entry->load, __entry->max_load)
 );
 
-TRACE_EVENT(cache_hwmon_meas,
-	TP_PROTO(const char *name, unsigned long high_mrps,
-		 unsigned long med_mrps, unsigned long low_mrps,
-		 unsigned int busy_percent, unsigned int us),
-	TP_ARGS(name, high_mrps, med_mrps, low_mrps, busy_percent, us),
-	TP_STRUCT__entry(
-		__string(name, name)
-		__field(unsigned long, high_mrps)
-		__field(unsigned long, med_mrps)
-		__field(unsigned long, low_mrps)
-		__field(unsigned long, total_mrps)
-		__field(unsigned int, busy_percent)
-		__field(unsigned int, us)
-	),
-	TP_fast_assign(
-		__assign_str(name, name);
-		__entry->high_mrps = high_mrps;
-		__entry->med_mrps = med_mrps;
-		__entry->low_mrps = low_mrps;
-		__entry->total_mrps = high_mrps + med_mrps + low_mrps;
-		__entry->busy_percent = busy_percent;
-		__entry->us = us;
-	),
-	TP_printk("dev=%s H=%lu M=%lu L=%lu T=%lu busy_pct=%u period=%u",
-		  __get_str(name), __entry->high_mrps, __entry->med_mrps,
-		  __entry->low_mrps, __entry->total_mrps,
-		  __entry->busy_percent, __entry->us)
-);
+TRACE_EVENT(emc_domain_load,
 
-TRACE_EVENT(cache_hwmon_update,
-	TP_PROTO(const char *name, unsigned long freq_mhz),
-	TP_ARGS(name, freq_mhz),
-	TP_STRUCT__entry(
-		__string(name, name)
-		__field(unsigned long, freq)
-	),
-	TP_fast_assign(
-		__assign_str(name, name);
-		__entry->freq = freq_mhz;
-	),
-	TP_printk("dev=%s freq=%lu", __get_str(name), __entry->freq)
-);
+	TP_PROTO(const char *domain, int load, int max_load),
 
-TRACE_EVENT(memlat_dev_meas,
-
-	TP_PROTO(const char *name, unsigned int dev_id, unsigned long inst,
-		 unsigned long mem, unsigned long freq, unsigned int stall,
-		 unsigned int ratio),
-
-	TP_ARGS(name, dev_id, inst, mem, freq, stall, ratio),
+	TP_ARGS(domain, load, max_load),
 
 	TP_STRUCT__entry(
-		__string(name, name)
-		__field(unsigned int, dev_id)
-		__field(unsigned long, inst)
-		__field(unsigned long, mem)
-		__field(unsigned long, freq)
-		__field(unsigned int, stall)
-		__field(unsigned int, ratio)
+		__string(domain, domain)
+		__field(int, load)
+		__field(int, max_load)
 	),
 
 	TP_fast_assign(
-		__assign_str(name, name);
-		__entry->dev_id = dev_id;
-		__entry->inst = inst;
-		__entry->mem = mem;
-		__entry->freq = freq;
-		__entry->stall = stall;
-		__entry->ratio = ratio;
+		__assign_str(domain, domain);
+		__entry->load = load;
+		__entry->max_load = max_load;
 	),
 
-	TP_printk("dev: %s, id=%u, inst=%lu, mem=%lu, freq=%lu, stall=%u, ratio=%u",
-		__get_str(name),
-		__entry->dev_id,
-		__entry->inst,
-		__entry->mem,
-		__entry->freq,
-		__entry->stall,
-		__entry->ratio)
+	TP_printk("domain:%s load_sum=%d, max_load_sum=%d",
+		__get_str(domain), __entry->load, __entry->max_load)
 );
 
-TRACE_EVENT(memlat_dev_update,
+TRACE_EVENT(emc_domain_status,
 
-	TP_PROTO(const char *name, unsigned int dev_id, unsigned long inst,
-		 unsigned long mem, unsigned long freq, unsigned long vote),
+	TP_PROTO(const char *domain, unsigned int sys_heavy, unsigned int sys_busy,
+			unsigned int dom_heavy, unsigned int dom_busy),
 
-	TP_ARGS(name, dev_id, inst, mem, freq, vote),
+	TP_ARGS(domain, sys_heavy, sys_busy, dom_heavy, dom_busy),
 
 	TP_STRUCT__entry(
-		__string(name, name)
-		__field(unsigned int, dev_id)
-		__field(unsigned long, inst)
-		__field(unsigned long, mem)
-		__field(unsigned long, freq)
-		__field(unsigned long, vote)
+		__string(domain, domain)
+		__field(unsigned int, sys_heavy)
+		__field(unsigned int, sys_busy)
+		__field(unsigned int, dom_heavy)
+		__field(unsigned int, dom_busy)
 	),
 
 	TP_fast_assign(
-		__assign_str(name, name);
-		__entry->dev_id = dev_id;
-		__entry->inst = inst;
-		__entry->mem = mem;
-		__entry->freq = freq;
-		__entry->vote = vote;
+		__assign_str(domain, domain);
+		__entry->sys_heavy = sys_heavy;
+		__entry->sys_busy = sys_busy;
+		__entry->dom_heavy = dom_heavy;
+		__entry->dom_busy = dom_busy;
 	),
 
-	TP_printk("dev: %s, id=%u, inst=%lu, mem=%lu, freq=%lu, vote=%lu",
-		__get_str(name),
-		__entry->dev_id,
-		__entry->inst,
-		__entry->mem,
-		__entry->freq,
-		__entry->vote)
+	TP_printk("domain:%s s_heavy =%x, s_busy=%x, d_heavy=%x, d_busy=%x",
+			__get_str(domain), __entry->sys_heavy, __entry->sys_busy,
+			__entry->dom_heavy, __entry->dom_busy)
+);
+
+TRACE_EVENT(emc_update_system_status,
+
+	TP_PROTO(unsigned int prev_heavy, unsigned int prev_busy,
+			unsigned int heavy, unsigned int busy),
+
+	TP_ARGS(prev_heavy, prev_busy, heavy, busy),
+
+	TP_STRUCT__entry(
+		__field(unsigned int, prev_heavy)
+		__field(unsigned int, prev_busy)
+		__field(unsigned int, heavy)
+		__field(unsigned int, busy)
+	),
+
+	TP_fast_assign(
+		__entry->prev_heavy = prev_heavy;
+		__entry->prev_busy = prev_busy;
+		__entry->heavy = heavy;
+		__entry->busy = busy;
+	),
+
+	TP_printk("prev_heavy=%x, prev_busy=%x, heavy=%x busy=%x",
+			__entry->prev_heavy, __entry->prev_busy,
+			__entry->heavy, __entry->busy)
+);
+
+TRACE_EVENT(emc_select_mode,
+
+	TP_PROTO(const char *mode, int need_online_cnt),
+
+	TP_ARGS(mode, need_online_cnt),
+
+	TP_STRUCT__entry(
+		__string(mode, mode)
+		__field(int, need_online_cnt)
+	),
+
+	TP_fast_assign(
+		__assign_str(mode, mode);
+		__entry->need_online_cnt = need_online_cnt;
+	),
+
+	TP_printk("mode:%s need_online_cnt=%d",
+		__get_str(mode), __entry->need_online_cnt)
+);
+
+TRACE_EVENT(emc_domain_busy,
+
+	TP_PROTO(const char *domain, unsigned long load, int busy),
+
+	TP_ARGS(domain, load, busy),
+
+	TP_STRUCT__entry(
+		__string(domain, domain)
+		__field(unsigned long, load)
+		__field(int, busy)
+	),
+
+	TP_fast_assign(
+		__assign_str(domain, domain);
+		__entry->load = load;
+		__entry->busy = busy;
+	),
+
+	TP_printk("domain=%s, load=%ld, busy=%d",
+			__get_str(domain), __entry->load, __entry->busy)
+);
+
+TRACE_EVENT(emc_start_timer,
+
+	TP_PROTO(const char *mode, unsigned int change_latency),
+
+	TP_ARGS(mode, change_latency),
+
+	TP_STRUCT__entry(
+		__string(mode, mode)
+		__field(unsigned int, change_latency)
+	),
+
+	TP_fast_assign(
+		__assign_str(mode, mode);
+		__entry->change_latency = change_latency;
+	),
+
+	TP_printk("mode=%s, change_latency=%d",
+			__get_str(mode), __entry->change_latency)
+);
+
+TRACE_EVENT(emc_do_mode_change,
+
+	TP_PROTO(const char *prev_mode, const char *new_mode, unsigned int event),
+
+	TP_ARGS(prev_mode, new_mode, event),
+
+	TP_STRUCT__entry(
+		__string(prev_mode, prev_mode)
+		__string(new_mode, new_mode)
+		__field(unsigned int, event)
+	),
+
+	TP_fast_assign(
+		__assign_str(prev_mode, prev_mode);
+		__assign_str(new_mode, new_mode);
+		__entry->event = event;
+	),
+
+	TP_printk("mode: %s->%s (event 0x%x)", __get_str(prev_mode),
+					__get_str(new_mode), __entry->event)
+);
+
+TRACE_EVENT(emc_update_cpu_pwr,
+
+	TP_PROTO(unsigned int pre_cpu_mask, unsigned int cpu, unsigned int on),
+
+	TP_ARGS(pre_cpu_mask, cpu, on),
+
+	TP_STRUCT__entry(
+		__field(unsigned int, pre_cpu_mask)
+		__field(unsigned int, cpu)
+		__field(unsigned int, on)
+	),
+
+	TP_fast_assign(
+		__entry->pre_cpu_mask = pre_cpu_mask;
+		__entry->cpu = cpu;
+		__entry->on = on;
+	),
+
+	TP_printk("pre_cpu_mask=%x, cpu=%u, on=%s", __entry->pre_cpu_mask,
+					__entry->cpu, __entry->on? "ON" : "OFF")
+);
+
+TRACE_EVENT(cpus_up_enter,
+
+	TP_PROTO(int cpu),
+
+	TP_ARGS(cpu),
+
+	TP_STRUCT__entry(
+		__field(int, cpu)
+	),
+
+	TP_fast_assign(
+		__entry->cpu = cpu;
+	),
+
+	TP_printk("enter cpus_up cpu%d", __entry->cpu)
+);
+
+TRACE_EVENT(cpus_up_exit,
+
+	TP_PROTO(int cpu),
+
+	TP_ARGS(cpu),
+
+	TP_STRUCT__entry(
+		__field(int, cpu)
+	),
+
+	TP_fast_assign(
+		__entry->cpu = cpu;
+	),
+
+	TP_printk("exit cpus_up cpu%d", __entry->cpu)
+);
+
+TRACE_EVENT(cpus_down_enter,
+
+	TP_PROTO(int cpu),
+
+	TP_ARGS(cpu),
+
+	TP_STRUCT__entry(
+		__field(int, cpu)
+	),
+
+	TP_fast_assign(
+		__entry->cpu = cpu;
+	),
+
+	TP_printk("enter cpus_down cpu%d", __entry->cpu)
+);
+
+TRACE_EVENT(cpus_down_exit,
+
+	TP_PROTO(int cpu),
+
+	TP_ARGS(cpu),
+
+	TP_STRUCT__entry(
+		__field(int, cpu)
+	),
+
+	TP_fast_assign(
+		__entry->cpu = cpu;
+	),
+
+	TP_printk("exit cpus_down cpu%d", __entry->cpu)
 );
 
 #endif /* _TRACE_POWER_H */

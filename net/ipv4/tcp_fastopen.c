@@ -245,6 +245,7 @@ static struct sock *tcp_fastopen_create_child(struct sock *sk,
 #ifndef CONFIG_MPTCP
 	tcp_init_buffer_space(child);
 
+
 	tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
 #endif
 #ifdef CONFIG_MPTCP

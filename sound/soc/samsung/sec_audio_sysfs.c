@@ -22,7 +22,6 @@
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/time.h>
-#include <linux/delay.h>
 #include <linux/wait.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -31,12 +30,7 @@
 
 struct sec_audio_sysfs_data *audio_data;
 
-int wdsp_count = 100;
-int wdsp_delay = 5;
-
-#define MAX_SIZE 4096
-
-#ifndef CONFIG_SND_SOC_SAMSUNG_USB_HEADSET_ONLY
+#ifdef CONFIG_SND_SOC_SAMSUNG_SYSFS_EARJACK
 int audio_register_jack_select_cb(int (*set_jack) (int))
 {
 	if (audio_data->set_jack_state) {
@@ -69,7 +63,7 @@ static ssize_t audio_jack_select_store(struct device *dev,
 	return size;
 }
 
-static DEVICE_ATTR(select_jack, S_IRUGO | S_IWUSR | S_IWGRP,
+static DEVICE_ATTR(select_jack, 0664,
 			NULL, audio_jack_select_store);
 
 int audio_register_jack_state_cb(int (*jack_state) (void))
@@ -93,15 +87,13 @@ static ssize_t audio_jack_state_show(struct device *dev,
 
 	if (audio_data->get_jack_state)
 		report = audio_data->get_jack_state();
-	else {
+	else
 		dev_info(dev, "%s: No callback registered\n", __func__);
-		panic("sound card is not registered");
-	}
 
 	return snprintf(buf, 4, "%d\n", report);
 }
 
-static DEVICE_ATTR(state, S_IRUGO | S_IWUSR | S_IWGRP,
+static DEVICE_ATTR(state, 0664,
 			audio_jack_state_show, NULL);
 
 int audio_register_key_state_cb(int (*key_state) (void))
@@ -131,10 +123,9 @@ static ssize_t audio_key_state_show(struct device *dev,
 	return snprintf(buf, 4, "%d\n", report);
 }
 
-static DEVICE_ATTR(key_state, S_IRUGO | S_IWUSR | S_IWGRP,
+static DEVICE_ATTR(key_state, 0664,
 			audio_key_state_show, NULL);
 
-#ifndef CONFIG_SND_SOC_SAMSUNG_MBHC_SUPPORT
 int audio_register_mic_adc_cb(int (*mic_adc) (void))
 {
 	if (audio_data->get_mic_adc) {
@@ -162,17 +153,14 @@ static ssize_t audio_mic_adc_show(struct device *dev,
 	return snprintf(buf, 16, "%d\n", report);
 }
 
-static DEVICE_ATTR(mic_adc, S_IRUGO | S_IWUSR | S_IWGRP,
+static DEVICE_ATTR(mic_adc, 0664,
 			audio_mic_adc_show, NULL);
-#endif
 
 static struct attribute *sec_audio_jack_attr[] = {
 	&dev_attr_select_jack.attr,
 	&dev_attr_state.attr,
 	&dev_attr_key_state.attr,
-#ifndef CONFIG_SND_SOC_SAMSUNG_MBHC_SUPPORT
 	&dev_attr_mic_adc.attr,
-#endif
 	NULL,
 };
 
@@ -208,104 +196,11 @@ static ssize_t audio_check_codec_id_show(struct device *dev,
 	return snprintf(buf, 4, "%d\n", report);
 }
 
-static DEVICE_ATTR(check_codec_id, S_IRUGO | S_IWUSR | S_IWGRP,
+static DEVICE_ATTR(check_codec_id, 0664,
 			audio_check_codec_id_show, NULL);
-
-int audio_register_wdsp_state_cb(int (*wdsp_state) (void))
-{
-	if (audio_data->get_wdsp_state) {
-		dev_err(audio_data->codec_dev,
-				"%s: Already registered\n", __func__);
-		return -EEXIST;
-	}
-
-	audio_data->get_wdsp_state = wdsp_state;
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(audio_register_wdsp_state_cb);
-
-int audio_register_mad_mic_state_cb(void (*mad_mic_bias_status) (int))
-{
-	if (audio_data->set_mad_mic_bias_status) {
-		dev_err(audio_data->codec_dev,
-				"%s: Already registered\n", __func__);
-		return -EEXIST;
-	}
-
-	audio_data->set_mad_mic_bias_status = mad_mic_bias_status;
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(audio_register_mad_mic_state_cb);
-
-
-static ssize_t audio_check_wdsp_state_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	int value;
-	int i, len;
-
-	len = 0;
-
-	audio_data->set_mad_mic_bias_status(0);
-
-	if (audio_data->get_wdsp_state) {
-		for (i = 0; i < wdsp_count; i++) {
-			if (len >= MAX_SIZE)
-				break;
-
-			value = audio_data->get_wdsp_state();
-			usleep_range(wdsp_delay*100, wdsp_delay*100+100);
-			len += snprintf(buf + len, MAX_SIZE - len, "%x", value);
-		}
-		len += snprintf(buf + len, MAX_SIZE - len, "\n");
-		dev_info(dev, "%s: string %s\n", __func__, buf);
-	} else
-		dev_info(dev, "%s: No callback registered\n", __func__);
-
-	audio_data->set_mad_mic_bias_status(1);
-
-	if (len >= MAX_SIZE)
-		return MAX_SIZE;
-
-	return len;
-}
-
-static DEVICE_ATTR(wdsp_state, S_IRUGO | S_IWUSR | S_IWGRP,
-			audio_check_wdsp_state_show, NULL);
-
-static ssize_t audio_wdsp_check_delays_store(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t size)
-{
-	sscanf(buf, "%d", &wdsp_delay);
-
-	dev_info(dev, "%s: wdsp_check_delay : %d\n", __func__, wdsp_delay);
-
-	return size;
-}
-
-static DEVICE_ATTR(wdsp_check_delay, S_IRUGO | S_IWUSR | S_IWGRP,
-			NULL, audio_wdsp_check_delays_store);
-
-static ssize_t audio_wdsp_check_count_store(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t size)
-{
-	sscanf(buf, "%d", &wdsp_count);
-
-	dev_info(dev, "%s: wdsp_check_count : %d\n", __func__, wdsp_count);
-
-	return size;
-}
-
-static DEVICE_ATTR(wdsp_check_count, S_IRUGO | S_IWUSR | S_IWGRP,
-			NULL, audio_wdsp_check_count_store);
 
 static struct attribute *sec_audio_codec_attr[] = {
 	&dev_attr_check_codec_id.attr,
-	&dev_attr_wdsp_state.attr,
-	&dev_attr_wdsp_check_delay.attr,
-	&dev_attr_wdsp_check_count.attr,
 	NULL,
 };
 
@@ -315,7 +210,8 @@ static struct attribute_group sec_audio_codec_attr_group = {
 
 static int __init sec_audio_sysfs_init(void)
 {
-	int ret = 0;
+	dev_t dev_id;
+	int ret;
 
 	audio_data = kzalloc(sizeof(struct sec_audio_sysfs_data), GFP_KERNEL);
 	if (audio_data == NULL)
@@ -323,87 +219,90 @@ static int __init sec_audio_sysfs_init(void)
 
 	audio_data->audio_class = class_create(THIS_MODULE, "audio");
 	if (IS_ERR(audio_data->audio_class)) {
-		pr_err("%s: Failed to create audio class\n", __func__);
 		ret = PTR_ERR(audio_data->audio_class);
-		goto err_alloc;
+		pr_err("%s: Failed to create audio class (%d)\n",
+							__func__, ret);
+		kfree(audio_data);
+		audio_data = NULL;
+		return ret;
 	}
 
-#ifndef CONFIG_SND_SOC_SAMSUNG_USB_HEADSET_ONLY
-	audio_data->jack_dev =
-			device_create(audio_data->audio_class,
-					NULL, 0, NULL, "earjack");
+	dev_id = 0;
+
+#ifdef CONFIG_SND_SOC_SAMSUNG_SYSFS_EARJACK
+	audio_data->jack_dev = device_create(audio_data->audio_class, NULL,
+						++dev_id, NULL, "earjack");
 	if (IS_ERR(audio_data->jack_dev)) {
-		pr_err("%s: Failed to create earjack device\n", __func__);
 		ret = PTR_ERR(audio_data->jack_dev);
-		goto err_class;
-	}
-
-	ret = sysfs_create_group(&audio_data->jack_dev->kobj,
-				&sec_audio_jack_attr_group);
-	if (ret) {
-		pr_err("%s: Failed to create earjack sysfs\n", __func__);
-		goto err_jack_device;
+		pr_err("%s: Failed to create earjack device (%d)\n",
+							__func__, ret);
+		audio_data->jack_dev = NULL;
+		--dev_id;
+	} else {
+		ret = sysfs_create_group(&audio_data->jack_dev->kobj,
+					&sec_audio_jack_attr_group);
+		if (ret) {
+			pr_err("%s: Failed to create earjack sysfs (%d)\n",
+								__func__, ret);
+			device_destroy(audio_data->audio_class,
+					audio_data->jack_dev_id);
+			audio_data->jack_dev = NULL;
+			--dev_id;
+		} else {
+			pr_info("%s: create earjack device id(%lu)\n",
+							__func__, dev_id);
+			audio_data->jack_dev_id = dev_id;
+		}
 	}
 #endif
 
-	audio_data->codec_dev =
-			device_create(audio_data->audio_class,
-					NULL, 1, NULL, "codec");
+	audio_data->codec_dev = device_create(audio_data->audio_class, NULL,
+						++dev_id, NULL, "codec");
 	if (IS_ERR(audio_data->codec_dev)) {
-		pr_err("%s: Failed to create codec device\n", __func__);
 		ret = PTR_ERR(audio_data->codec_dev);
-#ifndef CONFIG_SND_SOC_SAMSUNG_USB_HEADSET_ONLY
-		goto err_jack_attr;
-#else
-		goto err_class;
-#endif
-	}
-
-	ret = sysfs_create_group(&audio_data->codec_dev->kobj,
-				&sec_audio_codec_attr_group);
-	if (ret) {
-		pr_err("%s: Failed to create codec sysfs\n", __func__);
-		goto err_codec_device;
+		pr_err("%s: Failed to create codec device (%d)\n",
+							__func__, ret);
+		audio_data->codec_dev = NULL;
+		--dev_id;
+	} else {
+		ret = sysfs_create_group(&audio_data->codec_dev->kobj,
+					&sec_audio_codec_attr_group);
+		if (ret) {
+			pr_err("%s: Failed to create codec sysfs (%d)\n",
+								__func__, ret);
+			device_destroy(audio_data->audio_class,
+					audio_data->codec_dev_id);
+			audio_data->codec_dev = NULL;
+			--dev_id;
+		} else {
+			pr_info("%s: create codec device id(%lu)\n",
+							__func__, dev_id);
+			audio_data->codec_dev_id = dev_id;
+		}
 	}
 
 	return 0;
-
-err_codec_device:
-	device_destroy(audio_data->audio_class, 1);
-	audio_data->codec_dev = NULL;
-#ifndef CONFIG_SND_SOC_SAMSUNG_USB_HEADSET_ONLY
-err_jack_attr:
-	sysfs_remove_group(&audio_data->jack_dev->kobj,
-				&sec_audio_jack_attr_group);
-err_jack_device:
-	device_destroy(audio_data->audio_class, 0);
-	audio_data->jack_dev = NULL;
-#endif
-err_class:
-	class_destroy(audio_data->audio_class);
-	audio_data->audio_class = NULL;
-err_alloc:
-	kfree(audio_data);
-	audio_data = NULL;
-
-	return ret;
 }
 subsys_initcall(sec_audio_sysfs_init);
 
 static void __exit sec_audio_sysfs_exit(void)
 {
-	if (audio_data->codec_dev) {
-		sysfs_remove_group(&audio_data->codec_dev->kobj,
-				&sec_audio_codec_attr_group);
-		device_destroy(audio_data->audio_class, 1);
-	}
-#ifndef CONFIG_SND_SOC_SAMSUNG_USB_HEADSET_ONLY
+#ifdef CONFIG_SND_SOC_SAMSUNG_SYSFS_EARJACK
 	if (audio_data->jack_dev) {
 		sysfs_remove_group(&audio_data->jack_dev->kobj,
 				&sec_audio_jack_attr_group);
-		device_destroy(audio_data->audio_class, 0);
+		device_destroy(audio_data->audio_class,
+				audio_data->jack_dev_id);
 	}
 #endif
+
+	if (audio_data->codec_dev) {
+		sysfs_remove_group(&audio_data->codec_dev->kobj,
+				&sec_audio_codec_attr_group);
+		device_destroy(audio_data->audio_class,
+				audio_data->codec_dev_id);
+	}
+
 	if (audio_data->audio_class)
 		class_destroy(audio_data->audio_class);
 

@@ -282,9 +282,6 @@ static const struct usb_device_id usb_quirk_list[] = {
 	/* DJI CineSSD */
 	{ USB_DEVICE(0x2ca3, 0x0031), .driver_info = USB_QUIRK_NO_LPM },
 
-	/* Kingston DataTraveler 3.0 */
-	{ USB_DEVICE(0x0951, 0x1666), .driver_info = USB_QUIRK_NO_LPM },
-
 	/* INTEL VALUE SSD */
 	{ USB_DEVICE(0x8086, 0xf1a5), .driver_info = USB_QUIRK_RESET_RESUME },
 
@@ -294,6 +291,13 @@ static const struct usb_device_id usb_quirk_list[] = {
 
 	/* Realtek r8153 Lan dongle */
 	{ USB_DEVICE(0x0bda, 0x8153), .driver_info = USB_QUIRK_NO_LPM },
+
+	/* BES USB Headset */
+	{ USB_DEVICE(0xbe57, 0x020f), .driver_info = USB_QUIRK_RESET },
+
+	/* Samsung R1 USB Headset */
+	{ USB_DEVICE(0x04e8, 0xa04f), .driver_info = USB_QUIRK_RESET },
+	{ USB_DEVICE(0x04e8, 0xa057), .driver_info = USB_QUIRK_RESET },
 
 	{ }  /* terminating entry must be last */
 };
@@ -442,10 +446,9 @@ int usb_detect_interface_lpm(struct usb_device *udev)
 			continue;
 
 		l1_enable = 1;
+		break;
 	}
 
-	pr_info("%s:Device will %s L1\n", __func__, l1_enable?"enable":"disable");
 	return l1_enable;
 }
 #endif
-

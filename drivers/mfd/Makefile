@@ -47,21 +47,6 @@ obj-$(CONFIG_MFD_T7L66XB)	+= t7l66xb.o tmio_core.o
 obj-$(CONFIG_MFD_TC6387XB)	+= tc6387xb.o tmio_core.o
 obj-$(CONFIG_MFD_TC6393XB)	+= tc6393xb.o tmio_core.o
 
-obj-$(CONFIG_MFD_TACNA)		+= tacna-core.o
-ifeq ($(CONFIG_MFD_CS47L96),y)
-obj-$(CONFIG_MFD_TACNA)		+= cs47l96-tables.o
-endif
-ifeq ($(CONFIG_MFD_CS48L31),y)
-obj-$(CONFIG_MFD_TACNA)		+= cs48l32-tables.o
-endif
-ifeq ($(CONFIG_MFD_CS48L32),y)
-obj-$(CONFIG_MFD_TACNA)		+= cs48l32-tables.o
-endif
-ifeq ($(CONFIG_MFD_CS48L33),y)
-obj-$(CONFIG_MFD_TACNA)		+= cs48l32-tables.o
-endif
-obj-$(CONFIG_MFD_TACNA_SPI)	+= tacna-spi.o
-
 obj-$(CONFIG_MFD_ARIZONA)	+= arizona-core.o
 obj-$(CONFIG_MFD_ARIZONA)	+= arizona-irq.o
 obj-$(CONFIG_MFD_ARIZONA_I2C)	+= arizona-i2c.o
@@ -93,6 +78,25 @@ obj-$(CONFIG_MFD_WM8350)	+= wm8350.o
 obj-$(CONFIG_MFD_WM8350_I2C)	+= wm8350-i2c.o
 wm8994-objs			:= wm8994-core.o wm8994-irq.o wm8994-regmap.o
 obj-$(CONFIG_MFD_WM8994)	+= wm8994.o
+
+obj-$(CONFIG_MFD_MADERA)	+= madera-core.o
+ifeq ($(CONFIG_MFD_CS47L15),y)
+obj-$(CONFIG_MFD_MADERA)	+= cs47l15-tables.o
+endif
+ifeq ($(CONFIG_MFD_CS47L35),y)
+obj-$(CONFIG_MFD_MADERA)	+= cs47l35-tables.o
+endif
+ifeq ($(CONFIG_MFD_CS47L85),y)
+obj-$(CONFIG_MFD_MADERA)	+= cs47l85-tables.o
+endif
+ifeq ($(CONFIG_MFD_CS47L90),y)
+obj-$(CONFIG_MFD_MADERA)	+= cs47l90-tables.o
+endif
+ifeq ($(CONFIG_MFD_CS47L92),y)
+obj-$(CONFIG_MFD_MADERA)	+= cs47l92-tables.o
+endif
+obj-$(CONFIG_MFD_MADERA_I2C)	+= madera-i2c.o
+obj-$(CONFIG_MFD_MADERA_SPI)	+= madera-spi.o
 
 obj-$(CONFIG_TPS6105X)		+= tps6105x.o
 obj-$(CONFIG_TPS65010)		+= tps65010.o
@@ -164,13 +168,13 @@ obj-$(CONFIG_MFD_MAX77620)	+= max77620.o
 obj-$(CONFIG_MFD_MAX77686)	+= max77686.o
 obj-$(CONFIG_MFD_MAX77693)	+= max77693.o
 obj-$(CONFIG_MFD_MAX77843)	+= max77843.o
-obj-$(CONFIG_MFD_MAX77705) 	+= max77705.o max77705-irq.o
+obj-$(CONFIG_MFD_MAX77865)	+= max77865.o max77865-irq.o
+obj-$(CONFIG_MFD_MAX77705)	+= max77705.o max77705-irq.o
 obj-$(CONFIG_MFD_MAX8907)	+= max8907.o
 max8925-objs			:= max8925-core.o max8925-i2c.o
 obj-$(CONFIG_MFD_MAX8925)	+= max8925.o
 obj-$(CONFIG_MFD_MAX8997)	+= max8997.o max8997-irq.o
 obj-$(CONFIG_MFD_MAX8998)	+= max8998.o max8998-irq.o
-obj-$(CONFIG_MFD_SM5705)	+= sm5705.o sm5705-irq.o
 
 pcf50633-objs			:= pcf50633-core.o pcf50633-irq.o
 obj-$(CONFIG_MFD_PCF50633)	+= pcf50633.o
@@ -203,7 +207,6 @@ obj-$(CONFIG_MFD_SI476X_CORE)	+= si476x-core.o
 obj-$(CONFIG_MFD_CS5535)	+= cs5535-mfd.o
 obj-$(CONFIG_MFD_OMAP_USB_HOST)	+= omap-usb-host.o omap-usb-tll.o
 obj-$(CONFIG_MFD_PM8XXX) 	+= qcom-pm8xxx.o ssbi.o
-obj-$(CONFIG_MFD_I2C_PMIC)	+= qcom-i2c-pmic.o
 obj-$(CONFIG_MFD_QCOM_RPM)	+= qcom_rpm.o
 obj-$(CONFIG_MFD_SPMI_PMIC)	+= qcom-spmi-pmic.o
 obj-$(CONFIG_TPS65911_COMPARATOR)	+= tps65911-comparator.o
@@ -250,8 +253,8 @@ obj-$(CONFIG_MFD_STM32_LPTIMER)	+= stm32-lptimer.o
 obj-$(CONFIG_MFD_STM32_TIMERS) 	+= stm32-timers.o
 obj-$(CONFIG_MFD_MXS_LRADC)     += mxs-lradc.o
 
-obj-$(CONFIG_MFD_S2MPB02)       += s2mpb02-core.o s2mpb02-irq.o
-obj-$(CONFIG_SEC_PM)	+= sec_ap_pmic.o
-
-obj-$(CONFIG_MFD_S2MU107)	+= s2mu107_core.o s2mu107_irq.o
-obj-$(CONFIG_MFD_S2MU106)	+= s2mu106_core.o s2mu106_irq.o
+obj-$(CONFIG_MFD_S2MPS18)	+= s2mps18_core.o s2mps18_irq.o
+obj-$(CONFIG_MFD_S2MPS19)	+= s2mps19_core.o s2mps19_irq.o
+obj-$(CONFIG_MFD_S2MPS20)	+= s2mps20_core.o s2mps20_irq.o
+obj-$(CONFIG_MFD_S2MPB02)	+= s2mpb02-core.o s2mpb02-irq.o
+obj-$(CONFIG_MFD_S2MU004)   += s2mu004_core.o s2mu004_irq.o

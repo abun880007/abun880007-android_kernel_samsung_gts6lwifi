@@ -9,7 +9,7 @@
 #include <linux/scatterlist.h>
 
 #include <trace/events/block.h>
-#include <linux/pfk.h>
+
 #include "blk.h"
 
 static struct bio *blk_bio_discard_split(struct request_queue *q,
@@ -664,11 +664,6 @@ static void blk_account_io_merge(struct request *req)
 	}
 }
 
-static bool crypto_not_mergeable(const struct bio *bio, const struct bio *nxt)
-{
-	return (!pfk_allow_merge_bio(bio, nxt));
-}
-
 /*
  * For non-mq, this has to be called with the request spinlock acquired.
  * For mq with scheduling, the appropriate queue wide lock should be held.
@@ -700,15 +695,15 @@ static struct request *attempt_merge(struct request_queue *q,
 	    !blk_write_same_mergeable(req->bio, next->bio))
 		return NULL;
 
+	if (!blk_crypt_mergeable(req->bio, next->bio))
+		return NULL;
+
 	/*
 	 * Don't allow merge of different write hints, or for a hint with
 	 * non-hint IO.
 	 */
 	if (req->write_hint != next->write_hint)
 		return NULL;
-
-	if (crypto_not_mergeable(req->bio, next->bio))
-		return 0;
 
 	/*
 	 * If we are allowed to merge, then append bio list
@@ -852,12 +847,12 @@ enum elv_merge blk_try_merge(struct request *rq, struct bio *bio)
 		return ELEVATOR_DISCARD_MERGE;
 	} else if (blk_rq_pos(rq) + blk_rq_sectors(rq) ==
 						bio->bi_iter.bi_sector) {
-		if (crypto_not_mergeable(rq->bio, bio))
+		if (!blk_crypt_mergeable(rq->bio, bio))
 			return ELEVATOR_NO_MERGE;
 		return ELEVATOR_BACK_MERGE;
 	} else if (blk_rq_pos(rq) - bio_sectors(bio) ==
 						bio->bi_iter.bi_sector) {
-		if (crypto_not_mergeable(bio, rq->bio))
+		if (!blk_crypt_mergeable(bio, rq->bio))
 			return ELEVATOR_NO_MERGE;
 		return ELEVATOR_FRONT_MERGE;
 	}

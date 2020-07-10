@@ -17,7 +17,6 @@
 
 #include <linux/linkage.h>
 #include <asm/assembler.h>
-#include <linux/rkp_cfp.h>
 
 .section .hyperdrive, "ax"
 .global _start_hyperdrive
@@ -27,6 +26,9 @@ _start_hyperdrive:
 nop
 
 #ifdef CONFIG_RKP_CFP_JOPP
+
+#define RRX x16
+#define RRX_32 w16
 
 /*
  * Load the word just before the function instructions.
@@ -40,6 +42,22 @@ nop
 	subs	RRX_32, RRX_32, #0xbe7, lsl #12
 	cmp	RRX_32, #0xbad
 	b.eq	1f
+
+	/* 
+	 * DDK/VRA/RTA	0xffffff80fa000000 ~ 0xffffff80fa780000
+	 * Should match FIMC_VA and FIMC_SIZE
+	 */
+	mov	RRX, #0xffffff8000000000
+	movk	RRX, 0xfa00, lsl #16
+	cmp 	\reg, RRX
+	b.ls	2f
+	movk	RRX, #0xfa78, lsl #16
+	cmp 	\reg, RRX
+	b.hs	2f
+1: // Fail
+	pop	RRX, xzr
+	br 	\reg
+2: // Pass
 #if 0
 	//Test code
 	push	x0, x1
@@ -68,9 +86,6 @@ nop
 #else
 	.inst	0xdeadc0de //crash for sure
 #endif
-1:
-	pop	RRX, xzr
-	br 	\reg
 	.endm
 
 	// Only add springboards for a register rX if there exists a "BLR rX" instruction in vmlinux to instrument
@@ -116,31 +131,6 @@ nop
 
 #endif
 
-#ifdef CONFIG_RKP_CFP_ROPP
-/*
- * ROPP allows backtrace debugging
- *   x0 = encrypted return address
- *   x1 = task struct
- */
-ENTRY(ropp_enable_backtrace)
-#ifdef CONFIG_RKP_CFP_ROPP_SYSREGKEY
-	push	x2, x3
-	ldr	x2, [x1, #TSK_TI_RRK]
-	eor	x0, x0, x2		// x0=ra^x17^mk
-	mrs	x3, DAIF
-	msr	DAIFset, #0x3
-	mrs	x2, RRMK
-	eor	x0, x0, x2		//x0=ra^x17^mk^mk=ra^x17
-	msr	DAIF, x3
-	pop	x2, x3
-	ret
-#else
-	ldr	x1, [x1, #TSK_TI_RRK]
-	eor	x0, x0, x1
-	ret
-#endif
-ENDPROC(ropp_enable_backtrace)
-#endif
 
 .global _end_hyperdrive
 _end_hyperdrive:

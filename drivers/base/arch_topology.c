@@ -25,7 +25,6 @@
 #include <linux/cpuset.h>
 
 DEFINE_PER_CPU(unsigned long, freq_scale) = SCHED_CAPACITY_SCALE;
-DEFINE_PER_CPU(unsigned long, efficiency) = SCHED_CAPACITY_SCALE;
 DEFINE_PER_CPU(unsigned long, max_cpu_freq);
 DEFINE_PER_CPU(unsigned long, max_freq_scale) = SCHED_CAPACITY_SCALE;
 
@@ -81,6 +80,12 @@ static ssize_t cpu_capacity_show(struct device *dev,
 
 static void update_topology_flags_workfn(struct work_struct *work);
 static DECLARE_WORK(update_topology_flags_work, update_topology_flags_workfn);
+
+void topology_update(void)
+{
+	if (topology_detect_flags())
+		schedule_work(&update_topology_flags_work);
+}
 
 static ssize_t cpu_capacity_store(struct device *dev,
 				  struct device_attribute *attr,
@@ -163,9 +168,9 @@ static int register_cpu_capacity_sysctl(void)
 }
 subsys_initcall(register_cpu_capacity_sysctl);
 
-enum asym_cpucap_type { no_asym, asym_thread, asym_core, asym_die };
+enum asym_cpucap_type { no_asym, asym_thread, asym_core, asym_cluster, asym_die };
 static enum asym_cpucap_type asym_cpucap = no_asym;
-enum share_cap_type { no_share_cap, share_cap_thread, share_cap_core, share_cap_die};
+enum share_cap_type { no_share_cap, share_cap_thread, share_cap_core, share_cap_cluster, share_cap_die};
 static enum share_cap_type share_cap = no_share_cap;
 
 #ifdef CONFIG_CPU_FREQ
@@ -181,9 +186,9 @@ int detect_share_cap_flag(void)
 		if (!policy)
 			return 0;
 
-		if (cpumask_equal(cpu_cpu_mask(cpu),
+		if (cpumask_equal(topology_sibling_cpumask(cpu),
 				  policy->related_cpus)) {
-			share_cap_level = share_cap_die;
+			share_cap_level = share_cap_thread;
 			continue;
 		}
 
@@ -193,9 +198,15 @@ int detect_share_cap_flag(void)
 			continue;
 		}
 
-		if (cpumask_equal(topology_sibling_cpumask(cpu),
+		if (cpumask_equal(topology_cluster_cpumask(cpu),
 				  policy->related_cpus)) {
-			share_cap_level = share_cap_thread;
+			share_cap_level = share_cap_cluster;
+			continue;
+		}
+
+		if (cpumask_equal(cpu_cpu_mask(cpu),
+				  policy->related_cpus)) {
+			share_cap_level = share_cap_die;
 			continue;
 		}
 	}
@@ -246,7 +257,7 @@ int topology_detect_flags(void)
 
 check_core:
 		if (asym_level >= asym_core)
-			goto check_die;
+			goto check_cluster;
 
 		for_each_cpu(core, topology_core_cpumask(cpu)) {
 			capacity = topology_get_cpu_scale(NULL, core);
@@ -254,6 +265,20 @@ check_core:
 			if (capacity > max_capacity) {
 				if (max_capacity != 0)
 					asym_level = asym_core;
+
+				max_capacity = capacity;
+			}
+		}
+check_cluster:
+		if (asym_level >= asym_cluster)
+			goto check_die;
+
+		for_each_cpu(core, topology_cluster_cpumask(cpu)) {
+			capacity = topology_get_cpu_scale(NULL, core);
+
+			if (capacity > max_capacity) {
+				if (max_capacity != 0)
+					asym_level = asym_cluster;
 
 				max_capacity = capacity;
 			}
@@ -291,7 +316,7 @@ int topology_smt_flags(void)
 	if (asym_cpucap == asym_thread)
 		flags |= SD_ASYM_CPUCAPACITY;
 
-	if (share_cap >= share_cap_thread)
+	if (share_cap == share_cap_thread)
 		flags |= SD_SHARE_CAP_STATES;
 
 	return flags;
@@ -304,7 +329,17 @@ int topology_core_flags(void)
 	if (asym_cpucap == asym_core)
 		flags |= SD_ASYM_CPUCAPACITY;
 
-	if (share_cap >= share_cap_core)
+	if (share_cap == share_cap_core)
+		flags |= SD_SHARE_CAP_STATES;
+
+	return flags;
+}
+
+int topology_cluster_flags(void)
+{
+	int flags = SD_ASYM_CPUCAPACITY;
+
+	if (share_cap == share_cap_cluster)
 		flags |= SD_SHARE_CAP_STATES;
 
 	return flags;
@@ -312,12 +347,9 @@ int topology_core_flags(void)
 
 int topology_cpu_flags(void)
 {
-	int flags = 0;
+	int flags = SD_ASYM_CPUCAPACITY;
 
-	if (asym_cpucap == asym_die)
-		flags |= SD_ASYM_CPUCAPACITY;
-
-	if (share_cap >= share_cap_die)
+	if (share_cap == share_cap_die)
 		flags |= SD_SHARE_CAP_STATES;
 
 	return flags;
@@ -345,7 +377,7 @@ static void update_topology_flags_workfn(struct work_struct *work)
 static u32 capacity_scale;
 static u32 *raw_capacity;
 
-static int free_raw_capacity(void)
+static int __init free_raw_capacity(void)
 {
 	kfree(raw_capacity);
 	raw_capacity = NULL;
@@ -386,7 +418,6 @@ bool __init topology_parse_cpu_capacity(struct device_node *cpu_node, int cpu)
 	ret = of_property_read_u32(cpu_node, "capacity-dmips-mhz",
 				   &cpu_capacity);
 	if (!ret) {
-		per_cpu(efficiency, cpu) = cpu_capacity;
 		if (!raw_capacity) {
 			raw_capacity = kcalloc(num_possible_cpus(),
 					       sizeof(*raw_capacity),
@@ -481,11 +512,13 @@ static int __init register_cpufreq_notifier(void)
 
 	cpumask_copy(cpus_to_visit, cpu_possible_mask);
 
+#ifndef CONFIG_SIMPLIFIED_ENERGY_MODEL
 	ret = cpufreq_register_notifier(&init_cpu_capacity_notifier,
 					CPUFREQ_POLICY_NOTIFIER);
 
 	if (ret)
 		free_cpumask_var(cpus_to_visit);
+#endif
 
 	return ret;
 }

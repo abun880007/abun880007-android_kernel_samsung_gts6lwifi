@@ -136,6 +136,8 @@ struct cpuset {
 	/* for custom sched domain */
 	int relax_domain_level;
 };
+struct completion cpuset_work_competion;
+extern bool smp_init_done;
 
 static inline struct cpuset *css_cs(struct cgroup_subsys_state *css)
 {
@@ -867,20 +869,6 @@ void rebuild_sched_domains(void)
 	mutex_unlock(&cpuset_mutex);
 }
 
-static int update_cpus_allowed(struct cpuset *cs, struct task_struct *p,
-			       const struct cpumask *new_mask)
-{
-	int ret;
-
-	if (cpumask_subset(&p->cpus_requested, cs->cpus_requested)) {
-		ret = set_cpus_allowed_ptr(p, &p->cpus_requested);
-		if (!ret)
-			return ret;
-	}
-
-	return set_cpus_allowed_ptr(p, new_mask);
-}
-
 /**
  * update_tasks_cpumask - Update the cpumasks of tasks in the cpuset.
  * @cs: the cpuset in which each task's cpus_allowed mask needs to be changed
@@ -896,7 +884,7 @@ static void update_tasks_cpumask(struct cpuset *cs)
 
 	css_task_iter_start(&cs->css, 0, &it);
 	while ((task = css_task_iter_next(&it)))
-		update_cpus_allowed(cs, task, cs->effective_cpus);
+		set_cpus_allowed_ptr(task, cs->effective_cpus);
 	css_task_iter_end(&it);
 }
 
@@ -1564,7 +1552,7 @@ static void cpuset_attach(struct cgroup_taskset *tset)
 		 * can_attach beforehand should guarantee that this doesn't
 		 * fail.  TODO: have a better way to handle failure here
 		 */
-		WARN_ON_ONCE(update_cpus_allowed(cs, task, cpus_attach));
+		WARN_ON_ONCE(set_cpus_allowed_ptr(task, cpus_attach));
 
 		cpuset_change_task_nodemask(task, &cpuset_attach_nodemask_to);
 		cpuset_update_task_spread_flag(cs, task);
@@ -2156,6 +2144,7 @@ int __init cpuset_init(void)
 	nodes_setall(top_cpuset.mems_allowed);
 	cpumask_setall(top_cpuset.effective_cpus);
 	nodes_setall(top_cpuset.effective_mems);
+	init_completion(&cpuset_work_competion);
 
 	fmeter_init(&top_cpuset.fmeter);
 	set_bit(CS_SCHED_LOAD_BALANCE, &top_cpuset.flags);
@@ -2386,8 +2375,12 @@ static void cpuset_hotplug_workfn(struct work_struct *work)
 		force_rebuild = false;
 		rebuild_sched_domains();
 	}
+
+	if (smp_init_done)
+		complete(&cpuset_work_competion);
 }
 
+bool cpuset_work_compl_flag;
 void cpuset_update_active_cpus(void)
 {
 	/*
@@ -2395,10 +2388,22 @@ void cpuset_update_active_cpus(void)
 	 * inside cgroup synchronization.  Bounce actual hotplug processing
 	 * to a work item to avoid reverse locking order.
 	 */
+
+	cpuset_work_compl_flag = true;
 	schedule_work(&cpuset_hotplug_work);
 }
 
 void cpuset_wait_for_hotplug(void)
+{
+	if (cpuset_work_compl_flag) {
+		cpuset_work_compl_flag = false;
+		if (smp_init_done)
+			wait_for_completion(&cpuset_work_competion);
+	}
+	flush_work(&cpuset_hotplug_work);
+}
+
+void cpuset_wait_for_hotplug_wo_completion(void)
 {
 	flush_work(&cpuset_hotplug_work);
 }
@@ -2431,6 +2436,7 @@ void __init cpuset_init_smp(void)
 	top_cpuset.mems_allowed = node_states[N_MEMORY];
 	top_cpuset.old_mems_allowed = top_cpuset.mems_allowed;
 
+	cpumask_copy(top_cpuset.cpus_requested, cpu_possible_mask);
 	cpumask_copy(top_cpuset.effective_cpus, cpu_active_mask);
 	top_cpuset.effective_mems = node_states[N_MEMORY];
 

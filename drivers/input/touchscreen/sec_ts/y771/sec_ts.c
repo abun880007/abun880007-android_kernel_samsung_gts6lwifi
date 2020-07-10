@@ -525,6 +525,7 @@ int sec_ts_i2c_read(struct sec_ts_data *ts, u8 reg, u8 *data, int len)
 
 	if (retry == SEC_TS_I2C_RETRY_CNT) {
 		input_err(true, &ts->client->dev, "%s: I2C read over retry limit\n", __func__);
+		ret = -EIO;
 #ifdef USE_POR_AFTER_I2C_RETRY
 		if (ts->probe_done && !ts->reset_is_on_going && !shutdown_is_on_going_tsp)
 			schedule_delayed_work(&ts->reset_work, msecs_to_jiffies(TOUCH_RESET_DWORK_TIME));
@@ -763,7 +764,7 @@ static void sec_ts_set_prox_power_off(struct sec_ts_data *ts, u8 data)
 }
 
 #if defined(CONFIG_TOUCHSCREEN_DUMP_MODE)
-#include <linux/sec_ts_common.h>
+#include <linux/sec_debug.h>
 extern struct tsp_dump_callbacks dump_callbacks;
 static struct delayed_work *p_ghost_check;
 
@@ -2258,18 +2259,6 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	ts->power_status = SEC_TS_STATE_POWER_ON;
 	ts->tdata->external_factory = false;
 
-#ifdef CONFIG_SEC_BLOOMQ_PROJECT
-	/* will be removed */
-	{
-		u8 tBuff[SEC_TS_EVENT_BUFF_SIZE] = {0,};
-
-		ret = sec_ts_i2c_read(ts, SEC_TS_READ_ONE_EVENT, tBuff, SEC_TS_EVENT_BUFF_SIZE);
-		if (ret == -ENOTCONN) {
-			goto err_init;
-		}
-	}
-#endif
-
 	sec_ts_wait_for_ready(ts, SEC_TS_ACK_BOOT_COMPLETE);
 
 	input_info(true, &client->dev, "%s: power enable\n", __func__);
@@ -2888,9 +2877,6 @@ static void sec_ts_input_close(struct input_dev *dev)
 #ifdef CONFIG_INPUT_SEC_SECURE_TOUCH
 	secure_touch_stop(ts, 1);
 #endif
-#ifdef CONFIG_SAMSUNG_TUI
-	stui_cancel_session();
-#endif
 
 #ifdef USE_POWER_RESET_WORK
 	cancel_delayed_work(&ts->reset_work);
@@ -3082,8 +3068,7 @@ static int sec_ts_pm_suspend(struct device *dev)
 
 out:
 #endif
-	if (ts->lowpower_mode)
-		reinit_completion(&ts->resume_done);
+	reinit_completion(&ts->resume_done);
 
 	return 0;
 }
@@ -3092,8 +3077,7 @@ static int sec_ts_pm_resume(struct device *dev)
 {
 	struct sec_ts_data *ts = dev_get_drvdata(dev);
 
-	if (ts->lowpower_mode)
-		complete_all(&ts->resume_done);
+	complete_all(&ts->resume_done);
 
 	return 0;
 }

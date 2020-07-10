@@ -47,7 +47,6 @@
 **********************************/
 /* Total bytes used by the compressed storage */
 static u64 zswap_pool_total_size;
-u64 zswap_pool_pages;
 /* The number of compressed pages currently stored in zswap */
 static atomic_t zswap_stored_pages = ATOMIC_INIT(0);
 
@@ -226,7 +225,6 @@ static void zswap_update_total_size(void)
 	rcu_read_unlock();
 
 	zswap_pool_total_size = total;
-	zswap_pool_pages = zswap_pool_total_size >> PAGE_SHIFT;
 }
 
 /*********************************
@@ -1251,10 +1249,10 @@ static int zswap_size_notifier(struct notifier_block *nb,
 	s = (struct seq_file *)data;
 	if (s)
 		seq_printf(s, "ZSwapDevice:    %8lu kB\n",
-			(unsigned long)zswap_pool_pages << (PAGE_SHIFT - 10));
+			(unsigned long)zswap_pool_total_size >> 10);
 	else
 		pr_cont("ZSwapDevice:%lukB ",
-			(unsigned long)zswap_pool_pages << (PAGE_SHIFT - 10));
+			(unsigned long)zswap_pool_total_size >> 10);
 	return 0;
 }
 

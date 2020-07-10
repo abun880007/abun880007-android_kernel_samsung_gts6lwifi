@@ -36,38 +36,17 @@ static char abort_reason[MAX_SUSPEND_ABORT_LEN];
 static struct kobject *wakeup_reason;
 static DEFINE_SPINLOCK(resume_reason_lock);
 
+#ifdef CONFIG_SEC_PM_DEBUG
+#define MAX_WAKEUP_SRCS 32
+static const char* wakeup_src_list[MAX_WAKEUP_SRCS];
+static int wakeup_src_cnt;
+static bool wakeup_src_by_name;
+#endif /* CONFIG_SEC_PM_DEBUG */
+
 static ktime_t last_monotime; /* monotonic time before last suspend */
 static ktime_t curr_monotime; /* monotonic time after last suspend */
 static ktime_t last_stime; /* monotonic boottime offset before last suspend */
 static ktime_t curr_stime; /* monotonic boottime offset after last suspend */
-
-static int glink_hwirq_list[4] = {
-	481, /*modem*/
-	188, /*adsp*/
-	202, /*dsps*/
-	606 /*cdsp */
-};
-
-const char *glink_intr_owner(int irq);
-
-char irq_name[256];
-
-static char *get_irq_name(int irq)
-{
-	struct irq_desc *desc = irq_to_desc(irq);
-	int idx;
-	char* buf = irq_name;
-
-	for (idx = 0; idx < ARRAY_SIZE(glink_hwirq_list); idx++) {
-		if (desc->irq_data.hwirq == glink_hwirq_list[idx]) {
-			sprintf(buf, "%s-%s", desc->action->name, glink_intr_owner(irq));
-			return buf;
-		}
-	}
-	
-	sprintf(buf, "%s", desc->action->name);
-	return buf;
-}
 
 static ssize_t last_resume_reason_show(struct kobject *kobj, struct kobj_attribute *attr,
 		char *buf)
@@ -82,12 +61,24 @@ static ssize_t last_resume_reason_show(struct kobject *kobj, struct kobj_attribu
 			desc = irq_to_desc(irq_list[irq_no]);
 			if (desc && desc->action && desc->action->name)
 				buf_offset += sprintf(buf + buf_offset, "%d %s\n",
-						irq_list[irq_no], get_irq_name(irq_list[irq_no]));
+						irq_list[irq_no], desc->action->name);
 			else
 				buf_offset += sprintf(buf + buf_offset, "%d\n",
 						irq_list[irq_no]);
 		}
 	}
+
+#ifdef CONFIG_SEC_PM_DEBUG
+	if (!suspend_abort && wakeup_src_by_name) {
+		int i;
+		for (i = 0; i < wakeup_src_cnt; i++) {
+			/* XXX: 999 is dummy irq number for batterystats*/
+			buf_offset += sprintf(buf + buf_offset, "999 %s\n",
+					wakeup_src_list[i]);
+		}
+	}
+#endif /* CONFIG_SEC_PM_DEBUG */
+
 	spin_unlock(&resume_reason_lock);
 	return buf_offset;
 }
@@ -141,17 +132,8 @@ void log_wakeup_reason(int irq)
 	struct irq_desc *desc;
 	desc = irq_to_desc(irq);
 	if (desc && desc->action && desc->action->name)
-#ifdef CONFIG_SEC_PM
-	{
-		struct irq_chip *chip;
-		chip = irq_desc_get_chip(desc);
-		printk(KERN_INFO "Resume caused by IRQ %d, %s -> %s\n", irq,
-				chip->name, get_irq_name(irq));
-	}
-#else
 		printk(KERN_INFO "Resume caused by IRQ %d, %s\n", irq,
 				desc->action->name);
-#endif
 	else
 		printk(KERN_INFO "Resume caused by IRQ %d\n", irq);
 
@@ -166,6 +148,26 @@ void log_wakeup_reason(int irq)
 	irq_list[irqcount++] = irq;
 	spin_unlock(&resume_reason_lock);
 }
+
+#ifdef CONFIG_SEC_PM_DEBUG
+void log_wakeup_reason_name(const char *name)
+{
+	printk(KERN_INFO "Resume caused by wakeup source: %s\n", name);
+
+	spin_lock(&resume_reason_lock);
+	if (wakeup_src_cnt == MAX_WAKEUP_SRCS) {
+		spin_unlock(&resume_reason_lock);
+		printk(KERN_WARNING
+			"Resume caused by more than %d wakeup sources\n",
+			MAX_WAKEUP_REASON_IRQS);
+		return;
+	}
+
+	wakeup_src_list[wakeup_src_cnt++] = name;
+	wakeup_src_by_name = true;
+	spin_unlock(&resume_reason_lock);
+}
+#endif /* CONFIG_SEC_PM_DEBUG */
 
 int check_wakeup_reason(int irq)
 {
@@ -210,6 +212,10 @@ static int wakeup_reason_pm_event(struct notifier_block *notifier,
 		spin_lock(&resume_reason_lock);
 		irqcount = 0;
 		suspend_abort = false;
+#ifdef CONFIG_SEC_PM_DEBUG
+		wakeup_src_cnt = 0;
+		wakeup_src_by_name = false;
+#endif /* CONFIG_SEC_PM_DEBUG */
 		spin_unlock(&resume_reason_lock);
 		/* monotonic time since boot */
 		last_monotime = ktime_get();
@@ -230,7 +236,6 @@ static int wakeup_reason_pm_event(struct notifier_block *notifier,
 
 static struct notifier_block wakeup_reason_pm_notifier_block = {
 	.notifier_call = wakeup_reason_pm_event,
-	.priority = INT_MAX,
 };
 
 /* Initializes the sysfs parameter

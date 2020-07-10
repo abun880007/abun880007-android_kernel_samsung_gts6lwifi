@@ -46,7 +46,6 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_ALC5632 if I2C
 	select SND_SOC_BT_SCO
 	select SND_SOC_CQ0093VC
-	select SND_SOC_CS35L31 if I2C
 	select SND_SOC_CS35L32 if I2C
 	select SND_SOC_CS35L33 if I2C
 	select SND_SOC_CS35L34 if I2C
@@ -66,11 +65,12 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_CS43130 if I2C
 	select SND_SOC_CS4349 if I2C
 	select SND_SOC_CS47L24 if MFD_CS47L24
+	select SND_SOC_CS47L15 if MFD_CS47L15
+	select SND_SOC_CS47L35 if MFD_CS47L35
+	select SND_SOC_CS47L85 if MFD_CS47L85
+	select SND_SOC_CS47L90 if MFD_CS47L90
+	select SND_SOC_CS47L92 if MFD_CS47L92
 	select SND_SOC_CS53L30 if I2C
-	select SND_SOC_CS47L96 if MFD_CS47L96
-	select SND_SOC_CS48L32 if MFD_CS48L31
-	select SND_SOC_CS48L32 if MFD_CS48L32
-	select SND_SOC_CS48L32 if MFD_CS48L33
 	select SND_SOC_CX20442 if TTY
 	select SND_SOC_DA7210 if SND_SOC_I2C_AND_SPI
 	select SND_SOC_DA7213 if I2C
@@ -102,6 +102,8 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_MAX98925 if I2C
 	select SND_SOC_MAX98926 if I2C
 	select SND_SOC_MAX98927 if I2C
+	select SND_SOC_MAX98506 if I2C
+	select SND_SOC_MAX98512 if I2C
 	select SND_SOC_MAX9850 if I2C
 	select SND_SOC_MAX9860 if I2C
 	select SND_SOC_MAX9768 if I2C
@@ -259,12 +261,12 @@ config SND_SOC_WM_HUBS
 config SND_SOC_WM_ADSP
 	tristate
 	select SND_SOC_COMPRESS
-	default y if SND_SOC_TACNA=y
+	default y if SND_SOC_MADERA=y
 	default y if SND_SOC_CS47L24=y
 	default y if SND_SOC_WM5102=y
 	default y if SND_SOC_WM5110=y
 	default y if SND_SOC_WM2200=y
-	default m if SND_SOC_TACNA=m
+	default m if SND_SOC_MADERA=m
 	default m if SND_SOC_CS47L24=m
 	default m if SND_SOC_WM5102=m
 	default m if SND_SOC_WM5110=m
@@ -516,11 +518,20 @@ config SND_SOC_CS4349
 config SND_SOC_CS47L24
 	tristate
 
-config SND_SOC_CS47L96
-	tristate "Cirrus Logic CS47L96 CODEC"
+config SND_SOC_CS47L15
+	tristate
 
-config SND_SOC_CS48L32
-	tristate "Cirrus Logic CS48L32 CODEC"
+config SND_SOC_CS47L35
+	tristate
+
+config SND_SOC_CS47L85
+	tristate
+
+config SND_SOC_CS47L90
+	tristate
+
+config SND_SOC_CS47L92
+	tristate
 
 # Cirrus Logic Quad-Channel ADC
 config SND_SOC_CS53L30
@@ -611,6 +622,19 @@ config SND_SOC_ISABELLE
 config SND_SOC_LM49453
 	tristate
 
+config SND_SOC_MADERA
+	tristate
+	default y if SND_SOC_CS47L15=y
+	default y if SND_SOC_CS47L35=y
+	default y if SND_SOC_CS47L85=y
+	default y if SND_SOC_CS47L90=y
+	default y if SND_SOC_CS47L92=y
+	default m if SND_SOC_CS47L15=m
+	default m if SND_SOC_CS47L35=m
+	default m if SND_SOC_CS47L85=m
+	default m if SND_SOC_CS47L90=m
+	default m if SND_SOC_CS47L92=m
+
 config SND_SOC_MAX98088
        tristate
 
@@ -629,6 +653,30 @@ config SND_SOC_MAX98371
 config SND_SOC_MAX98504
 	tristate "Maxim MAX98504 speaker amplifier"
 	depends on I2C
+
+config SND_SOC_MAX98506
+	bool "Support MAX98506"
+	depends on I2C
+	help
+	MAX98506 driver
+
+config SND_SOC_MAX98512
+	bool "Support MAX98512"
+	depends on I2C
+	help
+	MAX98512 driver
+
+config SND_SOC_MAXIM_DSM
+	bool "Support MAXIM DSM"
+	depends on SND_SOC_MAX98506 || SND_SOC_MAX98512
+	help
+	MAXIM DSM driver
+
+config SND_SOC_MAXIM_DSM_CAL
+	tristate "Support MAXIM DSM Calibration"
+	depends on SND_SOC_MAXIM_DSM
+	help
+	MAX985xx Calibration Driver
 
 config SND_SOC_MAX9867
 	tristate
@@ -1193,17 +1241,12 @@ config SND_SOC_NAU8824
 config SND_SOC_NAU8825
 	tristate
 
-config SND_SOC_TACNA
-	tristate
-	default y if SND_SOC_CS47L96=y
-	default m if SND_SOC_CS47L96=m
-	default y if SND_SOC_CS48L32=y
-	default m if SND_SOC_CS48L32=m
-	default y if SND_SOC_CLSIC_CODEC=y
-	default m if SND_SOC_CLSIC_CODEC=m
-
 config SND_SOC_TPA6130A2
 	tristate "Texas Instruments TPA6130A2 headphone amplifier"
 	depends on I2C
+
+config MORO_SOUND
+	bool "Sound control for S10 madera driver"
+	default n
 
 endmenu

@@ -36,18 +36,11 @@ enum OlogTestEnum_ID {
   PERFLOG_LCD = 12,
   PERFLOG_CPU = 13,
   PERFLOG_LOCKCONTENTION = 14,
-  PERFLOG_CPUFREQ = 15,
-  PERFLOG_MEMPRESSURE = 16,
-  PERFLOG_INPUTD = 17,
-  PERFLOG_AMPSS = 18,
-  PERFLOG_SERVICEMANAGERSLOW = 19,
-  PERFLOG_IPCSTARVE = 20,
-  PERFLOG_SCREENSHOT = 21,
-  PERFLOG_MUTEX = 22
+  PERFLOG_CPUFREQ = 15
 };
 #if defined(KPERFMON_KERNEL)
-int OlogTestEnum_ID_maxnum = 23;
-char * OlogTestEnum_ID_strings[23] = {
+int OlogTestEnum_ID_maxnum = 16;
+char * OlogTestEnum_ID_strings[16] = {
   "UNKNOWN",
   " ",
   "LCDV",
@@ -63,14 +56,7 @@ char * OlogTestEnum_ID_strings[23] = {
   "LCD",
   "CPU",
   "LOCKCONTENTION",
-  "CPUFREQ",
-  "MEMPRESSURE",
-  "INPUTD",
-  "AMPSS",
-  "SERVICEMANAGERSLOW",
-  "IPCSTARVE",
-  "SCREENSHOT",
-  "MUTEX"
+  "CPUFREQ"
 };
 #endif //KPERFMON_KERNEL
 

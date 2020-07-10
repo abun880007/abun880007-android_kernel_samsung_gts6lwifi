@@ -98,8 +98,6 @@ skip_blr=set([
     '__primary_switch',
     '__primary_switched',
     'secondary_startup',
-    'el1_irq',
-    'el0_irq_naked',
     'el0_svc_naked',
     '__sys_trace',
 
@@ -160,10 +158,11 @@ skip_magic=set([
 func_file = './scripts/rkp_cfp/addr_taken_func';
 keep_magic= set([])
 
-#if os.path.isfile(func_file):
+if os.path.isfile(func_file):
     #print "Reading ", func_file
-    #with open(func_file) as f:
-        #for line in f:
-            #keep_magic.add(line.strip())
-#else:
-    #print "Skipping ", func_file
+    with open(func_file) as f:
+        for line in f:
+            keep_magic.add(line.strip())
+else:
+    print "Skipping ", func_file
+       
