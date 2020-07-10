@@ -1,2 +1,3 @@
-header-y += wcd9xxx_registers.h
-header-y += wcd9320_registers.h
+version https://git-lfs.github.com/spec/v1
+oid sha256:72d08ce07468e128e3969553c5bda14b18ed856cf8e9ab474378f6d87b7deab8
+size 64

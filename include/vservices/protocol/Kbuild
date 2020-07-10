@@ -1,12 +1,3 @@
-#
-# Find all of the protocol directory names, and get the basename followed
-# by a trailing slash.
-#
-protocols=$(shell find include/vservices/protocol/ -mindepth 1 -type d -exec basename {} \;)
-protocol_dirs=$(foreach p, $(protocols), $(p)/)
-
-#
-# Export the headers for all protocols. The kbuild file in each protocol
-# directory specifies exactly which headers to export.
-#
-header-y += $(protocol_dirs)
+version https://git-lfs.github.com/spec/v1
+oid sha256:17db93f621ca82f7671dc48eaa799c767d7265700104bd9ddf95d0dec6db7185
+size 404

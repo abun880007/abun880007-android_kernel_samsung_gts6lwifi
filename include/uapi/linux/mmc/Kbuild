@@ -1,6 +1,3 @@
-# UAPI Header export list
-header-y += core.h
-header-y += core.h
-header-y += ioctl.h
-header-y += mmc.h
-header-y += mmc.h
+version https://git-lfs.github.com/spec/v1
+oid sha256:d17745980abdab663b81e8221da565cc59bbb97fde6b1087560d2b6ff18814c7
+size 120

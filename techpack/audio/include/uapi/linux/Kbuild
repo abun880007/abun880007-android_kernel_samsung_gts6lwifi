@@ -1,20 +1,3 @@
-# UAPI Header export list
-header-y += avtimer.h
-header-y += msm_audio.h
-header-y += msm_audio_aac.h
-header-y += msm_audio_ac3.h
-header-y += msm_audio_amrnb.h
-header-y += msm_audio_amrwb.h
-header-y += msm_audio_amrwbplus.h
-header-y += msm_audio_calibration.h
-header-y += msm_audio_mvs.h
-header-y += msm_audio_qcp.h
-header-y += msm_audio_sbc.h
-header-y += msm_audio_voicememo.h
-header-y += msm_audio_wma.h
-header-y += msm_audio_wmapro.h
-header-y += msm_audio_alac.h
-header-y += msm_audio_ape.h
-header-y += msm_audio_g711.h
-header-y += msm_audio_g711_dec.h
-header-y += mfd/
+version https://git-lfs.github.com/spec/v1
+oid sha256:42260e58535ae3b47a87d7dff26e9d82209ae2bf9279764ee3abbccbc09d1e69
+size 571
