@@ -1,8 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-vfio-platform-calxedaxgmac-y := vfio_platform_calxedaxgmac.o
-vfio-platform-amdxgbe-y := vfio_platform_amdxgbe.o
-
-ccflags-y += -Idrivers/vfio/platform
-
-obj-$(CONFIG_VFIO_PLATFORM_CALXEDAXGMAC_RESET) += vfio-platform-calxedaxgmac.o
-obj-$(CONFIG_VFIO_PLATFORM_AMDXGBE_RESET) += vfio-platform-amdxgbe.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:affe4b8e93057f14cf8034a83318df0361f68ab64f7008e5a3309747c32b30f8
+size 334

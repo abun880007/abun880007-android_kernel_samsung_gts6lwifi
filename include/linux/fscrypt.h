@@ -15,24 +15,15 @@
 #define _LINUX_FSCRYPT_H
 
 #include <linux/fs.h>
-#include <linux/mm.h>
-#include <linux/bio.h>
-#include <linux/dcache.h>
-#include <crypto/skcipher.h>
-#include <uapi/linux/fs.h>
-#include <crypto/diskcipher.h>
-
-#define FS_CRYPTO_BLOCK_SIZE		16
-
-#ifndef __FS_HAS_ENCRYPTION
-#define __FS_HAS_ENCRYPTION (IS_ENABLED(CONFIG_EXT4_FS_ENCRYPTION) ||	\
-			IS_ENABLED(CONFIG_F2FS_FS_ENCRYPTION) ||	\
-			IS_ENABLED(CONFIG_UBIFS_FS_ENCRYPTION))
-#endif
 
 #define FS_CRYPTO_BLOCK_SIZE		16
 
 struct fscrypt_ctx;
+
+/* iv sector for security/pfe/pfk_fscrypt.c and f2fs */
+#define FSCRYPT_DUN(i,pg_index) \
+	((((i)->i_ino & 0xffffffff) << 32) | ((pg_index) & 0xffffffff))
+#define FSCRYPT_PG_DUN(i,p)	FSCRYPT_DUN(i, (p)->index)
 
 struct fscrypt_info;
 
@@ -53,11 +44,6 @@ struct fscrypt_name {
 #define FSTR_TO_QSTR(f)		QSTR_INIT((f)->name, (f)->len)
 #define fname_name(p)		((p)->disk_name.name)
 #define fname_len(p)		((p)->disk_name.len)
-
-/* device unit number for iv sector */
-#define FSCRYPT_DUN(i,pg_index) \
-	((((i)->i_ino & 0xffffffff) << 32) | ((pg_index) & 0xffffffff))
-#define FSCRYPT_PG_DUN(i,p)	FSCRYPT_DUN(i, (p)->index)
 
 /* Maximum value for the third parameter of fscrypt_operations.set_context(). */
 #if defined(CONFIG_FSCRYPT_SDP) || defined(CONFIG_DDAR)
@@ -319,4 +305,31 @@ static inline unsigned long long __fscrypt_make_dun(const struct inode *inode, p
 }
 #endif
 
+/* fscrypt_ice.c */
+#define fscrypt_using_hardware_encryption fscrypt_inline_encrypted
+#ifdef CONFIG_PFK
+extern int fscrypt_using_hardware_encryption(const struct inode *inode);
+extern void fscrypt_set_ice_dun(const struct inode *inode,
+		struct bio *bio, u64 dun);
+extern void fscrypt_set_ice_skip(struct bio *bio, int bi_crypt_skip);
+extern bool fscrypt_mergeable_bio(struct bio *bio, u64 dun, bool bio_encrypted,
+		int bi_crypt_skip);
+#else
+static inline int fscrypt_using_hardware_encryption(const struct inode *inode)
+{
+	return 0;
+}
+
+static inline void fscrypt_set_ice_dun(const struct inode *inode,
+		struct bio *bio, u64 dun){}
+
+static inline void fscrypt_set_ice_skip(struct bio *bio, int bi_crypt_skip)
+{}
+
+static inline bool fscrypt_mergeable_bio(struct bio *bio,
+		u64 dun, bool bio_encrypted, int bi_crypt_skip)
+{
+	return true;
+}
+#endif
 #endif	/* _LINUX_FSCRYPT_H */

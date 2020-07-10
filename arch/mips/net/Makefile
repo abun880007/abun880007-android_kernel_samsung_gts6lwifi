@@ -1,4 +1,3 @@
-# MIPS networking code
-
-obj-$(CONFIG_MIPS_CBPF_JIT) += bpf_jit.o bpf_jit_asm.o
-obj-$(CONFIG_MIPS_EBPF_JIT) += ebpf_jit.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:6774cba1c5ef435c578062dcaaafd1548240770aebfbb54271f51ca06945be50
+size 121

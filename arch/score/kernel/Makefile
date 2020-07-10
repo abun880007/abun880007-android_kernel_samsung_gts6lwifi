@@ -1,12 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the Linux/SCORE kernel.
-#
-
-extra-y	:= head.o vmlinux.lds
-
-obj-y += entry.o irq.o process.o ptrace.o \
-	setup.o signal.o sys_score.o time.o traps.o \
-	sys_call_table.o
-
-obj-$(CONFIG_MODULES) += module.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:608424f7e25806da54336b25c6045a0ba6918ba97526142f6e9a25006b459ff1
+size 254

@@ -1,9 +1,8 @@
 /*
  *
- * Copyright (C) 2017 Samsung Electronics
+ * Copyright (C) 2017 Samsung Electronics Inc.
+ * Author: wookwang.lee / gs.khurana@samsung.com
  *
- * Author:Wookwang Lee. <wookwang.lee@samsung.com>,
- * Author:Guneet Singh Khurana  <gs.khurana@samsung.com>,
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -13,10 +12,6 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.If not, see <http://www.gnu.org/licenses/>.
- *
  */
 
 #ifndef __CCIC_SYSFS__
@@ -80,4 +75,3 @@ typedef struct _ccic_sysfs_property_t {
 
 void ccic_sysfs_init_attrs(void);
 #endif
-

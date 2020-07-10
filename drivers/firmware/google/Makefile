@@ -1,12 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-
-obj-$(CONFIG_GOOGLE_SMI)		+= gsmi.o
-obj-$(CONFIG_GOOGLE_COREBOOT_TABLE)        += coreboot_table.o
-obj-$(CONFIG_GOOGLE_COREBOOT_TABLE_ACPI)   += coreboot_table-acpi.o
-obj-$(CONFIG_GOOGLE_COREBOOT_TABLE_OF)     += coreboot_table-of.o
-obj-$(CONFIG_GOOGLE_MEMCONSOLE)            += memconsole.o
-obj-$(CONFIG_GOOGLE_MEMCONSOLE_COREBOOT)   += memconsole-coreboot.o
-obj-$(CONFIG_GOOGLE_MEMCONSOLE_X86_LEGACY) += memconsole-x86-legacy.o
-
-vpd-sysfs-y := vpd.o vpd_decode.o
-obj-$(CONFIG_GOOGLE_VPD)		+= vpd-sysfs.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:b67e8b7959e31edff6d379fd578e809d8374e75c05e08130a20d9e0d806bd4a1
+size 542

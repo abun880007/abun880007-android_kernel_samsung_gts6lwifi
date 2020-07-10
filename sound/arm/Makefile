@@ -1,17 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for ALSA
-#
-
-obj-$(CONFIG_SND_ARMAACI)	+= snd-aaci.o
-snd-aaci-objs			:= aaci.o
-
-obj-$(CONFIG_SND_PXA2XX_PCM)	+= snd-pxa2xx-pcm.o
-snd-pxa2xx-pcm-objs		:= pxa2xx-pcm.o
-
-obj-$(CONFIG_SND_PXA2XX_LIB)	+= snd-pxa2xx-lib.o
-snd-pxa2xx-lib-y		:= pxa2xx-pcm-lib.o
-snd-pxa2xx-lib-$(CONFIG_SND_PXA2XX_LIB_AC97)	+= pxa2xx-ac97-lib.o
-
-obj-$(CONFIG_SND_PXA2XX_AC97)	+= snd-pxa2xx-ac97.o
-snd-pxa2xx-ac97-objs		:= pxa2xx-ac97.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:6c996d7d3b3f6a8dca8280009c050a3d5be2523bd755382b3ec560270ff70c6a
+size 458

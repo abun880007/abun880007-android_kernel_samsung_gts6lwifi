@@ -1,8 +1,3 @@
-#
-# Makefile for the I2C input drivers
-#
-
-obj-$(CONFIG_I2C_HID)				+= i2c-hid.o
-
-i2c-hid-objs					=  i2c-hid-core.o
-i2c-hid-$(CONFIG_DMI)				+= i2c-hid-dmi-quirks.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:36b17cd4e47f19098c65f548be3518ac89042653e787339196d71aff79121767
+size 165

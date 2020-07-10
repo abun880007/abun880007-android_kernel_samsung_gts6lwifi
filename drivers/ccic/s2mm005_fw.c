@@ -8,6 +8,8 @@
 #include <linux/ccic/BOOT_FLASH_FW_BOOT6.h>
 #include <linux/ccic/BOOT_FLASH_FW_0x0A_BOOT7.h>
 #include <linux/ccic/BOOT_FLASH_FW_0x01_BOOT7.h>
+#include <linux/ccic/BOOT_FLASH_FW_0x12_BOOT8.h>
+
 #include <linux/ccic/BOOT_SRAM_FW.h>
 
 #define	S2MM005_FIRMWARE_PATH	"usbpd/s2mm005.bin"
@@ -165,8 +167,10 @@ static int s2mm005_flash_write(struct s2mm005_data *usbpd_data, unsigned char *f
     	sLopCnt = 0x1000/4;
  	else if (fw_hd -> boot == 6)
         sLopCnt = 0x8000/4;
- 	else if (fw_hd -> boot >= 7)
-     	sLopCnt = 0x7000/4; 
+	else if (fw_hd -> boot == 7)
+     	sLopCnt = 0x7000/4;
+	else if (fw_hd -> boot >= 8)
+		sLopCnt = 0x5000/4;
 
 	/* Flash write */
 	for (LopCnt = sLopCnt; LopCnt < (size/4); LopCnt++) {
@@ -326,23 +330,20 @@ int s2mm005_flash(struct s2mm005_data *usbpd_data, unsigned int input)
 			}
 			s2mm005_read_byte_flash(i2c, FLASH_STATUS_0x24, &val, 1);
 			pr_err("%s %s retry %d\n", __func__, flashmode_to_string(val), retry);
-			usleep_range(50*1000, 50*1000);
+			usleep_range(50 * 1000, 50 * 1000);
 
 			s2mm005_read_byte(i2c, 0x24, Flash_DATA.BYTE, 4);
 			dev_info(&i2c->dev, "Flash_State:0x%02X   Reserved:0x%06X\n",
 				Flash_DATA.BITS.Flash_State, Flash_DATA.BITS.Reserved);
 
-			if(val != FLASH_MODE_FLASH) {
-				retry++;
-				if(retry == 10) {
-					/* RESET */
-					s2mm005_reset(usbpd_data);
-					msleep(3000);
-					/* FLASH_READY */
-					s2mm005_flash_ready(usbpd_data);
-				} else if (retry == 20) {
-					panic("Flash mode change fail!\n");
-				}
+			retry++;
+			if(retry == 10) {
+			   	 /* RESET */
+				s2mm005_reset(usbpd_data);
+				msleep(3000);
+				s2mm005_flash_ready(usbpd_data);
+			} else if (retry == 20) {
+				panic("Flash mode change fail!\n");
 			}
 		} while (val != FLASH_MODE_FLASH);
 		break;
@@ -372,6 +373,17 @@ int s2mm005_flash(struct s2mm005_data *usbpd_data, unsigned int input)
 			case PRODUCT_NUM_DREAM:
 			default:
 				ret = s2mm005_flash_write(usbpd_data, (unsigned char*)&BOOT_FLASH_FW_0x01_BOOT7[0]);
+				break;
+		}
+		break;
+	}
+	case FLASH_WRITE8: { /* write flash & verify */
+		switch (usbpd_data->s2mm005_fw_product_id) {
+			case PRODUCT_NUM_TABS5L:
+				ret = s2mm005_flash_write(usbpd_data, (unsigned char*)&BOOT_FLASH_FW_0x12_BOOT8[0]);
+				break;
+			default:
+				ret = s2mm005_flash_write(usbpd_data, (unsigned char*)&BOOT_FLASH_FW_0x12_BOOT8[0]);
 				break;
 		}
 		break;
@@ -436,7 +448,7 @@ int s2mm005_flash(struct s2mm005_data *usbpd_data, unsigned int input)
 void s2mm005_get_fw_version(int product_id,
 	struct s2mm005_version *version, u8 boot_version, u32 hw_rev)
 {
-	struct s2mm005_fw *fw_hd;
+	struct s2mm005_fw *fw_hd = NULL;
 	switch (boot_version) {
 	case 5:
 		fw_hd = (struct s2mm005_fw*) BOOT_FLASH_FW_BOOT5;
@@ -445,7 +457,6 @@ void s2mm005_get_fw_version(int product_id,
 		fw_hd = (struct s2mm005_fw*) BOOT_FLASH_FW_BOOT6;
 		break;
 	case 7:
-	default:
 		switch (product_id) {
 			case PRODUCT_NUM_GREAT:
 				fw_hd = (struct s2mm005_fw*) BOOT_FLASH_FW_0x0A_BOOT7;
@@ -456,11 +467,30 @@ void s2mm005_get_fw_version(int product_id,
 				break;
 		}
 		break;
+	case 8:
+		switch (product_id) {
+			case PRODUCT_NUM_TABS5L:
+				fw_hd = (struct s2mm005_fw*) BOOT_FLASH_FW_0x12_BOOT8;
+				break;
+			default:
+				fw_hd = (struct s2mm005_fw*) BOOT_FLASH_FW_0x12_BOOT8;
+				break;
+		}
+		break;
 	}
+
+	if(fw_hd != NULL)
+	{
 	version->boot = fw_hd->boot;
 	version->main[0] = fw_hd->main[0];
 	version->main[1] = fw_hd->main[1];
 	version->main[2] = fw_hd->main[2];
+	} else {
+		version->boot = 0;
+		version->main[0] = 0;
+		version->main[1] = 0;
+		version->main[2] = 0;
+	}
 }
 
 void s2mm005_get_chip_hwversion(struct s2mm005_data *usbpd_data,
@@ -516,12 +546,13 @@ int s2mm005_flash_fw(struct s2mm005_data *usbpd_data, unsigned int input)
 		pr_err("FW_UPDATE fail, product number is different (%d)(%d) \n",  usbpd_data->fw_product_id,usbpd_data->s2mm005_fw_product_id);
 		return 0;
 	}
-	
+
 	pr_err("FW_UPDATE %d\n", input);
 	switch (input) {
 	case FLASH_WRITE5:
 	case FLASH_WRITE6:
-	case FLASH_WRITE7:	
+	case FLASH_WRITE7:
+	case FLASH_WRITE8:
 	case FLASH_WRITE: {
 		s2mm005_flash(usbpd_data, FLASH_MODE_ENTER);
 		usleep_range(10 * 1000, 10 * 1000);
@@ -529,7 +560,7 @@ int s2mm005_flash_fw(struct s2mm005_data *usbpd_data, unsigned int input)
 		msleep(200);
 		ret = s2mm005_flash(usbpd_data, input);
 		if (ret < 0)
-			return ret;	
+			return ret;
 		usleep_range(10 * 1000, 10 * 1000);
 		s2mm005_flash(usbpd_data, FLASH_MODE_EXIT);
 		usleep_range(10 * 1000, 10 * 1000);

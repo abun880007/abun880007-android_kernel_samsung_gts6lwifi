@@ -1,10 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-subdir-ccflags-y += -I$(srctree)/drivers/staging/lustre/include
-subdir-ccflags-y += -I$(srctree)/drivers/staging/lustre/lustre/include
-
-obj-$(CONFIG_LNET) += lnet.o
-
-lnet-y := api-ni.o config.o nidstrings.o net_fault.o		\
-	  lib-me.o lib-msg.o lib-eq.o lib-md.o lib-ptl.o	\
-	  lib-socket.o lib-move.o module.o lo.o			\
-	  router.o router_proc.o acceptor.o peer.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:b73a4af094f092319a97d0d79b24de1bec8cad6ca8120ed974197a37554b0bd2
+size 398

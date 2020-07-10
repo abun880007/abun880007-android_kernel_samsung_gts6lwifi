@@ -1,4 +1,3 @@
-obj-$(CONFIG_SCSI_BNX2X_FCOE) += bnx2fc.o
-
-bnx2fc-y := bnx2fc_els.o bnx2fc_fcoe.o bnx2fc_hwi.o bnx2fc_io.o bnx2fc_tgt.o \
-	    bnx2fc_debug.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:577c02efcd7bf5ace9ec03d53329724d0aaedc84351ea9edd1615f6af9608d3b
+size 142

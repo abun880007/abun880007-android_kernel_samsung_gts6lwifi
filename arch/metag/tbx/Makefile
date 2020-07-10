@@ -1,22 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for TBX library files..
-#
-
-asflags-y		+= -mmetac=2.1 -Wa,-mfpu=metac21 -mdsp
-asflags-$(CONFIG_SMP)	+= -DTBX_PERCPU_SP_SAVE
-
-ccflags-y		+= -mmetac=2.1
-
-lib-y			+= tbicore.o
-lib-y			+= tbictx.o
-lib-y			+= tbidefr.o
-lib-y			+= tbilogf.o
-lib-y			+= tbipcx.o
-lib-y			+= tbiroot.o
-lib-y			+= tbisoft.o
-lib-y			+= tbistring.o
-lib-y			+= tbitimer.o
-
-lib-$(CONFIG_METAG_DSP)	+= tbidspram.o
-lib-$(CONFIG_METAG_FPU)	+= tbictxfpu.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:fd6f6ced944692c2e511ded0273de3d301d7b7e9c364deca435b5b1da3c0d7d3
+size 468

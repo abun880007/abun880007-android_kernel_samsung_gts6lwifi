@@ -44,6 +44,7 @@
 #define DECRYPT		0
 #define ENCRYPT		1
 #ifdef CONFIG_CRYPTO_FIPS
+
 static struct crypto_rng *ecryptfs_crypto_rng;
 
 static int crypto_rng_init(void)
@@ -261,12 +262,12 @@ static int ecryptfs_calculate_md5(char *dst,
 out:
 	return rc;
 }
+#ifdef CONFIG_CRYPTO_FIPS
 static int ecryptfs_calculate_hash(char *dst,
 				  struct ecryptfs_crypt_stat *crypt_stat,
 				  char *src, int len)
 {
 	int rc = 0;
-
 	if (crypt_stat->mount_crypt_stat->flags & ECRYPTFS_ENABLE_CC)
 		rc = ecryptfs_calculate_sha256(dst, crypt_stat, src, len);
 	else
@@ -274,6 +275,7 @@ static int ecryptfs_calculate_hash(char *dst,
 
 	return rc;
 }
+#endif
 static int ecryptfs_crypto_api_algify_cipher_name(char **algified_name,
 						  char *cipher_name,
 						  char *chaining_modifier)
@@ -881,9 +883,9 @@ out:
 		memset(crypt_stat->root_iv, 0, crypt_stat->iv_bytes);
 		crypt_stat->flags |= ECRYPTFS_SECURITY_WARNING;
 	}
-	#ifdef CONFIG_CRYPTO_FIPS
-		kfree(dst);
-	#endif
+#ifdef CONFIG_CRYPTO_FIPS
+	kfree(dst);
+#endif
 	return rc;
 }
 static void get_random_key(u8 *data, unsigned int len)
@@ -1120,6 +1122,7 @@ static void write_ecryptfs_marker(char *page_virt, size_t *written)
 	u32 m_1, m_2;
 
 	get_random_key((u8*)&m_1, (MAGIC_ECRYPTFS_MARKER_SIZE_BYTES / 2));
+
 	m_2 = (m_1 ^ MAGIC_ECRYPTFS_MARKER);
 	put_unaligned_be32(m_1, page_virt);
 	page_virt += (MAGIC_ECRYPTFS_MARKER_SIZE_BYTES / 2);
@@ -1835,7 +1838,7 @@ ecryptfs_process_key_cipher(struct crypto_skcipher **key_tfm,
 	crypto_skcipher_set_flags(*key_tfm, CRYPTO_TFM_REQ_WEAK_KEY);
 	if (*key_size == 0)
 		*key_size = crypto_skcipher_default_keysize(*key_tfm);
-
+	
 	get_random_key(dummy_key, *key_size);
 	rc = crypto_skcipher_setkey(*key_tfm, dummy_key, *key_size);
 	if (rc) {

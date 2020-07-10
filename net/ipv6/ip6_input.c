@@ -79,7 +79,6 @@ int ipv6_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt
 	struct net *net = dev_net(skb->dev);
 
 	if (skb->pkt_type == PACKET_OTHERHOST) {
-		DROPDUMP_QUEUE_SKB(skb, NET_DROPDUMP_OPT_IP_OTHERHOST);
 		kfree_skb(skb);
 		return NET_RX_DROP;
 	}
@@ -93,7 +92,6 @@ int ipv6_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt
 	if ((skb = skb_share_check(skb, GFP_ATOMIC)) == NULL ||
 	    !idev || unlikely(idev->cnf.disable_ipv6)) {
 		__IP6_INC_STATS(net, idev, IPSTATS_MIB_INDISCARDS);
-		DROPDUMP_QUEUE_SKB(skb, NET_DROPDUMP_IPSTATS_MIB_INDISCARDS1);
 		goto drop;
 	}
 
@@ -131,11 +129,18 @@ int ipv6_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt
 	 * A packet received on an interface with a destination address
 	 * of loopback must be dropped.
 	 */
+	/*
+	 * EMBMS fix : multicasted embms src address cannot pass this condition.
+         * That drops here and got lost service
 	if ((ipv6_addr_loopback(&hdr->saddr) ||
 	     ipv6_addr_loopback(&hdr->daddr)) &&
 	     !(dev->flags & IFF_LOOPBACK))
 		goto err;
-
+	*/
+	if (!(dev->flags & IFF_LOOPBACK) &&
+             ipv6_addr_loopback(&hdr->daddr))
+		goto err;
+	
 	/* RFC4291 Errata ID: 3480
 	 * Interface-Local scope spans only a single interface on a
 	 * node and is useful only for loopback transmission of
@@ -185,12 +190,10 @@ int ipv6_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt
 		if (pkt_len + sizeof(struct ipv6hdr) > skb->len) {
 			__IP6_INC_STATS(net,
 					idev, IPSTATS_MIB_INTRUNCATEDPKTS);
-			DROPDUMP_QUEUE_SKB(skb, NET_DROPDUMP_IPSTATS_MIB_INTRUNCATEDPKTS1);
 			goto drop;
 		}
 		if (pskb_trim_rcsum(skb, pkt_len + sizeof(struct ipv6hdr))) {
 			__IP6_INC_STATS(net, idev, IPSTATS_MIB_INHDRERRORS);
-			DROPDUMP_QUEUE_SKB(skb, NET_DROPDUMP_IPSTATS_MIB_INHDRERRORS2);
 			goto drop;
 		}
 		hdr = ipv6_hdr(skb);
@@ -214,7 +217,6 @@ int ipv6_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt
 		       ip6_rcv_finish);
 err:
 	__IP6_INC_STATS(net, idev, IPSTATS_MIB_INHDRERRORS);
-	DROPDUMP_QUEUE_SKB(skb, NET_DROPDUMP_IPSTATS_MIB_INHDRERRORS3);
 drop:
 	rcu_read_unlock();
 	kfree_skb(skb);
@@ -224,28 +226,26 @@ drop:
 /*
  *	Deliver the packet to the host
  */
-
-
-static int ip6_input_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
+void ip6_protocol_deliver_rcu(struct net *net, struct sk_buff *skb, int nexthdr,
+			      bool have_final)
 {
 	const struct inet6_protocol *ipprot;
 	struct inet6_dev *idev;
 	unsigned int nhoff;
-	int nexthdr;
 	bool raw;
-	bool have_final = false;
 
 	/*
 	 *	Parse extension headers
 	 */
 
-	rcu_read_lock();
 resubmit:
 	idev = ip6_dst_idev(skb_dst(skb));
-	if (!pskb_pull(skb, skb_transport_offset(skb)))
-		goto discard;
 	nhoff = IP6CB(skb)->nhoff;
-	nexthdr = skb_network_header(skb)[nhoff];
+	if (!have_final) {
+		if (!pskb_pull(skb, skb_transport_offset(skb)))
+			goto discard;
+		nexthdr = skb_network_header(skb)[nhoff];
+	}
 
 resubmit_final:
 	raw = raw6_local_deliver(skb, nexthdr);
@@ -307,7 +307,6 @@ resubmit_final:
 			if (xfrm6_policy_check(NULL, XFRM_POLICY_IN, skb)) {
 				__IP6_INC_STATS(net, idev,
 						IPSTATS_MIB_INUNKNOWNPROTOS);
-				DROPDUMP_QUEUE_SKB(skb, NET_DROPDUMP_IPSTATS_MIB_INUNKNOWNPROTOS1);
 				icmpv6_send(skb, ICMPV6_PARAMPROB,
 					    ICMPV6_UNK_NEXTHDR, nhoff);
 			}
@@ -317,14 +316,19 @@ resubmit_final:
 			consume_skb(skb);
 		}
 	}
-	rcu_read_unlock();
-	return 0;
+	return;
 
 discard:
 	__IP6_INC_STATS(net, idev, IPSTATS_MIB_INDISCARDS);
-	rcu_read_unlock();
-	DROPDUMP_QUEUE_SKB(skb, NET_DROPDUMP_IPSTATS_MIB_INDISCARDS2);
 	kfree_skb(skb);
+}
+
+static int ip6_input_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
+{
+	rcu_read_lock();
+	ip6_protocol_deliver_rcu(net, skb, 0, false);
+	rcu_read_unlock();
+
 	return 0;
 }
 

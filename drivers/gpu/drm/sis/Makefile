@@ -1,9 +1,3 @@
-#
-# Makefile for the drm device driver.  This driver provides support for the
-# Direct Rendering Infrastructure (DRI) in XFree86 4.1.0 and higher.
-
-sis-y := sis_drv.o sis_mm.o
-
-obj-$(CONFIG_DRM_SIS)   += sis.o
-
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:59995d2b25ddb19fc160d8f42866d36f6d77efb8e3cb78b563c39da90aca1e1c
+size 212

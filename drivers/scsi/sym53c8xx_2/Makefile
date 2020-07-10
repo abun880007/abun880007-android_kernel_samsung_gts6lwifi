@@ -1,4 +1,3 @@
-# Makefile for the NCR/SYMBIOS/LSI 53C8XX PCI SCSI controllers driver.
-
-sym53c8xx-objs := sym_fw.o sym_glue.o sym_hipd.o sym_malloc.o sym_nvram.o
-obj-$(CONFIG_SCSI_SYM53C8XX_2) := sym53c8xx.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:58d7b6be279a2bd80a3bf80f3220a52d321e24f0508723dbb5c9d66d9859d579
+size 192

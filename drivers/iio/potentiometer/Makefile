@@ -1,12 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for industrial I/O potentiometer drivers
-#
-
-# When adding new entries keep the list in alphabetical order
-obj-$(CONFIG_DS1803) += ds1803.o
-obj-$(CONFIG_MAX5481) += max5481.o
-obj-$(CONFIG_MAX5487) += max5487.o
-obj-$(CONFIG_MCP4131) += mcp4131.o
-obj-$(CONFIG_MCP4531) += mcp4531.o
-obj-$(CONFIG_TPL0102) += tpl0102.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:cb25df2f5a03534d71ba621804665191164ae0a21e726237551e04553121a619
+size 362

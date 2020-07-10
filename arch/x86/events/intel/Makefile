@@ -1,10 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_CPU_SUP_INTEL)		+= core.o bts.o
-obj-$(CONFIG_CPU_SUP_INTEL)		+= ds.o knc.o
-obj-$(CONFIG_CPU_SUP_INTEL)		+= lbr.o p4.o p6.o pt.o
-obj-$(CONFIG_PERF_EVENTS_INTEL_RAPL)	+= intel-rapl-perf.o
-intel-rapl-perf-objs			:= rapl.o
-obj-$(CONFIG_PERF_EVENTS_INTEL_UNCORE)	+= intel-uncore.o
-intel-uncore-objs			:= uncore.o uncore_nhmex.o uncore_snb.o uncore_snbep.o
-obj-$(CONFIG_PERF_EVENTS_INTEL_CSTATE)	+= intel-cstate.o
-intel-cstate-objs			:= cstate.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:f1013dacd560941f9907543882d8b236865d05ae1218f610f95aaca7ddbcc1a2
+size 488

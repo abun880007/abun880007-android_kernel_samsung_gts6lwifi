@@ -128,14 +128,14 @@ static unsigned int get_coeff(struct device *dev, u8 adc_reg_num)
 	unsigned int coeff;
 
 	if (adc_meter1->adc_mode == CURRENT_METER) {
-		if (adc_reg_num <= 7)
+		if (adc_reg_num >= 0 && adc_reg_num <= 7)
 			coeff = current_coeffs[adc_reg_num];
 		else {
 			dev_err(dev, "%s: invalid adc regulator number(%d)\n", __func__, adc_reg_num);
 			coeff = 0;
 		}
 	} else if (adc_meter1->adc_mode == POWER_METER) {
-		if (adc_reg_num <= 7)
+		if (adc_reg_num >= 0 && adc_reg_num <= 7)
 			coeff = power_coeffs[adc_reg_num];
 		else {
 			dev_err(dev, "%s: invalid adc regulator number(%d)\n", __func__, adc_reg_num);
@@ -152,7 +152,8 @@ static ssize_t adc_val_all_show(struct device *dev, struct device_attribute *att
 {
 	s2m_adc_read_data(dev, -1);
 	if (adc_meter1->adc_mode == POWER_METER) {
-		return snprintf(buf, PAGE_SIZE, "CH0:%d uW (%d), CH1:%d uW (%d), CH2:%d uW (%d), CH3:%d uW (%d)\nCH4:%d uW (%d), CH5:%d uW (%d), CH6:%d uW (%d), CH7:%d uW (%d)\n",
+		return snprintf(buf, PAGE_SIZE, "CH0:%d uW (%d), CH1:%d uW (%d), CH2:%d uW (%d), CH3:%d uW (%d)\n"
+			"CH4:%d uW (%d), CH5:%d uW (%d), CH6:%d uW (%d), CH7:%d uW (%d)\n",
 			(adc_meter1->adc_val[0] * get_coeff(dev, 0))/100, adc_meter1->adc_val[0],
 			(adc_meter1->adc_val[1] * get_coeff(dev, 1))/100, adc_meter1->adc_val[1],
 			(adc_meter1->adc_val[2] * get_coeff(dev, 2))/100, adc_meter1->adc_val[2],
@@ -162,7 +163,8 @@ static ssize_t adc_val_all_show(struct device *dev, struct device_attribute *att
 			(adc_meter1->adc_val[6] * get_coeff(dev, 6))/100, adc_meter1->adc_val[6],
 			(adc_meter1->adc_val[7] * get_coeff(dev, 7))/100, adc_meter1->adc_val[7]);
 	} else {
-		return snprintf(buf, PAGE_SIZE, "CH0:%d uA (%d), CH1:%d uA (%d), CH2:%d uA (%d), CH3:%d uA (%d)\nCH4:%d uA (%d), CH5:%d uA (%d), CH6:%d uA (%d), CH7:%d uA (%d)\n",
+		return snprintf(buf, PAGE_SIZE, "CH0:%d uA (%d), CH1:%d uA (%d), CH2:%d uA (%d), CH3:%d uA (%d)\n"
+			"CH4:%d uA (%d), CH5:%d uA (%d), CH6:%d uA (%d), CH7:%d uA (%d)\n",
 			adc_meter1->adc_val[0] * get_coeff(dev, 0), adc_meter1->adc_val[0],
 			adc_meter1->adc_val[1] * get_coeff(dev, 1), adc_meter1->adc_val[1],
 			adc_meter1->adc_val[2] * get_coeff(dev, 2), adc_meter1->adc_val[2],
@@ -430,16 +432,13 @@ static DEVICE_ATTR(adc_ctrl1, 0644, adc_ctrl1_show, adc_ctrl1_store);
 static DEVICE_ATTR(adc_validity, 0444, adc_validity_show, NULL);
 #endif /* CONFIG_SEC_PM */
 
-void s2dos05_powermeter_init(struct s2dos05_dev *s2dos05,
-				struct device *sec_disp_pmic_dev)
+void s2dos05_powermeter_init(struct s2dos05_dev *s2dos05)
 {
 	int ret;
 
 	adc_meter1 = kzalloc(sizeof(struct adc_info), GFP_KERNEL);
-	if (!adc_meter1) {
-		pr_err("%s: adc_meter1 alloc fail.\n", __func__);
+	if (!adc_meter1)
 		return;
-	}
 
 	adc_meter1->adc_val = kzalloc(sizeof(u16)*S2DOS05_MAX_ADC_CHANNEL, GFP_KERNEL);
 
@@ -502,47 +501,47 @@ void s2dos05_powermeter_init(struct s2dos05_dev *s2dos05,
 	/* create sysfs entries */
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_en);
 	if (ret)
-		goto err_free;
+		goto remove_adc_en;
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_mode);
 	if (ret)
-		goto remove_adc_en;
+		goto remove_adc_mode;
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_sync_mode);
 	if (ret)
-		goto remove_adc_mode;
+		goto remove_adc_sync_mode;
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_val_all);
 	if (ret)
-		goto remove_adc_sync_mode;
+		goto remove_adc_val_all;
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_val_0);
 	if (ret)
-		goto remove_adc_val_all;
+		goto remove_adc_val_0;
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_val_1);
 	if (ret)
-		goto remove_adc_val_0;
+		goto remove_adc_val_1;
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_val_2);
 	if (ret)
-		goto remove_adc_val_1;
+		goto remove_adc_val_2;
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_val_3);
 	if (ret)
-		goto remove_adc_val_2;
+		goto remove_adc_val_3;
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_val_4);
 	if (ret)
-		goto remove_adc_val_3;
+		goto remove_adc_val_4;
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_val_5);
 	if (ret)
-		goto remove_adc_val_4;
+		goto remove_adc_val_5;
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_val_6);
 	if (ret)
-		goto remove_adc_val_5;
+		goto remove_adc_val_6;
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_val_7);
 	if (ret)
-		goto remove_adc_val_6;
+		goto remove_adc_val_7;
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_ctrl1);
 	if (ret)
-		goto remove_adc_val_7;
+		goto remove_adc_ctrl1;
 #ifdef CONFIG_SEC_PM
 	ret = device_create_file(s2dos05_adc_dev, &dev_attr_adc_validity);
 	if (ret)
-		goto remove_adc_ctrl1;
+		goto remove_adc_validity;
 
 	if (!IS_ERR_OR_NULL(sec_disp_pmic_dev)) {
 		ret = sysfs_create_link(&sec_disp_pmic_dev->kobj,
@@ -561,9 +560,9 @@ void s2dos05_powermeter_init(struct s2dos05_dev *s2dos05,
 #ifdef CONFIG_SEC_PM
 remove_adc_validity:
 	device_remove_file(s2dos05_adc_dev, &dev_attr_adc_validity);
+#endif /* CONFIG_SEC_PM */
 remove_adc_ctrl1:
 	device_remove_file(s2dos05_adc_dev, &dev_attr_adc_ctrl1);
-#endif /* CONFIG_SEC_PM */
 remove_adc_val_7:
 	device_remove_file(s2dos05_adc_dev, &dev_attr_adc_val_7);
 remove_adc_val_6:
@@ -588,7 +587,7 @@ remove_adc_mode:
 	device_remove_file(s2dos05_adc_dev, &dev_attr_adc_mode);
 remove_adc_en:
 	device_remove_file(s2dos05_adc_dev, &dev_attr_adc_en);
-err_free:
+
 	kfree(adc_meter1->adc_val);
 	dev_info(s2dos05->dev, "%s : fail to create sysfs\n", __func__);
 }

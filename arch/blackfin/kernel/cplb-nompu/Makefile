@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# arch/blackfin/kernel/cplb-nompu/Makefile
-#
-
-obj-y := cplbinit.o cplbmgr.o
-
-CFLAGS_cplbmgr.o := -ffixed-I0 -ffixed-I1 -ffixed-I2 -ffixed-I3 \
-		    -ffixed-L0 -ffixed-L1 -ffixed-L2 -ffixed-L3 \
-		    -ffixed-M0 -ffixed-M1 -ffixed-M2 -ffixed-M3 \
-		    -ffixed-B0 -ffixed-B1 -ffixed-B2 -ffixed-B3
+version https://git-lfs.github.com/spec/v1
+oid sha256:a12125cd38af59e2dc61d26bdd0de6b3ce68c5184b90c2a7d9b0da17cb45c7f1
+size 334

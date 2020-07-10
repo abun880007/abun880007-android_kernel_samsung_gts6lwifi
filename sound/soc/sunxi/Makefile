@@ -1,6 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_SND_SUN4I_CODEC) += sun4i-codec.o
-obj-$(CONFIG_SND_SUN4I_I2S) += sun4i-i2s.o
-obj-$(CONFIG_SND_SUN4I_SPDIF) += sun4i-spdif.o
-obj-$(CONFIG_SND_SUN8I_CODEC_ANALOG) += sun8i-codec-analog.o
-obj-$(CONFIG_SND_SUN8I_CODEC) += sun8i-codec.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:4bbe1a74850d1c61e538a231a38739ef7e74b4d943fca046a862144a2271de50
+size 280

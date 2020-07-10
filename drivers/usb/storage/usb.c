@@ -1179,6 +1179,7 @@ void usb_stor_disconnect(struct usb_interface *intf)
 #ifdef CONFIG_USB_STORAGE_DETECT
 	pr_info("%s enter\n", __func__);
 #endif
+
 	quiesce_and_remove_host(us);
 #ifdef CONFIG_USB_STORAGE_DETECT
 	pr_info("%s doing\n", __func__);

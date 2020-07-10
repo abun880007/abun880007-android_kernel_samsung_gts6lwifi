@@ -1,9 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_MOSTCORE)	+= mostcore/
-obj-$(CONFIG_AIM_CDEV)	+= aim-cdev/
-obj-$(CONFIG_AIM_NETWORK)	+= aim-network/
-obj-$(CONFIG_AIM_SOUND)	+= aim-sound/
-obj-$(CONFIG_AIM_V4L2)	+= aim-v4l2/
-obj-$(CONFIG_HDM_DIM2)	+= hdm-dim2/
-obj-$(CONFIG_HDM_I2C)	+= hdm-i2c/
-obj-$(CONFIG_HDM_USB)	+= hdm-usb/
+version https://git-lfs.github.com/spec/v1
+oid sha256:778f8f6d46f299b478599df99d47654aad53d590837a7b8aaff424cd57fe9719
+size 327

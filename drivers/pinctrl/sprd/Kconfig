@@ -1,20 +1,3 @@
-#
-# Spreadtrum pin control drivers
-#
-
-config PINCTRL_SPRD
-	bool "Spreadtrum pinctrl driver"
-	depends on OF
-	depends on ARCH_SPRD || COMPILE_TEST
-	select PINMUX
-	select PINCONF
-	select GENERIC_PINCONF
-	select GENERIC_PINMUX_FUNCTIONS
-	help
-	  Say Y here to enable Spreadtrum pinctrl driver
-
-config PINCTRL_SPRD_SC9860
-	bool "Spreadtrum SC9860 pinctrl driver"
-	depends on PINCTRL_SPRD
-	help
-	  Say Y here to enable Spreadtrum SC9860 pinctrl driver
+version https://git-lfs.github.com/spec/v1
+oid sha256:4826fe5071e3c6e782d0bd8d11e5280170c5af26f6fa3401514533fc671d41fa
+size 446

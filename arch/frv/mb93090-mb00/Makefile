@@ -1,16 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the MB93090-MB00 motherboard stuff
-#
-
-ifeq "$(CONFIG_PCI)" "y"
-obj-y := pci-frv.o pci-irq.o pci-vdk.o
-
-ifeq "$(CONFIG_MMU)" "y"
-obj-y += pci-dma.o
-else
-obj-y += pci-dma-nommu.o
-endif
-endif
-
-obj-$(CONFIG_MTD) += flash.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:ff63ce7fe16ecdeecc870bb10d500b48630bd86260136f3dddce34adc6bc0483
+size 271

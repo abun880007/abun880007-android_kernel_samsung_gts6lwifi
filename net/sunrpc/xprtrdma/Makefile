@@ -1,9 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_SUNRPC_XPRT_RDMA) += rpcrdma.o
-
-rpcrdma-y := transport.o rpc_rdma.o verbs.o \
-	fmr_ops.o frwr_ops.o \
-	svc_rdma.o svc_rdma_backchannel.o svc_rdma_transport.o \
-	svc_rdma_sendto.o svc_rdma_recvfrom.o svc_rdma_rw.o \
-	module.o
-rpcrdma-$(CONFIG_SUNRPC_BACKCHANNEL) += backchannel.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:34fde4a4eabf70b1475478a4843df0a047358cbaa52c9b0316fd88b063b4275d
+size 327

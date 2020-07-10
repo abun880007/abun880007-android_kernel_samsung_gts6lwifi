@@ -1,21 +1,3 @@
-config COMMON_CLK_AMLOGIC
-	bool
-	depends on OF
-	depends on ARCH_MESON || COMPILE_TEST
-
-config COMMON_CLK_MESON8B
-	bool
-	depends on COMMON_CLK_AMLOGIC
-	select RESET_CONTROLLER
-	help
-	  Support for the clock controller on AmLogic S802 (Meson8),
-	  S805 (Meson8b) and S812 (Meson8m2) devices. Say Y if you
-	  want peripherals and CPU frequency scaling to work.
-
-config COMMON_CLK_GXBB
-	bool
-	depends on COMMON_CLK_AMLOGIC
-	select RESET_CONTROLLER
-	help
-	  Support for the clock controller on AmLogic S905 devices, aka gxbb.
-	  Say Y if you want peripherals and CPU frequency scaling to work.
+version https://git-lfs.github.com/spec/v1
+oid sha256:2a7112a9d0c118d9d58bbd28432b57366efa20041fa8be637337e947514882f7
+size 589

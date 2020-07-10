@@ -1,8 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-ccflags-y := -Iinclude/drm
-
-vboxvideo-y :=  hgsmi_base.o modesetting.o vbva_base.o \
-		vbox_drv.o vbox_fb.o vbox_hgsmi.o vbox_irq.o vbox_main.o \
-		vbox_mode.o vbox_prime.o vbox_ttm.o
-
-obj-$(CONFIG_DRM_VBOXVIDEO) += vboxvideo.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:a5e9e9028b46f82afc478a17dab2abcc2efae1d343877abc63ab396d2487a201
+size 263

@@ -1,14 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for s390 specific build tools
-#
-
-hostprogs-y		    += gen_facilities
-HOSTCFLAGS_gen_facilities.o += -Wall $(LINUXINCLUDE)
-
-define filechk_facilities.h
-	$(obj)/gen_facilities
-endef
-
-include/generated/facilities.h: $(obj)/gen_facilities FORCE
-	$(call filechk,facilities.h)
+version https://git-lfs.github.com/spec/v1
+oid sha256:ee45c528f72a3d1344eca48b27685bc88e90df7028ebf4ad36911773c81f2d12
+size 318

@@ -1,8 +1,3 @@
-#
-# Makefile for IIO counter devices
-#
-
-# When adding new entries keep the list in alphabetical order
-
-obj-$(CONFIG_104_QUAD_8)	+= 104-quad-8.o
-obj-$(CONFIG_STM32_LPTIMER_CNT)	+= stm32-lptimer-cnt.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:50dd3d1d65450adff282c2c56577d19950988a789b864017e9d0d949116fe7a7
+size 199

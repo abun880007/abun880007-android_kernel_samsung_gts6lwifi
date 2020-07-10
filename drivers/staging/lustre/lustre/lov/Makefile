@@ -1,9 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-subdir-ccflags-y += -I$(srctree)/drivers/staging/lustre/include
-subdir-ccflags-y += -I$(srctree)/drivers/staging/lustre/lustre/include
-
-obj-$(CONFIG_LUSTRE_FS) += lov.o
-lov-y := lov_obd.o lov_pack.o lov_offset.o lov_merge.o \
-	 lov_request.o lov_ea.o lov_dev.o lov_object.o lov_page.o  \
-	 lov_lock.o lov_io.o lovsub_dev.o lovsub_object.o lovsub_page.o      \
-	 lovsub_lock.o lov_pool.o lproc_lov.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:0e87567bcce226c88d12c8615cb8551a630ef33657e9c7541430a70e535ec9a8
+size 434

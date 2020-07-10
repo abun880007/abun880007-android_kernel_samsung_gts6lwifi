@@ -1,8 +1,3 @@
-#
-# Makefile for the linux qnx4-filesystem routines.
-#
-
-obj-$(CONFIG_QNX6FS_FS) += qnx6.o
-
-qnx6-objs := inode.o dir.o namei.o super_mmi.o
-ccflags-$(CONFIG_QNX6FS_DEBUG)	+= -DDEBUG
+version https://git-lfs.github.com/spec/v1
+oid sha256:486333fd84e61345f03cc80cb1f69dd8cac4ba3469c4ce03e9eebba116bd8070
+size 180

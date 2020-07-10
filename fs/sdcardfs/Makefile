@@ -1,7 +1,3 @@
-SDCARDFS_VERSION="0.1"
-
-EXTRA_CFLAGS += -DSDCARDFS_VERSION=\"$(SDCARDFS_VERSION)\"
-
-obj-$(CONFIG_SDCARD_FS) += sdcardfs.o
-
-sdcardfs-y := dentry.o file.o inode.o main.o super.o lookup.o mmap.o packagelist.o derived_perm.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:0dfa2552697a1b948861be3fceba40043bccfc88d44efdf72093b55b7e828878
+size 221

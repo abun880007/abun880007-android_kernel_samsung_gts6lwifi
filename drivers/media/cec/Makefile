@@ -1,12 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-cec-objs := cec-core.o cec-adap.o cec-api.o cec-edid.o
-
-ifeq ($(CONFIG_CEC_NOTIFIER),y)
-  cec-objs += cec-notifier.o
-endif
-
-ifeq ($(CONFIG_CEC_PIN),y)
-  cec-objs += cec-pin.o
-endif
-
-obj-$(CONFIG_CEC_CORE) += cec.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:2955981c82c84c313ea080a354d37f992b72612b7950e722fbda7fa4731ea95e
+size 249

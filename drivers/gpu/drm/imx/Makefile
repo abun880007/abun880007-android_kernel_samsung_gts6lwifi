@@ -1,12 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-
-imxdrm-objs := imx-drm-core.o ipuv3-crtc.o ipuv3-plane.o
-
-obj-$(CONFIG_DRM_IMX) += imxdrm.o
-
-obj-$(CONFIG_DRM_IMX_PARALLEL_DISPLAY) += parallel-display.o
-obj-$(CONFIG_DRM_IMX_TVE) += imx-tve.o
-obj-$(CONFIG_DRM_IMX_LDB) += imx-ldb.o
-
-obj-$(CONFIG_DRM_IMX_IPUV3)	+= imx-ipuv3-crtc.o
-obj-$(CONFIG_DRM_IMX_HDMI) += dw_hdmi-imx.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:48928cdcb40398f48852143ef9700a702c9f6b5d39369df559bc08f92aa1b6d1
+size 361

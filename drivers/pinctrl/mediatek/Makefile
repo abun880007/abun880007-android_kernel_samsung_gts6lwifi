@@ -1,10 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-# Core
-obj-y				+= pinctrl-mtk-common.o
-
-# SoC Drivers
-obj-$(CONFIG_PINCTRL_MT2701)	+= pinctrl-mt2701.o
-obj-$(CONFIG_PINCTRL_MT8135)	+= pinctrl-mt8135.o
-obj-$(CONFIG_PINCTRL_MT8127)	+= pinctrl-mt8127.o
-obj-$(CONFIG_PINCTRL_MT8173)	+= pinctrl-mt8173.o
-obj-$(CONFIG_PINCTRL_MT6397)	+= pinctrl-mt6397.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:f864fe5279b9408d9b294602cb0958436b3420858b675d6e14e11d9ad412307e
+size 335

@@ -1,16 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-snd-soc-skl-objs := skl.o skl-pcm.o skl-nhlt.o skl-messages.o \
-skl-topology.o
-
-ifdef CONFIG_DEBUG_FS
-  snd-soc-skl-objs += skl-debug.o
-endif
-
-obj-$(CONFIG_SND_SOC_INTEL_SKYLAKE) += snd-soc-skl.o
-
-# Skylake IPC Support
-snd-soc-skl-ipc-objs := skl-sst-ipc.o skl-sst-dsp.o cnl-sst-dsp.o \
-		skl-sst-cldma.o skl-sst.o bxt-sst.o cnl-sst.o \
-		skl-sst-utils.o
-
-obj-$(CONFIG_SND_SOC_INTEL_SKYLAKE) += snd-soc-skl-ipc.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:1526e2368c6971c92876d868e13aecd89bd5c6e74e0bea452e2133f6fdfe858b
+size 448

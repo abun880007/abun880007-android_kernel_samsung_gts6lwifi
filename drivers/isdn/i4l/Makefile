@@ -1,20 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-# Makefile for the kernel ISDN subsystem and device drivers.
-
-# Each configuration option enables a list of files.
-
-obj-$(CONFIG_ISDN_I4L)		+= isdn.o
-obj-$(CONFIG_ISDN_PPP_BSDCOMP)	+= isdn_bsdcomp.o
-obj-$(CONFIG_ISDN_HDLC)		+= isdnhdlc.o
-
-# Multipart objects.
-
-isdn-y				:= isdn_net.o isdn_tty.o isdn_v110.o isdn_common.o
-
-# Optional parts of multipart objects.
-
-isdn-$(CONFIG_ISDN_PPP)		+= isdn_ppp.o
-isdn-$(CONFIG_ISDN_X25)		+= isdn_concap.o isdn_x25iface.o
-isdn-$(CONFIG_ISDN_AUDIO)		+= isdn_audio.o
-isdn-$(CONFIG_ISDN_TTY_FAX)	+= isdn_ttyfax.o
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:f5bb5564d9be3adb7c7f380534bf69aa524e8dec5d6da203c72c78204f1a8614
+size 584

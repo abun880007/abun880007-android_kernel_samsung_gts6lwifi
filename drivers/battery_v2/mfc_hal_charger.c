@@ -34,8 +34,6 @@
 #include <linux/proc_fs.h>
 #include <linux/vmalloc.h>
 #include <linux/ctype.h>
-#include <linux/sec_batt.h>
-#include <linux/sec_ext.h>
 
 unsigned int mfc_chip_id_now;
 
@@ -251,8 +249,8 @@ static int mfc_hal_charger_probe(
 
 #if defined(CONFIG_WIRELESS_IC_PARAM)
 	pr_info("%s, wireless_chip_id_param : 0x%02X, wireless_fw_ver_param : 0x%04X"
-			"wireless_fw_mode_param : (0x%01X)\n", __func__,
-			wireless_chip_id_param, wireless_fw_ver_param, wireless_fw_mode_param);
+		"wireless_fw_mode_param : (0x%01X)\n", __func__,
+		wireless_chip_id_param, wireless_fw_ver_param, wireless_fw_mode_param);
 
 	if (wireless_chip_id_param == MFC_CHIP_ID_P9320 || wireless_chip_id_param == MFC_CHIP_ID_S2MIW04) {
 		mfc_chip_id_now = wireless_chip_id_param;

@@ -1,7 +1,3 @@
-#
-#  Makefile for the Linux Controller Area Network SPI drivers.
-#
-
-
-obj-$(CONFIG_CAN_HI311X)	+= hi311x.o
-obj-$(CONFIG_CAN_MCP251X)	+= mcp251x.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:e8a2ec5b223cf60bb1d5af125a5c2ba60ca479c86d81a5764f4ad15f7291bd23
+size 181

@@ -1,5 +1,3 @@
-obj-y := dma-buf.o dma-fence.o dma-fence-array.o reservation.o seqno-fence.o
-obj-$(CONFIG_SYNC_FILE)		+= sync_file.o
-obj-$(CONFIG_SW_SYNC)		+= sw_sync.o sync_debug.o
-obj-$(CONFIG_DMA_BUF_CONTAINER)	+= dma-buf-container.o
-obj-$(CONFIG_DMABUF_TRACE)	+= dma-buf-trace.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:8be7426b8a20329a136bdbab982ba9ef7c822029b46d9ddbefc55dddd430cfa9
+size 215

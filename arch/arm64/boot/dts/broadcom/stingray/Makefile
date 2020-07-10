@@ -1,7 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_ARCH_BCM_IPROC) += bcm958742k.dtb
-dtb-$(CONFIG_ARCH_BCM_IPROC) += bcm958742t.dtb
-
-always		:= $(dtb-y)
-subdir-y	:= $(dts-dirs)
-clean-files	:= *.dtb
+version https://git-lfs.github.com/spec/v1
+oid sha256:1ef8fb71ad1e0ef18248f211d4f8f9042b3b337d3aaf2de44f802bc8aefee450
+size 195

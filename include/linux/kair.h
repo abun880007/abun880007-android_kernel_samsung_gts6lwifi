@@ -21,7 +21,7 @@
 #define KAIR_CONVERGING			(0)
 #define KAIR_TPDF_CUMSUM		(512)
 #define KAIR_TPDF_MINVAL		(1)
-#define KAIR_TPDF_CASCADE_LEVEL		(1)
+#define KAIR_TPDF_CASCADE_LEVEL		(3)
 #define KAIR_ALIAS_LEN			(8)
 
 #define KAIR_INF_TPDF_WEIGHT		(1)
@@ -417,4 +417,3 @@ struct kair_class *kair_obj_creator(const char *alias,
 				    unsigned int min_capa,
 				    struct kairistics *kairistic);
 void kair_obj_destructor(struct kair_class *self);
-

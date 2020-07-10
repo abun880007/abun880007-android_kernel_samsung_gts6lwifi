@@ -1,6 +1,3 @@
-obj-$(CONFIG_HINIC) += hinic.o
-
-hinic-y := hinic_main.o hinic_tx.o hinic_rx.o hinic_port.o hinic_hw_dev.o \
-	   hinic_hw_io.o hinic_hw_qp.o hinic_hw_cmdq.o hinic_hw_wq.o \
-	   hinic_hw_mgmt.o hinic_hw_api_cmd.o hinic_hw_eqs.o hinic_hw_if.o \
-	   hinic_common.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:2e98511585e4a66f6a948fa6d9e8a835a16681bc60c6f11eece4a208f680fbb7
+size 261

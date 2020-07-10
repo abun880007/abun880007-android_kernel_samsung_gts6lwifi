@@ -1,4 +1,3 @@
-obj-$(CONFIG_PHY_MIPHY28LP) 		+= phy-miphy28lp.o
-obj-$(CONFIG_PHY_ST_SPEAR1310_MIPHY)	+= phy-spear1310-miphy.o
-obj-$(CONFIG_PHY_ST_SPEAR1340_MIPHY)	+= phy-spear1340-miphy.o
-obj-$(CONFIG_PHY_STIH407_USB)		+= phy-stih407-usb.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:4f8fd2a0359f8cc2e1a4095d4de85ab862637500692592134ee81fa099034295
+size 225

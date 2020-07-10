@@ -39,11 +39,11 @@ enum external_notify_cmd {
 	EXTERNAL_NOTIFY_MDMBLOCK_POST,
 	EXTERNAL_NOTIFY_POWERROLE,
 	EXTERNAL_NOTIFY_DEVICEADD,
+	EXTERNAL_NOTIFY_HOSTBLOCK_EARLY,
 };
 
 /* external notifier call sequence,
- * largest priority number device will be called first.
- */
+ * largest priority number device will be called first. */
 enum external_notify_device {
 	EXTERNAL_NOTIFY_DEV_MUIC,
 	EXTERNAL_NOTIFY_DEV_CHARGER,

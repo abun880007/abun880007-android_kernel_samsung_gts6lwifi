@@ -1,11 +1,3 @@
-#
-# Makefile for muic devices
-#
-
-obj-y					+= muic-core.o
-obj-$(CONFIG_MUIC_NOTIFIER)		+= muic_notifier.o
-obj-$(CONFIG_MUIC_MAX77705)		+= max77705-muic.o
-obj-$(CONFIG_HV_MUIC_MAX77705_AFC)	+= max77705-muic-afc.o
-obj-$(CONFIG_MUIC_MAX77705_CCIC)	+= max77705-muic-ccic.o
-obj-$(CONFIG_MUIC_MANAGER)		+= muic_manager.o
-obj-$(CONFIG_MUIC_SM5508)		+= sm5508-muic.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:4e6ad9d74d6be8079bb979a1c7d4b9b58afda204cef166bcb5ef97b8c8bf7613
+size 1580

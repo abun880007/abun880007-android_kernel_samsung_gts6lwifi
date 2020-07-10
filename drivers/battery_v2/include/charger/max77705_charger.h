@@ -31,7 +31,12 @@ enum {
 };
 
 extern unsigned int lpcharge;
-extern bool mfc_fw_update;
+extern bool mfc_fw_update; 
+//extern int is_debug_level_low;
+
+#if defined(CONFIG_SEC_FACTORY)
+extern int factory_mode;
+#endif
 
 extern void max77705_set_fw_noautoibus(int enable);
 
@@ -320,11 +325,20 @@ ssize_t max77705_chg_store_attrs(struct device *dev,
 #define WC_CURRENT_STEP		100
 #define WC_CURRENT_START	480
 
+#if defined(CONFIG_CHARGER_MAX77705_OTG_LIMIT)
+enum max77705_otg_limit_step {
+	MAX77705_LIMIT_STEP_DEFAULT,
+	MAX77705_LIMIT_STEP_OTG_ON,
+	MAX77705_LIMIT_STEP_NUM,
+};
+#endif
+
 struct max77705_charger_data {
 	struct device           *dev;
 	struct i2c_client       *i2c;
 	struct i2c_client       *pmic_i2c;
 	struct mutex            charger_mutex;
+	struct mutex            mode_mutex;
 
 	struct max77705_platform_data *max77705_pdata;
 
@@ -336,16 +350,21 @@ struct max77705_charger_data {
 	struct delayed_work	aicl_work;
 	struct delayed_work	isr_work;
 	struct delayed_work	recovery_work;	/*  softreg recovery work */
+#if defined(CONFIG_USE_POGO)
 	struct delayed_work	wpc_work;	/*  wpc detect work */
+#endif
 	struct delayed_work	chgin_init_work;	/*  chgin init work */
 	struct delayed_work wc_current_work;
+	struct delayed_work skipmode_work;
 
-/* mutex */
+	/* mutex */
 	struct mutex irq_lock;
 	struct mutex ops_lock;
 
 	/* wakelock */
+#if defined(CONFIG_USE_POGO)
 	struct wake_lock wpc_wake_lock;
+#endif
 	struct wake_lock chgin_wake_lock;
 	struct wake_lock wc_current_wake_lock;
 	struct wake_lock aicl_wake_lock;
@@ -379,27 +398,16 @@ struct max77705_charger_data {
 	int		irq_wcin;
 	int		irq_chgin;
 	int		irq_aicl;
-	int             irq_aicl_enabled;
-	/* software regulation */
-	bool		soft_reg_state;
-	int		soft_reg_current;
-
-	/* unsufficient power */
-	bool		reg_loop_deted;
+	int		irq_aicl_enabled;
 
 	/* wireless charge, w(wpc), v(vbus) */
-	int		wc_w_gpio;
+#if defined(CONFIG_USE_POGO)
 	int		wc_w_irq;
-	int		wc_w_state;
-	int		wc_v_gpio;
-	int		wc_v_irq;
-	int		wc_v_state;
-	bool		wc_pwr_det;
-	int		soft_reg_recovery_cnt;
+#endif
 	int		wc_current;
 	int		wc_pre_current;
 
-	bool            jig_low_active;
+	bool	jig_low_active;
 	int		jig_gpio;
 
 	bool enable_sysovlo_irq;
@@ -409,17 +417,17 @@ struct max77705_charger_data {
 
 	bool is_mdock;
 	bool otg_on;
-	bool uno_on;
+	bool uno_on;	
+#if defined(CONFIG_CHARGER_MAX77705_OTG_LIMIT)
+	int otg_limit_step;
+	int cpu_max_freq[MAX77705_LIMIT_STEP_NUM];
+#endif
 
 	int pmic_ver;
 	int input_curr_limit_step;
 	int wpc_input_curr_limit_step;
 	int charging_curr_step;
 	int float_voltage;
-
-#if defined(CONFIG_BATTERY_SAMSUNG_MHS)
-	int charging_port;
-#endif
 
 	sec_charger_platform_data_t *pdata;
 };

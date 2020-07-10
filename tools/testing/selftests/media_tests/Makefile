@@ -1,8 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-TEST_PROGS := media_device_test media_device_open video_device_test
-all: $(TEST_PROGS)
-
-include ../lib.mk
-
-clean:
-	rm -fr media_device_test media_device_open video_device_test
+version https://git-lfs.github.com/spec/v1
+oid sha256:1ff256fc2ab8704d985c1b3dd8c18a1c7496b771abbf7ac5713053497da48452
+size 211

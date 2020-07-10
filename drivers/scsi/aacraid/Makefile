@@ -1,8 +1,3 @@
-# Adaptec aacraid
-
-obj-$(CONFIG_SCSI_AACRAID) := aacraid.o
-
-aacraid-objs	:= linit.o aachba.o commctrl.o comminit.o commsup.o \
-		   dpcsup.o rx.o sa.o rkt.o nark.o src.o
-
-ccflags-y	:= -Idrivers/scsi
+version https://git-lfs.github.com/spec/v1
+oid sha256:d565ba7a26a297c0a71f517853184623a8d4dbae18dcefae3731e23c8c55e1e1
+size 199

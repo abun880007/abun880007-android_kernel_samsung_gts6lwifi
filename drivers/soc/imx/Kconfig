@@ -1,10 +1,3 @@
-menu "i.MX SoC drivers"
-
-config IMX7_PM_DOMAINS
-	bool "i.MX7 PM domains"
-	depends on SOC_IMX7D || (COMPILE_TEST && OF)
-	depends on PM
-	select PM_GENERIC_DOMAINS
-	default y if SOC_IMX7D
-
-endmenu
+version https://git-lfs.github.com/spec/v1
+oid sha256:a4a34fb4e9df435f892916930645dba35e8ca3022fa36a0c54da782c72b9ded1
+size 194

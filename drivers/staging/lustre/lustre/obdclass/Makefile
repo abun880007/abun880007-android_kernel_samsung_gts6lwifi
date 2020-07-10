@@ -1,12 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-subdir-ccflags-y += -I$(srctree)/drivers/staging/lustre/include
-subdir-ccflags-y += -I$(srctree)/drivers/staging/lustre/lustre/include
-
-obj-$(CONFIG_LUSTRE_FS) += obdclass.o
-
-obdclass-y := linux/linux-module.o linux/linux-sysctl.o \
-	      llog.o llog_cat.o llog_obd.o llog_swab.o class_obd.o debug.o \
-	      genops.o uuid.o lprocfs_status.o lprocfs_counters.o \
-	      lustre_handles.o lustre_peer.o statfs_pack.o linkea.o \
-	      obdo.o obd_config.o obd_mount.o lu_object.o lu_ref.o \
-	      cl_object.o cl_page.o cl_lock.o cl_io.o kernelcomm.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:3b3125ba7fc2aeada6ea0abde91379a79a50aeb8651a78e0b0f79a4d441a3369
+size 584

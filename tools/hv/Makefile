@@ -1,14 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-# Makefile for Hyper-V tools
-
-WARNINGS = -Wall -Wextra
-CFLAGS = $(WARNINGS) -g $(shell getconf LFS_CFLAGS)
-
-CFLAGS += -D__EXPORTED_HEADERS__ -I../../include/uapi -I../../include
-
-all: hv_kvp_daemon hv_vss_daemon hv_fcopy_daemon
-%: %.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-clean:
-	$(RM) hv_kvp_daemon hv_vss_daemon hv_fcopy_daemon
+version https://git-lfs.github.com/spec/v1
+oid sha256:214d57c8ce3e8e644a6cfe62fce29c4ff504e07f6bbd40e95a6da2cc9eeee7cc
+size 355

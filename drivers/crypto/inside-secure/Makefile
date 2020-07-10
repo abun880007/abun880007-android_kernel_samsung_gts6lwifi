@@ -1,2 +1,3 @@
-obj-$(CONFIG_CRYPTO_DEV_SAFEXCEL) += crypto_safexcel.o
-crypto_safexcel-objs := safexcel.o safexcel_ring.o safexcel_cipher.o safexcel_hash.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:cf580613754ab565fd41a973038720424e04a72f92f8dc82a43a8fd185244fad
+size 140

@@ -1,3 +1,3 @@
-obj-$(CONFIG_SCSI_HISI_SAS)		+= hisi_sas_main.o
-obj-$(CONFIG_SCSI_HISI_SAS)		+= hisi_sas_v1_hw.o hisi_sas_v2_hw.o
-obj-$(CONFIG_SCSI_HISI_SAS_PCI)		+= hisi_sas_v3_hw.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:ec453159abaf8d441105acde99219acb322167a3d7951db4b439fcb90298f018
+size 167

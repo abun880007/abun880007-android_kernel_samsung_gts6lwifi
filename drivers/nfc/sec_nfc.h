@@ -25,9 +25,9 @@
 #define SEC_NFC_SET_MODE		_IOW(SEC_NFC_MAGIC, 1, unsigned int)
 #define SEC_NFC_SLEEP			_IOW(SEC_NFC_MAGIC, 2, unsigned int)
 #define SEC_NFC_WAKEUP			_IOW(SEC_NFC_MAGIC, 3, unsigned int)
-#define SEC_NFC_SET_NPT_MODE		_IOW(SEC_NFC_MAGIC, 4, unsigned int)
+#define SEC_NFC_SET_NPT_MODE	_IOW(SEC_NFC_MAGIC, 4, unsigned int)
 
-#define SEC_NFC_DEBUG			_IO(SEC_NFC_MAGIC, 99)
+#define SEC_NFC_DEBUG           _IO(SEC_NFC_MAGIC, 99)
 
 /* size */
 #define SEC_NFC_MSG_MAX_SIZE	(256 + 4)
@@ -46,6 +46,7 @@ struct sec_nfc_platform_data {
 	int ven;
 	int firm;
 	int wake;
+	int pvdd_en;
 	unsigned int tvdd;
 	unsigned int avdd;
 
@@ -60,7 +61,7 @@ struct sec_nfc_platform_data {
 	unsigned int npt;
 	u32 npt_gpio_flags;
 // [END] NPT
-	const char *nfc_pvdd;
+	struct regulator *nfc_pvdd;
 };
 
 enum sec_nfc_mode {
@@ -95,5 +96,6 @@ enum sec_nfc_npt_mode {
 // [END] NPT
 
 extern unsigned int lpcharge;
+
 #define NFC_I2C_LDO_ON  1
 #define NFC_I2C_LDO_OFF 0

@@ -1,5 +1,3 @@
-subdir-ccflags-y += -I$(srctree)/drivers/staging/lustre/include
-subdir-ccflags-y += -I$(srctree)/drivers/staging/lustre/lustre/include
-
-obj-$(CONFIG_LNET_XPRT_IB) += ko2iblnd.o
-ko2iblnd-y := o2iblnd.o o2iblnd_cb.o o2iblnd_modparams.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:cb66e3b36e97ac385d57387a556517156d9909572ef88953410ba5379b91d1dd
+size 234

@@ -1,7 +1,3 @@
-#
-# Makefile for radios with Richwave RTC6213N FM Tuner
-#
-
-radio-i2c-rtc6213n-objs	:= radio-rtc6213n-i2c.o radio-rtc6213n-common.o
-
-obj-$(CONFIG_I2C_RTC6213N) += radio-i2c-rtc6213n.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:8e48c8eff3ccda548b7a37b0c2c2851cc82ec161695bac3b9b5c3935cc6cef16
+size 183

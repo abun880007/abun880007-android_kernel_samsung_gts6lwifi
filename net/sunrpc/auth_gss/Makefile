@@ -1,15 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for Linux kernel rpcsec_gss implementation
-#
-
-obj-$(CONFIG_SUNRPC_GSS) += auth_rpcgss.o
-
-auth_rpcgss-y := auth_gss.o gss_generic_token.o \
-	gss_mech_switch.o svcauth_gss.o \
-	gss_rpc_upcall.o gss_rpc_xdr.o
-
-obj-$(CONFIG_RPCSEC_GSS_KRB5) += rpcsec_gss_krb5.o
-
-rpcsec_gss_krb5-y := gss_krb5_mech.o gss_krb5_seal.o gss_krb5_unseal.o \
-	gss_krb5_seqnum.o gss_krb5_wrap.o gss_krb5_crypto.o gss_krb5_keys.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:7e2748bb42ec25bc5c64c2d1f7303a91ed392a6820582826b37426256ef35bac
+size 449

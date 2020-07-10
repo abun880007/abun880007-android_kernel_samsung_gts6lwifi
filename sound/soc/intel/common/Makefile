@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-snd-soc-sst-dsp-objs := sst-dsp.o
-snd-soc-sst-acpi-objs := sst-acpi.o
-snd-soc-sst-match-objs := sst-match-acpi.o
-snd-soc-sst-ipc-objs := sst-ipc.o
-snd-soc-sst-firmware-objs := sst-firmware.o
-
-obj-$(CONFIG_SND_SOC_INTEL_SST) += snd-soc-sst-dsp.o snd-soc-sst-ipc.o
-obj-$(CONFIG_SND_SOC_INTEL_SST_ACPI) += snd-soc-sst-acpi.o
-obj-$(CONFIG_SND_SOC_INTEL_SST_MATCH) += snd-soc-sst-match.o
-obj-$(CONFIG_SND_SOC_INTEL_SST_FIRMWARE) += snd-soc-sst-firmware.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:4714c73ae82958a61248943e0446a1ac856c2d3f80ac4422debb9be3354e0355
+size 485

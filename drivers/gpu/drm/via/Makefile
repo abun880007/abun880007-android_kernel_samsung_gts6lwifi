@@ -1,7 +1,3 @@
-#
-# Makefile for the drm device driver.  This driver provides support for the
-# Direct Rendering Infrastructure (DRI) in XFree86 4.1.0 and higher.
-
-via-y    := via_irq.o via_drv.o via_map.o via_mm.o via_dma.o via_verifier.o via_video.o via_dmablit.o
-
-obj-$(CONFIG_DRM_VIA)	+=via.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:afdcdd32de1063034f0258d66ee4e87c86eee08ccc2788aa6b557b044cc6449a
+size 281

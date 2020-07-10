@@ -1,13 +1,3 @@
-# UAPI Header export list
-
-ifeq ($(wildcard $(srctree)/arch/$(SRCARCH)/include/uapi/asm/a.out.h),)
-no-export-headers += a.out.h
-endif
-
-ifeq ($(wildcard $(srctree)/arch/$(SRCARCH)/include/uapi/asm/kvm.h),)
-no-export-headers += kvm.h
-endif
-
-ifeq ($(wildcard $(srctree)/arch/$(SRCARCH)/include/uapi/asm/kvm_para.h),)
-no-export-headers += kvm_para.h
-endif
+version https://git-lfs.github.com/spec/v1
+oid sha256:ecf693970e7fb8caf35a59d7f20a1decf0a346c3674d756bb4701a181e688370
+size 646

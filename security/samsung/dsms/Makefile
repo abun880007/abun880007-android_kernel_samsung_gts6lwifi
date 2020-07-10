@@ -1,18 +1,3 @@
-#
-# Makefile for the DSMS
-#
-
-obj-y := dsms_kernel_api.o
-obj-y += dsms_access_control.o
-obj-y += dsms_rate_limit.o
-obj-y += dsms_policy.o
-obj-y += dsms_init.o
-obj-y += dsms_debug.o
-
-EXTRA_CFLAGS += -DDSMS_WHITELIST_IGNORE_NAME_SUFFIXES_ENABLE
-
-# Debugging options:
-
-ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
-#    CFLAGS_dsms_debug.o := -DDEBUG
-endif
+version https://git-lfs.github.com/spec/v1
+oid sha256:97b06db658e188f354f92edaa77aa4e902bf5b50af69f9ee2154ee2284ec064a
+size 365

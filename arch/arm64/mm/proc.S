@@ -44,6 +44,52 @@
 #define MAIR(attr, mt)	((attr) << ((mt) * 8))
 
 /*
+ *	cpu_cache_off()
+ *
+ *	Turn the CPU D-cache off.
+ */
+ENTRY(cpu_cache_off)
+	mrs	x0, sctlr_el1
+	bic	x0, x0, #1 << 2			// clear SCTLR.C
+	msr	sctlr_el1, x0
+	isb
+	ret
+ENDPROC(cpu_cache_off)
+
+/*
+ *	cpu_reset(loc)
+ *
+ *	Perform a soft reset of the system.  Put the CPU into the same state
+ *	as it would be if it had been reset, and branch to what would be the
+ *	reset vector. It must be executed with the flat identity mapping.
+ *
+ *	- loc   - location to jump to for soft reset
+ */
+	.align	5
+ENTRY(cpu_reset)
+	mrs	x1, sctlr_el1
+	bic	x1, x1, #1
+	msr	sctlr_el1, x1			// disable the MMU
+	isb
+	ret	x0
+ENDPROC(cpu_reset)
+
+ENTRY(cpu_soft_restart)
+	/* Save address of cpu_reset() and reset address */
+	mov	x19, x0
+	mov	x20, x1
+
+	/* Turn D-cache off */
+	bl	cpu_cache_off
+
+	/* Push out all dirty data, and ensure cache is empty */
+	bl	flush_cache_all
+
+	mov	x0, x20
+	ret	x19
+ENDPROC(cpu_soft_restart)
+
+/*
  *	cpu_do_idle()
  *
  *	Idle the processor (wait for interrupt).
@@ -166,9 +212,6 @@ ENDPROC(cpu_do_switch_mm)
 	msr	ttbr1_el1, \tmp1
 	isb
 	tlbi	vmalle1
-#ifdef CONFIG_SOC_EXYNOS9820
-	tlbi    vaale1is, xzr                   // dummy TLBI
-#endif
 	dsb	nsh
 	isb
 .endm
@@ -211,15 +254,9 @@ ENDPROC(idmap_cpu_replace_ttbr1)
 
 	.macro __idmap_kpti_put_pgtable_ent_ng, type
 	orr	\type, \type, #PTE_NG		// Same bit for blocks and pages
-#ifdef CONFIG_UH_RKP
-	mov	x2, \type
-	mov	x1, cur_\()\type\()p		// Update the entry for uH rkp
-	str	x2, [x1]			// Need to check for corruption of each register
-#else
-	str	\type, [cur_\()\type\()p]	// Update the entry and ensure it
-#endif
-	dmb	sy
-	dc	civac, cur_\()\type\()p		// is visible to all CPUs.
+	str	\type, [cur_\()\type\()p]	// Update the entry and ensure
+	dmb	sy				// that it is visible to all
+	dc	civac, cur_\()\type\()p		// CPUs.
 	.endm
 
 /*
@@ -356,13 +393,22 @@ skip_pte:
 	/* Secondary CPUs end up here */
 __idmap_kpti_secondary:
 	/* Uninstall swapper before surgery begins */
+#ifdef CONFIG_RKP_CFP_ROPP
+	__idmap_cpu_set_reserved_ttbr1 x18, x16
+#else
 	__idmap_cpu_set_reserved_ttbr1 x18, x17
+#endif
 
 	/* Increment the flag to let the boot CPU we're ready */
 1:	ldxr	w18, [flag_ptr]
 	add	w18, w18, #1
+#ifdef CONFIG_RKP_CFP_ROPP
+	stxr	w16, w18, [flag_ptr]
+	cbnz	w16, 1b
+#else
 	stxr	w17, w18, [flag_ptr]
 	cbnz	w17, 1b
+#endif
 
 	/* Wait for the boot CPU to finish messing around with swapper */
 	sevl
@@ -405,9 +451,6 @@ ENDPROC(idmap_kpti_install_ng_mappings)
 	.pushsection ".idmap.text", "awx"
 ENTRY(__cpu_setup)
 	tlbi	vmalle1				// Invalidate local TLB
-#ifdef CONFIG_SOC_EXYNOS9820
-	tlbi    vaale1is, xzr                   // dummy TLBI
-#endif
 	dsb	nsh
 
 	mov	x0, #3 << 20
@@ -460,21 +503,15 @@ ENTRY(__cpu_setup)
 	bfi	x10, x9, #32, #3
 #ifdef CONFIG_ARM64_HW_AFDBM
 	/*
-	 * Hardware update of the Access and Dirty bits.
+	 * Enable hardware update of the Access Flags bit.
+	 * Hardware dirty bit management is enabled later,
+	 * via capabilities.
 	 */
 	mrs	x9, ID_AA64MMFR1_EL1
 	and	x9, x9, #0xf
-	cbz	x9, 2f
-	cmp	x9, #2
-	b.lt	1f
-#ifdef CONFIG_ARM64_ERRATUM_1024718
-	/* Disable hardware DBM on Cortex-A55 r0p0, r0p1 & r1p0 */
-	cpu_midr_match MIDR_CORTEX_A55, MIDR_CPU_VAR_REV(0, 0), MIDR_CPU_VAR_REV(1, 0), x1, x2, x3, x4
-	cbnz	x1, 1f
-#endif
-	orr	x10, x10, #TCR_HD		// hardware Dirty flag update
-1:	orr	x10, x10, #TCR_HA		// hardware Access flag update
-2:
+	cbz	x9, 1f
+	orr	x10, x10, #TCR_HA		// hardware Access flag update
+1:
 #endif	/* CONFIG_ARM64_HW_AFDBM */
 	msr	tcr_el1, x10
 	ret					// return to head.S

@@ -1,5 +1,3 @@
-#
-# FIVE drivers configuration
-#
-
-source "drivers/five/five_tee_driver/Kconfig"
+version https://git-lfs.github.com/spec/v1
+oid sha256:f816c45629e24d27e01c78204fed44c5e622290de138de52237a81bd57033735
+size 80

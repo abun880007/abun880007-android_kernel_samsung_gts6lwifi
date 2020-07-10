@@ -1,7 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_ARCH_SPRD) += sc9836-openphone.dtb \
-			sp9860g-1h10.dtb
-
-always		:= $(dtb-y)
-subdir-y	:= $(dts-dirs)
-clean-files	:= *.dtb
+version https://git-lfs.github.com/spec/v1
+oid sha256:15f6e61afd55746167b33f861829209261459a7d024db09bf15baf90c468e403
+size 171

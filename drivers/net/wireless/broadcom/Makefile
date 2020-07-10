@@ -1,15 +1,3 @@
-obj-$(CONFIG_B43)		+= b43/
-obj-$(CONFIG_B43LEGACY)		+= b43legacy/
-
-obj-$(CONFIG_BRCMFMAC)	+= brcm80211/
-obj-$(CONFIG_BRCMSMAC)	+= brcm80211/
-
-ifneq ($(CONFIG_BCM4375),)
-obj-$(CONFIG_BCM4375)   += bcmdhd_100_15/
-obj-$(CONFIG_SOC_EXYNOS9820) += bcmdhd_100_15/dhd_custom_memprealloc.o
-obj-$(CONFIG_SOC_EXYNOS9820) += bcmdhd_100_15/dhd_custom_exynos.o
-else
-obj-$(CONFIG_BCM4375)   += bcmdhd_100_10/
-obj-$(CONFIG_SOC_EXYNOS9820) += bcmdhd_100_10/dhd_custom_memprealloc.o
-obj-$(CONFIG_SOC_EXYNOS9820) += bcmdhd_100_10/dhd_custom_exynos.o
-endif
+version https://git-lfs.github.com/spec/v1
+oid sha256:8441269908703f9278471390bd7d71fa89d3f27726b694174d63ec4ef5a4dcad
+size 519

@@ -1,8 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_WCN36XX) := wcn36xx.o
-wcn36xx-y +=   main.o \
-               dxe.o \
-               txrx.o \
-               smd.o \
-               pmc.o \
-               debug.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:c8795860ef38aace976c48bcc337a7b3062f38deff763b2acdf9e10950e11ad6
+size 210

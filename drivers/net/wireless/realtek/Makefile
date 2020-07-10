@@ -1,9 +1,3 @@
-#
-# Makefile for the Linux Wireless network device drivers for Realtek units
-#
-
-obj-$(CONFIG_RTL8180)		+= rtl818x/
-obj-$(CONFIG_RTL8187)		+= rtl818x/
-obj-$(CONFIG_RTLWIFI)		+= rtlwifi/
-obj-$(CONFIG_RTL8XXXU)		+= rtl8xxxu/
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:cc102999bece4059d9c79bc40547fd259c13fc49545d325cbf06db54c767ed8e
+size 223

@@ -1,10 +1,3 @@
-#
-# Makefile for the RMNET module
-#
-
-rmnet-y		 := rmnet_config.o
-rmnet-y		 += rmnet_vnd.o
-rmnet-y		 += rmnet_handlers.o
-rmnet-y		 += rmnet_map_data.o
-rmnet-y		 += rmnet_map_command.o
-obj-$(CONFIG_RMNET) += rmnet.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:9da7d92448a182597b5523168e52d6ef1bc0cf076ccaed3fe3ba4bc799d744e9
+size 291

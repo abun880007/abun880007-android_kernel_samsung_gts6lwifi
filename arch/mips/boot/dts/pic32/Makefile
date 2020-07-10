@@ -1,13 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_DTB_PIC32_MZDA_SK)		+= pic32mzda_sk.dtb
-
-dtb-$(CONFIG_DTB_PIC32_NONE)		+= \
-					pic32mzda_sk.dtb
-
-obj-y				+= $(patsubst %.dtb, %.dtb.o, $(dtb-y))
-
-# Force kbuild to make empty built-in.o if necessary
-obj-				+= dummy.o
-
-always				:= $(dtb-y)
-clean-files			:= *.dtb *.dtb.S
+version https://git-lfs.github.com/spec/v1
+oid sha256:a36aede3147632a8c7abe6729ad5f9039a38dc6b6ce9dee3f5abac2671220351
+size 323

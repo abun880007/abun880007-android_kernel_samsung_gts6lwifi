@@ -1,21 +1,13 @@
 /*
  * s2mpb02-irq.c - Interrupt controller support for S2MPB02
  *
- * Copyright (C) 2014 Samsung Electronics Co.Ltd
+ * Copyright (c) 2017 Samsung Electronics Co., Ltd
+ *              http://www.samsung.com
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *  This program is free software; you can redistribute  it and/or modify it
+ *  under  the terms of  the GNU General  Public License as published by the
+ *  Free Software Foundation;  either version 2 of the  License, or (at your
+ *  option) any later version.
  *
  * This driver is based on max77804-irq.c
  */
@@ -24,8 +16,8 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/gpio.h>
-#include <linux/mfd/samsung/s2mpb02.h>
-#include <linux/mfd/samsung/s2mpb02-regulator.h>
+#include <linux/mfd/s2mpb02.h>
+#include <linux/mfd/s2mpb02-private.h>
 
 static const u8 s2mpb02_mask_reg[] = {
 	[LED_INT] = S2MPB02_REG_INT1M,
@@ -191,6 +183,7 @@ int s2mpb02_irq_init(struct s2mpb02_dev *s2mpb02)
 	/* Register with genirq */
 	for (i = 0; i < S2MPB02_IRQ_NR; i++) {
 		int cur_irq = i + s2mpb02->irq_base;
+
 		ret = irq_set_chip_data(cur_irq, s2mpb02);
 		if (ret) {
 			dev_err(s2mpb02->dev,

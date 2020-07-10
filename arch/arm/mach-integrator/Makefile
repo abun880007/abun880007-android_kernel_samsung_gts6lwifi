@@ -1,13 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the linux kernel.
-#
-
-# Object file lists.
-
-obj-y					:= core.o lm.o
-obj-$(CONFIG_ARCH_INTEGRATOR_AP)	+= integrator_ap.o
-obj-$(CONFIG_ARCH_INTEGRATOR_CP)	+= integrator_cp.o
-
-obj-$(CONFIG_PCI)			+= pci_v3.o
-obj-$(CONFIG_INTEGRATOR_IMPD1)		+= impd1.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:8a035561d4e27519c059b10a63a07143f618ead7cf5887e0d6946505ab87e380
+size 300

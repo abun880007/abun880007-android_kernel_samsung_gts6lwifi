@@ -1,8 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-pl111_drm-y +=	pl111_connector.o \
-		pl111_display.o \
-		pl111_drv.o
-
-pl111_drm-$(CONFIG_DEBUG_FS) += pl111_debugfs.o
-
-obj-$(CONFIG_DRM_PL111) += pl111_drm.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:d0a08ad74932a5f1e5f29025e6ea7cdd839def4296ad06e5a8424ecf7281076c
+size 193

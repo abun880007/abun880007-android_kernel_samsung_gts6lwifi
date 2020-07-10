@@ -200,11 +200,18 @@ EXPORT_SYMBOL(unregister_lsm_notifier);
  *	This is a hook that returns a value.
  */
 
+/*
+ * security_integrity_current() is added, 
+ * which has a dependency of CONFIG_RKP_KDP.
+ * security_integrity_current is added to check integrity of credential context.
+ * if CONFIG_RKP_KDP is disabled, it will always return 0.
+ */
+
 #define call_void_hook(FUNC, ...)				\
 	do {							\
 		struct security_hook_list *P;			\
 								\
-		if(security_integrity_current()) break;	\
+		if(security_integrity_current()) break;		\
 		list_for_each_entry(P, &security_hook_heads.FUNC, list)	\
 			P->hook.FUNC(__VA_ARGS__);		\
 	} while (0)
@@ -215,8 +222,8 @@ EXPORT_SYMBOL(unregister_lsm_notifier);
 		struct security_hook_list *P;			\
 								\
 		RC = security_integrity_current();		\
-		if (RC != 0)							\
-			break;								\
+		if (RC != 0)					\
+			break;					\
 		list_for_each_entry(P, &security_hook_heads.FUNC, list) { \
 			RC = P->hook.FUNC(__VA_ARGS__);		\
 			if (RC != 0)				\
@@ -621,6 +628,14 @@ int security_inode_create(struct inode *dir, struct dentry *dentry, umode_t mode
 	return call_int_hook(inode_create, 0, dir, dentry, mode);
 }
 EXPORT_SYMBOL_GPL(security_inode_create);
+
+int security_inode_post_create(struct inode *dir, struct dentry *dentry,
+				umode_t mode)
+{
+	if (unlikely(IS_PRIVATE(dir)))
+		return 0;
+	return call_int_hook(inode_post_create, 0, dir, dentry, mode);
+}
 
 int security_inode_link(struct dentry *old_dentry, struct inode *dir,
 			 struct dentry *new_dentry)

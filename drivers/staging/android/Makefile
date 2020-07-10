@@ -1,10 +1,3 @@
-ccflags-y += -I$(src)			# needed for trace events
-
-obj-y					+= ion/
-
-obj-$(CONFIG_ASHMEM)			+= ashmem.o
-obj-$(CONFIG_ANDROID_SWITCH)           += switch/
-obj-$(CONFIG_ANDROID_VSOC)		+= vsoc.o
-obj-$(CONFIG_ANDROID_LOW_MEMORY_KILLER)	+= lowmemorykiller.o
-obj-$(CONFIG_SAMSUNG_FREECESS)		+= freecess.o
-obj-$(CONFIG_SAMSUNG_FREECESS)		+= freecess_pkg.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:6097901557d2e7dbf22d1fbb6c660f56294fe4e97ae13eab388e56e9c7f59743
+size 300

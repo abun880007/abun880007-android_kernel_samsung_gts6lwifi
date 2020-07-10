@@ -28,7 +28,7 @@
 #include <linux/interrupt.h>
 #include <linux/debug_locks.h>
 #include <linux/osq_lock.h>
-#include <linux/sec_debug.h>
+#include <linux/delay.h>
 #ifdef CONFIG_KPERFMON
 #include <linux/ologk.h>
 #endif
@@ -558,6 +558,17 @@ mutex_optimistic_spin(struct mutex *lock, struct ww_acquire_ctx *ww_ctx,
 		 * values at the cost of a few extra spins.
 		 */
 		cpu_relax();
+
+		/*
+		 * On arm systems, we must slow down the waiter's repeated
+		 * aquisition of spin_mlock and atomics on the lock count, or
+		 * we risk starving out a thread attempting to release the
+		 * mutex. The mutex slowpath release must take spin lock
+		 * wait_lock. This spin lock can share a monitor with the
+		 * other waiter atomics in the mutex data structure, so must
+		 * take care to rate limit the waiters.
+		 */
+		udelay(1);
 	}
 
 	if (!waiter)
@@ -818,7 +829,6 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 	if (__mutex_waiter_is_first(lock, &waiter))
 		__mutex_set_flag(lock, MUTEX_FLAG_WAITERS);
 
-	sec_debug_wtsk_set_data(DTYPE_MUTEX, (void *)lock);
 	set_current_state(state);
 	for (;;) {
 		/*
@@ -874,7 +884,6 @@ __mutex_lock_common(struct mutex *lock, long state, unsigned int subclass,
 	spin_lock(&lock->wait_lock);
 acquired:
 	__set_current_state(TASK_RUNNING);
-	sec_debug_wtsk_set_data(DTYPE_NONE, NULL);
 
 	mutex_remove_waiter(lock, &waiter, current);
 	if (likely(list_empty(&lock->wait_list)))
@@ -895,7 +904,6 @@ skip_wait:
 
 err:
 	__set_current_state(TASK_RUNNING);
-	sec_debug_wtsk_set_data(DTYPE_NONE, NULL);
 	mutex_remove_waiter(lock, &waiter, current);
 err_early_backoff:
 	spin_unlock(&lock->wait_lock);

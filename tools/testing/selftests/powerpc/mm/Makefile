@@ -1,16 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-noarg:
-	$(MAKE) -C ../
-
-TEST_GEN_PROGS := hugetlb_vs_thp_test subpage_prot prot_sao
-TEST_GEN_FILES := tempfile
-
-include ../../lib.mk
-
-$(TEST_GEN_PROGS): ../harness.c
-
-$(OUTPUT)/prot_sao: ../utils.c
-
-$(OUTPUT)/tempfile:
-	dd if=/dev/zero of=$@ bs=64k count=1
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:c1e3638ef5b1895306f447e4e93fdf65d8f29f37e1e0480e088182208fcbda85
+size 293

@@ -1,11 +1,3 @@
-# Makefile for Qualcomm CAMSS driver
-
-qcom-camss-objs += \
-		camss.o \
-		camss-csid.o \
-		camss-csiphy.o \
-		camss-ispif.o \
-		camss-vfe.o \
-		camss-video.o \
-
-obj-$(CONFIG_VIDEO_QCOM_CAMSS) += qcom-camss.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:056cb4b2d94c19ecadec0667b87dc097be57c47039b0e509167278bd432236fe
+size 207

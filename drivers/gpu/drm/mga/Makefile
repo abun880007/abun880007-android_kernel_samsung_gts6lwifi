@@ -1,10 +1,3 @@
-#
-# Makefile for the drm device driver.  This driver provides support for the
-# Direct Rendering Infrastructure (DRI) in XFree86 4.1.0 and higher.
-
-mga-y := mga_drv.o mga_dma.o mga_state.o mga_warp.o mga_irq.o
-
-mga-$(CONFIG_COMPAT) += mga_ioc32.o
-
-obj-$(CONFIG_DRM_MGA)	+= mga.o
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:a10dcc5b9a033f51fa722e27013ed08e023f8fbe10a43b402ebbce147e692372
+size 280

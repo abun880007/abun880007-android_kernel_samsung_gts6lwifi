@@ -107,7 +107,7 @@ typedef union {
 	} BYTES;
 	struct {
 		uint32_t	USB_Superspeed_Signaling_Support:3,
-				SOP_contoller_present:1,
+				SOP_controller_present:1,
 				Vbus_through_cable:1,
 				Vbus_Current_Handling_Capability:2,
 				SSRX2_Directionality_Support:1,
@@ -223,7 +223,8 @@ typedef struct {
 
 /* For Dex */
 #define TypeC_Dex_SUPPORT	(0x04E8)
-#define SWAP_UINT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24))
+
+#define SWAP_UINT32(x) (((((uint32_t)(x) >> 24) | ((((uint32_t)(x) & 0x00FF0000)) >> 8) | ((((uint32_t)(x) & 0x0000FF00)) << 8) | ((uint32_t)(x) << 24))))
 
 /* For DP VDM Modes VDO Port_Capability */
 typedef enum {
@@ -538,6 +539,10 @@ typedef union {
 #define SEC_UVDM_RX_HEADER_ACK	0x0
 #define SEC_UVDM_RX_HEADER_NAK	0x1
 
+#define HOST_DRIVER_RECOGNITION_WAIT_MS	2000
+#define USB_PHY_SUSPEND_WAIT_MS		12000
+#define USB_PHY_RESUME_WAIT_MS		3000
+
 #define MAXIM_ENABLE_ALTERNATE_SRCCAP 0x1
 #define MAXIM_ENABLE_ALTERNATE_VDM	  0x2
 #define MAXIM_ENABLE_ALTERNATE_SRC_VDM	0x3
@@ -600,18 +605,18 @@ struct SS_UNSTRUCTURED_VDM_MSG{
 	VDO_MESSAGE_Type VDO_MSG;
 } __attribute__((aligned(1), packed));
 
+extern int dwc3_msm_is_suspended(void);
+extern int dwc3_msm_is_host_highspeed(void);
+extern int dwc3_restart_usb_host_mode_hs(void);
 void max77705_receive_alternate_message(struct max77705_usbc_platform_data *data,
 			MAX77705_VDM_MSG_IRQ_STATUS_Type *VDM_MSG_IRQ_State);
+void max77705_check_discover_modes(struct work_struct *work);
 void max77705_vdm_message_handler(struct max77705_usbc_platform_data *usbpd_data,
 			char *opcode_data, int len);
 void max77705_sec_unstructured_message_handler(struct max77705_usbc_platform_data *usbpd_data,
 			char *opcode_data, int len);
 int max_uvdm_in_request_message(void *data);
-void max77705_send_dex_fan_unstructured_vdm_message(void *data, int cmd);
-void max77705_acc_detach_check(struct work_struct *work);
-void max77705_set_enable_alternate_mode(int mode);
 void max77705_vdm_process_set_samsung_alternate_mode(void *data, int mode);
-int max77705_process_check_accessory(void *data);
 extern void max77705_vdm_process_set_identity_req(void *data);
 extern void max77705_vdm_process_set_DP_configure_mode_req(void *data, uint8_t W_DATA);
 extern void max77705_vdm_process_set_Dex_enter_mode_req(void *data);
@@ -619,5 +624,12 @@ extern int max77705_sec_uvdm_in_request_message(void *data);
 extern int max77705_sec_uvdm_out_request_message(void *data, int size);
 extern int max77705_sec_uvdm_ready(void);
 extern void max77705_sec_uvdm_close(void);
+void max77705_send_dex_fan_unstructured_vdm_message(void *data, int cmd);
+void max77705_acc_detach_check(struct work_struct *work);
+void max77705_set_usb_phy_completion(int kind);
+void max77705_set_host_turn_on_event(int mode);
+int max77705_get_diplayport_status(void);
+void max77705_set_enable_alternate_mode(int mode);
+int max77705_process_check_accessory(void *data);
 #endif
 #endif

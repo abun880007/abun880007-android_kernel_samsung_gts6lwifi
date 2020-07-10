@@ -1,4 +1,3 @@
-mgag200-y   := mgag200_main.o mgag200_mode.o mgag200_cursor.o \
-	mgag200_drv.o mgag200_fb.o mgag200_i2c.o mgag200_ttm.o
-
-obj-$(CONFIG_DRM_MGAG200) += mgag200.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:ed19382dadfcbf9ae30d70cf1b00c233032280c6e1373006249ee5e353c78642
+size 160

@@ -1,16 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-TEST_GEN_PROGS := switch_endian_test
-
-ASFLAGS += -O2 -Wall -g -nostdlib -m64
-
-EXTRA_CLEAN = $(OUTPUT)/*.o $(OUTPUT)/check-reversed.S
-
-include ../../lib.mk
-
-$(OUTPUT)/switch_endian_test: $(OUTPUT)/check-reversed.S
-
-$(OUTPUT)/check-reversed.o: $(OUTPUT)/check.o
-	$(CROSS_COMPILE)objcopy -j .text --reverse-bytes=4 -O binary $< $@
-
-$(OUTPUT)/check-reversed.S: $(OUTPUT)/check-reversed.o
-	hexdump -v -e '/1 ".byte 0x%02X\n"' $< > $@
+version https://git-lfs.github.com/spec/v1
+oid sha256:c01016657cb063f342bb9d69e84177b0b4d1588e3ae01e08d602e39c8e62f58a
+size 464

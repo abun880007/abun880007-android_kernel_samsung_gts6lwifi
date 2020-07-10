@@ -1,5 +1,3 @@
-obj-$(CONFIG_QEDE) := qede.o
-
-qede-y := qede_main.o qede_fp.o qede_filter.o qede_ethtool.o qede_ptp.o
-qede-$(CONFIG_DCB) += qede_dcbnl.o
-qede-$(CONFIG_QED_RDMA) += qede_rdma.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:70675e056650fd89268c0fdb9d7b18c357929f55d5a97a3f2371e6386dd0f732
+size 176

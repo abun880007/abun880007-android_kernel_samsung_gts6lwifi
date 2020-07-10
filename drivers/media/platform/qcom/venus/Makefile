@@ -1,12 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-# Makefile for Qualcomm Venus driver
-
-venus-core-objs += core.o helpers.o firmware.o \
-		   hfi_venus.o hfi_msgs.o hfi_cmds.o hfi.o
-
-venus-dec-objs += vdec.o vdec_ctrls.o
-venus-enc-objs += venc.o venc_ctrls.o
-
-obj-$(CONFIG_VIDEO_QCOM_VENUS) += venus-core.o
-obj-$(CONFIG_VIDEO_QCOM_VENUS) += venus-dec.o
-obj-$(CONFIG_VIDEO_QCOM_VENUS) += venus-enc.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:3e6d84ab3bb83b0c28b3caa761944a9c4bc172a029e5b110d4f29818be1ab2c3
+size 384

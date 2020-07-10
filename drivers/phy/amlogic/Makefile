@@ -1,2 +1,3 @@
-obj-$(CONFIG_PHY_MESON8B_USB2)		+= phy-meson8b-usb2.o
-obj-$(CONFIG_PHY_MESON_GXL_USB2)	+= phy-meson-gxl-usb2.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:a3434ec3dba4c544b210ad1eb7a4c01330974cbb255159800a86cb75e48d1fae
+size 111

@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_MIPS_MALTA)	+= malta.dtb
-dtb-$(CONFIG_LEGACY_BOARD_SEAD3)	+= sead3.dtb
-
-obj-y				+= $(patsubst %.dtb, %.dtb.o, $(dtb-y))
-
-# Force kbuild to make empty built-in.o if necessary
-obj-				+= dummy.o
-
-always				:= $(dtb-y)
-clean-files			:= *.dtb *.dtb.S
+version https://git-lfs.github.com/spec/v1
+oid sha256:bdac4976e42173a34f0a450c13588f3b45c7ca8201ed93c8d89c15c3463f42d6
+size 296

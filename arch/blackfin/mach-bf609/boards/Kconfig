@@ -1,13 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-choice
-	prompt "System type"
-	default BFIN609_EZKIT
-	help
-	  Select your board!
-
-config BFIN609_EZKIT
-	bool "BF609-EZKIT"
-	help
-	  BFIN609-EZKIT board support.
-	  
-endchoice
+version https://git-lfs.github.com/spec/v1
+oid sha256:bea9423ddf5a29af15a0f30f586d0724d24b9caa85094eda014c6d53118082b7
+size 209

@@ -10,6 +10,7 @@
 #include <linux/types.h>
 #include <linux/slab.h>
 
+#include <linux/rkp_cfp.h>
 #include <linux/vmalloc.h>
 #include <linux/sched/signal.h>
 

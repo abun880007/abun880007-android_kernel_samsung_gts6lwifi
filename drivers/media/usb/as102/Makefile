@@ -1,8 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-dvb-as102-objs := as102_drv.o as102_fw.o as10x_cmd.o as10x_cmd_stream.o \
-		  as102_usb_drv.o as10x_cmd_cfg.o
-
-obj-$(CONFIG_DVB_AS102) += dvb-as102.o
-
-ccflags-y += -Idrivers/media/dvb-core
-ccflags-y += -Idrivers/media/dvb-frontends
+version https://git-lfs.github.com/spec/v1
+oid sha256:61369d1a6477a89b2c3e1c08156d7e12d0e4aeb3370a1d5a1b953d888a277ed6
+size 267

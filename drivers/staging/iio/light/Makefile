@@ -1,5 +1,3 @@
-#
-# Makefile for industrial I/O Light sensors
-#
-
-obj-$(CONFIG_TSL2x7x)	+= tsl2x7x.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:a640c41da303fcc472d28d050112fdce91b40ec56041a00d9d32a97b60102628
+size 84

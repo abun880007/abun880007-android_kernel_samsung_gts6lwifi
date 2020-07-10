@@ -30,6 +30,7 @@
 
 static struct ccic_misc_dev *c_dev;
 
+#define CCIC_MISC_DBG 1
 #define MAX_BUF 255
 #define NODE_OF_MISC "ccic_misc"
 #define CCIC_IOCTL_UVDM _IOWR('C', 0, struct uvdm_data)
@@ -113,6 +114,10 @@ ccic_misc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
 	void *buf = NULL;
+#if CCIC_MISC_DBG
+	uint8_t *p_buf;
+	int i;
+#endif
 
 	if (_lock(&c_dev->ioctl_excl)) {
 		pr_err("%s - error : ioctl busy - cmd : %d\n", __func__, cmd);
@@ -154,6 +159,13 @@ ccic_misc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				pr_err("%s - copy_from_user error\n", __func__);
 				goto err;
 			}
+#if CCIC_MISC_DBG
+			pr_info("%s = send_uvdm_message - size : %d\n", __func__, c_dev->u_data.size);
+			p_buf = buf;
+			for (i = 0 ; i < c_dev->u_data.size ; i++)
+				pr_info("%x ", (uint32_t)p_buf[i]);
+			pr_info("\n");
+#endif
 			ret = send_uvdm_message(buf, c_dev->u_data.size);
 			if (ret < 0) {
 				pr_err("%s - send_uvdm_message error\n", __func__);
@@ -161,12 +173,22 @@ ccic_misc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				goto err;
 			}
 		} else {
+#if CCIC_MISC_DBG
+			pr_info("%s = received_uvdm_message - size : %d\n", __func__, c_dev->u_data.size);
+#endif
 			ret = receive_uvdm_message(buf, c_dev->u_data.size);
 			if (ret < 0) {
 				pr_err("%s - receive_uvdm_message error\n", __func__);
 				ret = -EINVAL;
 				goto err;
 			}
+#if CCIC_MISC_DBG
+			p_buf = buf;
+			pr_info("%s = received_uvdm_message - ret : %d\n", __func__, ret);
+			for (i = 0; i < ret ; i++)
+				pr_info("%x ", (uint32_t)p_buf[i]);
+			pr_info("\n");
+#endif
 			if (copy_to_user((void __user *)c_dev->u_data.pData,
 					 buf, ret)) {
 				ret = -EIO;

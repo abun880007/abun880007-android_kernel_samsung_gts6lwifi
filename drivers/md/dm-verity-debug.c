@@ -182,7 +182,6 @@ void print_fc_blks_list(void){
         i = (b_info->list_idx + 1) % MAX_FC_BLKS_LIST;
     }
 
-
     for( ; i != b_info->list_idx; i = (i + 1) % MAX_FC_BLKS_LIST)
         pr_err("%s %llu",b_info->dev_name[i],(unsigned long long)b_info->fc_blks_list[i]);
 

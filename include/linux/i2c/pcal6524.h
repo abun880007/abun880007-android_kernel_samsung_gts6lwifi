@@ -29,6 +29,9 @@
 #define PCAL6524_PORT_CNT		3
 #define PCAL6524_MAX_GPIO		23
 
+struct device *pcal6524_dev;
+extern struct class *sec_class;
+
 /* EXPANDER GPIO Drive Strength */
 enum {
 	GPIO_CFG_6_25MA,
@@ -39,7 +42,7 @@ enum {
 
 struct pcal6524_platform_data {
 	/* number of the first GPIO */
-	unsigned int gpio_base;
+	unsigned gpio_base;
 	int gpio_start;
 	int ngpio;
 	int irq_base;
@@ -53,8 +56,5 @@ struct pcal6524_platform_data {
 	struct regulator *vdd;
 };
 
-#ifdef CONFIG_SEC_PM_DEBUG
-int expander_print_all(void);
 #endif
 
-#endif

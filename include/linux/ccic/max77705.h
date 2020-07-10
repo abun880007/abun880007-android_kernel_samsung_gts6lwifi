@@ -167,6 +167,7 @@
 #define BIT_ConnStat			BIT(1)
 #define BIT_Altmode				BIT(0)
 
+
 /*
  * REG_PD_STATUS0
  */
@@ -404,6 +405,7 @@ enum max77705_usbc_SYSMsg {
 	SYSMSG_PD_CCx_5V_SHORT = 0x65,
 	SYSMSG_PD_SBUx_5V_SHORT = 0x66,
 	SYSMSG_PD_SHORT_NONE = 0x67,
+
 	SYSERROR_DROP5V_SRCRDY = 0x68,
 	SYSERROR_DROP5V_SNKRDY = 0x69,
 	SYSMSG_PD_GENDER_SHORT = 0x6A,
@@ -454,7 +456,6 @@ enum max77705_pdmsg {
 
 	Sink_PD_Disabled = 0x20,
 	Source_PD_Disabled = 0x21,
-	Current_Cable_Connected = 0x22,
 
 	Get_Source_Capabilities_Extended_Received = 0x30,
 	Get_Status_Received = 0x31,
@@ -464,7 +465,7 @@ enum max77705_pdmsg {
 	Source_Capabilities_Extended_Received = 0x35,
 	Status_Received = 0x36,
 	Battery_Capabilities_Received = 0x37,
-	Batery_Status_Received = 0x38,
+	Battery_Status_Received = 0x38,
 	Manufacturer_Info_Received = 0x39,
 	Alert_Message = 0x3e,
 	VDM_NAK_Recevied = 0x40,
@@ -516,6 +517,7 @@ enum max77705_connstat {
 #define OPCODE_RW_SEQ 0x3
 #define OPCODE_PUSH_SEQ 0x4
 #define OPCODE_UPDATE_SEQ 0x5
+
 
 typedef enum {
 	OPCODE_BCCTRL1_R = 0x01,
@@ -574,7 +576,6 @@ typedef enum {
 	OPCODE_SET_ALTERNATEMODE = 0x55,
 	OPCODE_SAMSUNG_FW_AUTOIBUS = 0x57,
 	OPCODE_READ_SELFTEST = 0x59,
-	OPCODE_SAMSUNG_GPIO5_CONTROL = 0x5B,
 	OPCODE_SAMSUNG_READ_MESSAGE = 0x5D,
 #ifdef CONFIG_MAX77705_GRL_ENABLE
 	OPCODE_GRL_COMMAND = 0x70,

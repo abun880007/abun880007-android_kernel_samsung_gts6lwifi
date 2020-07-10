@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for PTP 1588 clock support.
-#
-
-ptp-y					:= ptp_clock.o ptp_chardev.o ptp_sysfs.o
-obj-$(CONFIG_PTP_1588_CLOCK)		+= ptp.o
-obj-$(CONFIG_PTP_1588_CLOCK_DTE)	+= ptp_dte.o
-obj-$(CONFIG_PTP_1588_CLOCK_IXP46X)	+= ptp_ixp46x.o
-obj-$(CONFIG_PTP_1588_CLOCK_PCH)	+= ptp_pch.o
-obj-$(CONFIG_PTP_1588_CLOCK_KVM)	+= ptp_kvm.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:2610ee412bf1635e7f6e8cf6e79a7843d92cd11fadd2af2480a47c1f984c3fc9
+size 359

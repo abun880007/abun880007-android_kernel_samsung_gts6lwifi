@@ -1,8 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_RPMSG)		+= rpmsg_core.o
-obj-$(CONFIG_RPMSG_CHAR)	+= rpmsg_char.o
-obj-$(CONFIG_RPMSG_QCOM_GLINK_RPM) += qcom_glink_rpm.o
-obj-$(CONFIG_RPMSG_QCOM_GLINK_NATIVE) += qcom_glink_native.o
-obj-$(CONFIG_RPMSG_QCOM_GLINK_SMEM) += qcom_glink_smem.o
-obj-$(CONFIG_RPMSG_QCOM_SMD)	+= qcom_smd.o
-obj-$(CONFIG_RPMSG_VIRTIO)	+= virtio_rpmsg_bus.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:889b611c5fb94f56c23315e4ef2ee5f14bedef7d6897938b0850ac85470e4156
+size 529

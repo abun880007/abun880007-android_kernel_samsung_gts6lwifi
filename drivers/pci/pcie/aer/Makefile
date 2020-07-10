@@ -1,13 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for PCI-Express Root Port Advanced Error Reporting Driver
-#
-
-obj-$(CONFIG_PCIEAER) += aerdriver.o
-
-obj-$(CONFIG_PCIE_ECRC)	+= ecrc.o
-
-aerdriver-objs := aerdrv_errprint.o aerdrv_core.o aerdrv.o
-aerdriver-$(CONFIG_ACPI) += aerdrv_acpi.o
-
-obj-$(CONFIG_PCIEAER_INJECT) += aer_inject.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:de4eb1882ad614f1a733a955eb4e6ddb21d51c60ed566d8a870b5b36b3ccc2b7
+size 329

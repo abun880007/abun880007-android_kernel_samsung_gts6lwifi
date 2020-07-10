@@ -1,7 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_ARCH_LG1K) += lg1312-ref.dtb
-dtb-$(CONFIG_ARCH_LG1K) += lg1313-ref.dtb
-
-always		:= $(dtb-y)
-subdir-y	:= $(dts-dirs)
-clean-files	:= *.dtb
+version https://git-lfs.github.com/spec/v1
+oid sha256:af0684d83597e0817eac448a99e450b64c78241b457c7fb7364a27bcd506c133
+size 185

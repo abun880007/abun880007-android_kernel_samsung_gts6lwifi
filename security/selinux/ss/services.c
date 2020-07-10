@@ -69,12 +69,6 @@
 #include "xfrm.h"
 #include "ebitmap.h"
 #include "audit.h"
-#ifdef CONFIG_UH
-#include <linux/uh.h>
-#ifdef CONFIG_RKP_KDP
-#include <linux/rkp.h>
-#endif
-#endif
 
 /* Policy capability names */
 char *selinux_policycap_names[__POLICYDB_CAPABILITY_MAX] = {
@@ -97,11 +91,7 @@ static DEFINE_RWLOCK(policy_rwlock);
 
 static struct sidtab sidtab;
 struct policydb policydb;
-#if (defined CONFIG_RKP_KDP && defined CONFIG_SAMSUNG_PRODUCT_SHIP)
-int ss_initialized __kdp_ro;
-#else
-int ss_initialized;
-#endif
+int ss_initialized __rticdata;
 
 /*
  * The largest sequence number that has been used when
@@ -466,7 +456,6 @@ mls_ops:
 	return s[0];
 }
 
-#ifdef CONFIG_AUDIT
 /*
  * security_dump_masked_av - dumps masked permissions during
  * security_compute_av due to RBAC, MLS/Constraint and Type bounds.
@@ -556,7 +545,6 @@ out:
 
 	return;
 }
-#endif
 
 /*
  * security_boundary_permission - drops violated permissions
@@ -610,11 +598,9 @@ static void type_attribute_bounds_av(struct context *scontext,
 	/* mask violated permissions */
 	avd->allowed &= ~masked;
 
-#ifdef CONFIG_AUDIT
 	/* audit masked permissions */
 	security_dump_masked_av(scontext, tcontext,
 				tclass, masked, "bounds");
-#endif
 }
 
 /*
@@ -756,7 +742,6 @@ static int security_validtrans_handle_fail(struct context *ocontext,
 					   struct context *tcontext,
 					   u16 tclass)
 {
-#ifdef CONFIG_AUDIT
 	char *o = NULL, *n = NULL, *t = NULL;
 	u32 olen, nlen, tlen;
 
@@ -774,7 +759,6 @@ out:
 	kfree(o);
 	kfree(n);
 	kfree(t);
-#endif
 
 // [ SEC_SELINUX_PORTING_COMMON
 #ifdef CONFIG_ALWAYS_ENFORCE
@@ -935,7 +919,6 @@ int security_bounded_transition(u32 old_sid, u32 new_sid)
 		index = type->bounds;
 	}
 
-#ifdef CONFIG_AUDIT
 	if (rc) {
 		char *old_name = NULL;
 		char *new_name = NULL;
@@ -955,7 +938,6 @@ int security_bounded_transition(u32 old_sid, u32 new_sid)
 		kfree(new_name);
 		kfree(old_name);
 	}
-#endif
 out:
 	read_unlock(&policy_rwlock);
 
@@ -1549,7 +1531,6 @@ static int compute_sid_handle_invalid_context(
 	u16 tclass,
 	struct context *newcontext)
 {
-#ifdef CONFIG_AUDIT
 	char *s = NULL, *t = NULL, *n = NULL;
 	u32 slen, tlen, nlen;
 
@@ -1569,7 +1550,6 @@ out:
 	kfree(s);
 	kfree(t);
 	kfree(n);
-#endif
 
 // [ SEC_SELINUX_PORTING_COMMON
 #ifdef CONFIG_ALWAYS_ENFORCE
@@ -1871,7 +1851,9 @@ static inline int convert_context_handle_invalid_context(struct context *context
 
 // [ SEC_SELINUX_PORTING_COMMON
 #ifdef CONFIG_ALWAYS_ENFORCE
+#if !defined(CONFIG_RKP_KDP)
 	selinux_enforcing = 1;
+#endif
 #endif
 // ] SEC_SELINUX_PORTING_COMMON
 	if (selinux_enforcing)
@@ -2128,11 +2110,7 @@ int security_load_policy(void *data, size_t len)
 		}
 
 		security_load_policycaps();
-#if (defined CONFIG_RKP_KDP && defined CONFIG_SAMSUNG_PRODUCT_SHIP)
-		uh_call(UH_APP_RKP, RKP_KDP_X60, (u64)&ss_initialized, 1, 0, 0);
-#else
 		ss_initialized = 1;
-#endif
 		seqno = ++latest_granting;
 		selinux_complete_init();
 		avc_ss_reset(seqno);
@@ -2893,6 +2871,8 @@ int security_sid_mls_copy(u32 sid, u32 mls_sid, u32 *new_sid)
 	struct context *context1;
 	struct context *context2;
 	struct context newcon;
+	char *s;
+	u32 len;
 	int rc;
 
 	rc = 0;
@@ -2932,10 +2912,6 @@ int security_sid_mls_copy(u32 sid, u32 mls_sid, u32 *new_sid)
 	if (!policydb_context_isvalid(&policydb, &newcon)) {
 		rc = convert_context_handle_invalid_context(&newcon);
 		if (rc) {
-#ifdef CONFIG_AUDIT
-			char *s;
-			u32 len;
-
 			if (!context_struct_to_string(&newcon, &s, &len)) {
 				audit_log(current->audit_context,
 					  GFP_ATOMIC, AUDIT_SELINUX_ERR,
@@ -2943,7 +2919,6 @@ int security_sid_mls_copy(u32 sid, u32 mls_sid, u32 *new_sid)
 					  "invalid_context=%s", s);
 				kfree(s);
 			}
-#endif
 			goto out_unlock;
 		}
 	}
@@ -3166,7 +3141,6 @@ int security_policycap_supported(unsigned int req_cap)
 	return rc;
 }
 
-#ifdef CONFIG_AUDIT
 struct selinux_audit_rule {
 	u32 au_seqno;
 	struct context au_ctxt;
@@ -3433,7 +3407,6 @@ static int __init aurule_init(void)
 	return err;
 }
 __initcall(aurule_init);
-#endif
 
 #ifdef CONFIG_NETLABEL
 /**

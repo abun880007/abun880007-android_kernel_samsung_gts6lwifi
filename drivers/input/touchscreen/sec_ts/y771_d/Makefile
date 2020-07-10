@@ -1,7 +1,3 @@
-ifeq ($(CONFIG_SAMSUNG_PRODUCT_SHIP), y)
-  obj-$(CONFIG_TOUCHSCREEN_SEC_TS_Y771_D)   += sec_ts.o sec_ts_fw.o sec_ts_fn.o sec_ts_ioctl.o
-else
-  obj-$(CONFIG_TOUCHSCREEN_SEC_TS_Y771_D)   += sec_ts.o sec_ts_fw.o sec_ts_fn.o sec_ts_ioctl.o sec_ts_only_vendor.o
-endif
-
-ccflags-$(CONFIG_SAMSUNG_TUI)	+= -Idrivers/misc/tui
+version https://git-lfs.github.com/spec/v1
+oid sha256:9700293f38a0988652068b5bac28d781c79cf368ee06bef45055dd1da16b8c27
+size 263

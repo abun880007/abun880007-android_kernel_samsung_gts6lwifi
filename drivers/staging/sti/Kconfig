@@ -1,7 +1,3 @@
-config SEC_STI
-	tristate "Samsung STI(System Test Infra)"
-	default n
-	help
-		Drivers to support Samsung STI(System Test Infra).
-
-source "drivers/staging/sti/abc/Kconfig"
+version https://git-lfs.github.com/spec/v1
+oid sha256:7de16720e7c7e7da76538250bdb95e442382bff0be55f9e23d85aaf3f3471ef8
+size 170

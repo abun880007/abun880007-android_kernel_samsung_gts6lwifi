@@ -1,31 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-OUTPUT=./
-ifeq ("$(origin O)", "command line")
-	OUTPUT := $(O)/
-endif
-
-DESTDIR =
-bindir  = /usr/bin
-
-INSTALL = /usr/bin/install
-
-
-default: all
-
-$(OUTPUT)centrino-decode: ../i386/centrino-decode.c
-	$(CC) $(CFLAGS) -o $@ $<
-
-$(OUTPUT)powernow-k8-decode: ../i386/powernow-k8-decode.c
-	$(CC) $(CFLAGS) -o $@ $<
-
-all: $(OUTPUT)centrino-decode $(OUTPUT)powernow-k8-decode
-
-clean:
-	rm -rf $(OUTPUT)centrino-decode $(OUTPUT)powernow-k8-decode
-
-install:
-	$(INSTALL) -d $(DESTDIR)${bindir}
-	$(INSTALL) $(OUTPUT)centrino-decode $(DESTDIR)${bindir}
-	$(INSTALL) $(OUTPUT)powernow-k8-decode $(DESTDIR)${bindir}
-
-.PHONY: all default clean install
+version https://git-lfs.github.com/spec/v1
+oid sha256:4e34490cc6778e2f79703e34e7150433c73d20d3f9df6dade36a9f6c13034f68
+size 667

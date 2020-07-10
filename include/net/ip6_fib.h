@@ -1,8 +1,8 @@
 /*
- *	Linux INET6 implementation 
+ *	Linux INET6 implementation
  *
  *	Authors:
- *	Pedro Roque		<roque@di.fc.ul.pt>	
+ *	Pedro Roque		<roque@di.fc.ul.pt>
  *
  *	This program is free software; you can redistribute it and/or
  *      modify it under the terms of the GNU General Public License
@@ -199,7 +199,8 @@ static inline u32 rt6_get_cookie(const struct rt6_info *rt)
 {
 	u32 cookie = 0;
 
-	if (rt->dst.from)
+	if (rt->rt6i_flags & RTF_PCPU ||
+	    (unlikely(!list_empty(&rt->rt6i_uncached)) && rt->dst.from))
 		rt = (struct rt6_info *)(rt->dst.from);
 
 	rt6_get_cookie_safe(rt, &cookie);

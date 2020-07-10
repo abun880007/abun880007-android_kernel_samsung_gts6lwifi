@@ -1,9 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# TI Keystone SOC drivers
-#
-obj-$(CONFIG_KEYSTONE_NAVIGATOR_QMSS)	+= knav_qmss.o
-knav_qmss-y := knav_qmss_queue.o knav_qmss_acc.o
-obj-$(CONFIG_KEYSTONE_NAVIGATOR_DMA)	+= knav_dma.o
-obj-$(CONFIG_WKUP_M3_IPC)		+= wkup_m3_ipc.o
-obj-$(CONFIG_TI_SCI_PM_DOMAINS)		+= ti_sci_pm_domains.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:0c9eee5c64fa1c11ae1772f5be12a0dde425eea47743eb9a3345d5ce846e0bad
+size 318

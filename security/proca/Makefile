@@ -1,17 +1,3 @@
-$(obj)/proca_certificate-asn1.o: $(obj)/proca_certificate-asn1.c \
-                               $(obj)/proca_certificate-asn1.h
-
-$(obj)/proca_certificate.o: $(obj)/proca_certificate-asn1.h
-
-obj-$(CONFIG_PROCA) += proca_identity.o proca_lsm.o proca_fcntl.o \
-                               proca_task_descr.o proca_certificate-asn1.o \
-                               proca_certificate.o proca_table.o \
-                               proca_config.o
-
-ccflags-y += -Isecurity/samsung/five/
-
-# clean-files is given relative to the current directory,
-# so don't use (obj)/ prefix here.
-# Look at file ../../scripts/Makefile.clean for details.
-clean-files += proca_certificate-asn1.c proca_certificate-asn1.h
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:23f78237a95c17eb4fee9b54d505852b994e45bfb5b4346c48e7fa09daf6795e
+size 706

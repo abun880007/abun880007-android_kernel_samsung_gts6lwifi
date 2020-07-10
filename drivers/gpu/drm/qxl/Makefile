@@ -1,7 +1,3 @@
-#
-# Makefile for the drm device driver.  This driver provides support for the
-# Direct Rendering Infrastructure (DRI) in XFree86 4.1.0 and higher.
-
-qxl-y := qxl_drv.o qxl_kms.o qxl_display.o qxl_ttm.o qxl_fb.o qxl_object.o qxl_gem.o qxl_cmd.o qxl_image.o qxl_draw.o qxl_debugfs.o qxl_irq.o qxl_dumb.o qxl_ioctl.o qxl_release.o qxl_prime.o
-
-obj-$(CONFIG_DRM_QXL)+= qxl.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:7c625382d8e917251b05435f7ecd32f3437c12e67fbed0436adfa68c00359fd0
+size 370

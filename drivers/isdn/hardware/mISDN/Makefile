@@ -1,17 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the modular ISDN hardware drivers
-#
-#
-
-obj-$(CONFIG_MISDN_HFCPCI) += hfcpci.o
-obj-$(CONFIG_MISDN_HFCMULTI) += hfcmulti.o
-obj-$(CONFIG_MISDN_HFCUSB) += hfcsusb.o
-obj-$(CONFIG_MISDN_AVMFRITZ) += avmfritz.o
-obj-$(CONFIG_MISDN_SPEEDFAX) += speedfax.o
-obj-$(CONFIG_MISDN_INFINEON) += mISDNinfineon.o
-obj-$(CONFIG_MISDN_W6692) += w6692.o
-obj-$(CONFIG_MISDN_NETJET) += netjet.o
-# chip modules
-obj-$(CONFIG_MISDN_IPAC) += mISDNipac.o
-obj-$(CONFIG_MISDN_ISAR) += mISDNisar.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:2eef17cd47b727036838be68811636e08091ea11a9402fc5868edbdd52b8187e
+size 518

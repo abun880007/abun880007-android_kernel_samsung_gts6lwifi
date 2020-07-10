@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Generic Hardware Spinlock framework
-#
-
-obj-$(CONFIG_HWSPINLOCK)		+= hwspinlock_core.o
-obj-$(CONFIG_HWSPINLOCK_OMAP)		+= omap_hwspinlock.o
-obj-$(CONFIG_HWSPINLOCK_QCOM)		+= qcom_hwspinlock.o
-obj-$(CONFIG_HWSPINLOCK_SIRF)		+= sirf_hwspinlock.o
-obj-$(CONFIG_HWSPINLOCK_SPRD)		+= sprd_hwspinlock.o
-obj-$(CONFIG_HSEM_U8500)		+= u8500_hsem.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:4c859f218c305eacaa78f8c9fdd14ede23083ea294659d942586eae0905370ce
+size 375

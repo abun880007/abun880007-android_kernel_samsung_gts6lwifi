@@ -21,7 +21,6 @@
 #include <linux/usb.h>
 #include <linux/usb/audio.h>
 #include <linux/usb/audio-v2.h>
-#include <linux/usb/exynos_usb_audio.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -151,6 +150,69 @@ static struct audioformat *find_format(struct snd_usb_substream *subs)
 	return found;
 }
 
+/*
+ * find a matching audio format as well as non-zero service interval
+ */
+static struct audioformat *find_format_and_si(struct snd_usb_substream *subs,
+	unsigned int datainterval)
+{
+	unsigned int i;
+	struct audioformat *fp;
+	struct audioformat *found = NULL;
+	int cur_attr = 0, attr;
+
+	list_for_each_entry(fp, &subs->fmt_list, list) {
+		if (datainterval != fp->datainterval)
+			continue;
+		if (!(fp->formats & pcm_format_to_bits(subs->pcm_format)))
+			continue;
+		if (fp->channels != subs->channels)
+			continue;
+		if (subs->cur_rate < fp->rate_min ||
+		    subs->cur_rate > fp->rate_max)
+			continue;
+		if (!(fp->rates & SNDRV_PCM_RATE_CONTINUOUS)) {
+			for (i = 0; i < fp->nr_rates; i++)
+				if (fp->rate_table[i] == subs->cur_rate)
+					break;
+			if (i >= fp->nr_rates)
+				continue;
+		}
+		attr = fp->ep_attr & USB_ENDPOINT_SYNCTYPE;
+		if (!found) {
+			found = fp;
+			cur_attr = attr;
+			continue;
+		}
+		/* avoid async out and adaptive in if the other method
+		 * supports the same format.
+		 * this is a workaround for the case like
+		 * M-audio audiophile USB.
+		 */
+		if (attr != cur_attr) {
+			if ((attr == USB_ENDPOINT_SYNC_ASYNC &&
+			     subs->direction == SNDRV_PCM_STREAM_PLAYBACK) ||
+			    (attr == USB_ENDPOINT_SYNC_ADAPTIVE &&
+			     subs->direction == SNDRV_PCM_STREAM_CAPTURE))
+				continue;
+			if ((cur_attr == USB_ENDPOINT_SYNC_ASYNC &&
+			     subs->direction == SNDRV_PCM_STREAM_PLAYBACK) ||
+			    (cur_attr == USB_ENDPOINT_SYNC_ADAPTIVE &&
+			     subs->direction == SNDRV_PCM_STREAM_CAPTURE)) {
+				found = fp;
+				cur_attr = attr;
+				continue;
+			}
+		}
+		/* find the format with the largest max. packet size */
+		if (fp->maxpacksize > found->maxpacksize) {
+			found = fp;
+			cur_attr = attr;
+		}
+	}
+	return found;
+}
+
 static int init_pitch_v1(struct snd_usb_audio *chip, int iface,
 			 struct usb_host_interface *alts,
 			 struct audioformat *fmt)
@@ -229,7 +291,7 @@ static int start_endpoints(struct snd_usb_substream *subs)
 	if (!test_and_set_bit(SUBSTREAM_FLAG_DATA_EP_STARTED, &subs->flags)) {
 		struct snd_usb_endpoint *ep = subs->data_endpoint;
 
-		dev_dbg(&subs->dev->dev, "Starting data EP @%p\n", ep);
+		dev_dbg(&subs->dev->dev, "Starting data EP @%pK\n", ep);
 
 		ep->data_subs = subs;
 		err = snd_usb_endpoint_start(ep);
@@ -258,7 +320,7 @@ static int start_endpoints(struct snd_usb_substream *subs)
 			}
 		}
 
-		dev_info(&subs->dev->dev, "Starting sync EP @%p\n", ep);
+		dev_dbg(&subs->dev->dev, "Starting sync EP @%pK\n", ep);
 
 		ep->sync_slave = subs->data_endpoint;
 		err = snd_usb_endpoint_start(ep);
@@ -532,9 +594,6 @@ static int set_format(struct snd_usb_substream *subs, struct audioformat *fmt)
 				fmt->iface, fmt->altsetting, err);
 			return -EIO;
 		}
-		dev_info(&dev->dev, "setting usb interface %d:%d\n",
-			fmt->iface, fmt->altsetting);
-
 		subs->interface = -1;
 		subs->altset_idx = 0;
 	}
@@ -554,14 +613,8 @@ static int set_format(struct snd_usb_substream *subs, struct audioformat *fmt)
 				fmt->iface, fmt->altsetting, err);
 			return -EIO;
 		}
-		dev_info(&dev->dev, "setting usb interface %d:%d\n",
+		dev_dbg(&dev->dev, "setting usb interface %d:%d\n",
 			fmt->iface, fmt->altsetting);
-
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO
-		exynos_usb_audio_setintf(dev, fmt->iface, fmt->altsetting, subs->direction);
-		dev_info(&dev->dev, "Endpoint #%x / Direction : %d \n",
-						fmt->endpoint, subs->direction);
-#endif
 		subs->interface = fmt->iface;
 		subs->altset_idx = fmt->altset_idx;
 
@@ -590,7 +643,73 @@ static int set_format(struct snd_usb_substream *subs, struct audioformat *fmt)
 	return 0;
 }
 
-#ifndef CONFIG_SND_EXYNOS_USB_AUDIO
+int snd_usb_enable_audio_stream(struct snd_usb_substream *subs,
+	int datainterval, bool enable)
+{
+	struct audioformat *fmt;
+	struct usb_host_interface *alts;
+	struct usb_interface *iface;
+	int ret;
+
+	if (!enable) {
+		if (subs->interface >= 0) {
+			usb_set_interface(subs->dev, subs->interface, 0);
+			subs->altset_idx = 0;
+			subs->interface = -1;
+			subs->cur_audiofmt = NULL;
+		}
+
+		snd_usb_autosuspend(subs->stream->chip);
+		return 0;
+	}
+
+	snd_usb_autoresume(subs->stream->chip);
+	if (datainterval != -EINVAL)
+		fmt = find_format_and_si(subs, datainterval);
+	else
+		fmt = find_format(subs);
+	if (!fmt) {
+		dev_err(&subs->dev->dev,
+		"cannot set format: format = %#x, rate = %d, channels = %d\n",
+			   subs->pcm_format, subs->cur_rate, subs->channels);
+		return -EINVAL;
+	}
+
+	subs->altset_idx = 0;
+	subs->interface = -1;
+	if (atomic_read(&subs->stream->chip->shutdown)) {
+		ret = -ENODEV;
+	} else {
+		ret = set_format(subs, fmt);
+		if (ret < 0)
+			return ret;
+
+		iface = usb_ifnum_to_if(subs->dev, subs->cur_audiofmt->iface);
+		if (!iface) {
+			dev_err(&subs->dev->dev, "Could not get iface %d\n",
+				subs->cur_audiofmt->iface);
+			return -ENODEV;
+		}
+
+		alts = &iface->altsetting[subs->cur_audiofmt->altset_idx];
+		ret = snd_usb_init_sample_rate(subs->stream->chip,
+					       subs->cur_audiofmt->iface,
+					       alts,
+					       subs->cur_audiofmt,
+					       subs->cur_rate);
+		if (ret < 0) {
+			dev_err(&subs->dev->dev, "failed to set rate %d\n",
+				subs->cur_rate);
+			return ret;
+		}
+	}
+
+	subs->interface = fmt->iface;
+	subs->altset_idx = fmt->altset_idx;
+
+	return 0;
+}
+
 /*
  * Return the score of matching two audioformats.
  * Veto the audioformat if:
@@ -608,13 +727,13 @@ static int match_endpoint_audioformats(struct snd_usb_substream *subs,
 
 	if (fp->channels < 1) {
 		dev_dbg(&subs->dev->dev,
-			"%s: (fmt @%p) no channels\n", __func__, fp);
+			"%s: (fmt @%pK) no channels\n", __func__, fp);
 		return 0;
 	}
 
 	if (!(fp->formats & pcm_format_to_bits(pcm_format))) {
 		dev_dbg(&subs->dev->dev,
-			"%s: (fmt @%p) no match for format %d\n", __func__,
+			"%s: (fmt @%pK) no match for format %d\n", __func__,
 			fp, pcm_format);
 		return 0;
 	}
@@ -627,7 +746,7 @@ static int match_endpoint_audioformats(struct snd_usb_substream *subs,
 	}
 	if (!score) {
 		dev_dbg(&subs->dev->dev,
-			"%s: (fmt @%p) no match for rate %d\n", __func__,
+			"%s: (fmt @%pK) no match for rate %d\n", __func__,
 			fp, rate);
 		return 0;
 	}
@@ -636,7 +755,7 @@ static int match_endpoint_audioformats(struct snd_usb_substream *subs,
 		score++;
 
 	dev_dbg(&subs->dev->dev,
-		"%s: (fmt @%p) score %d\n", __func__, fp, score);
+		"%s: (fmt @%pK) score %d\n", __func__, fp, score);
 
 	return score;
 }
@@ -736,7 +855,6 @@ static int configure_endpoint(struct snd_usb_substream *subs)
 
 	return ret;
 }
-#endif
 
 /*
  * hw_params callback
@@ -757,10 +875,8 @@ static int snd_usb_hw_params(struct snd_pcm_substream *substream,
 
 	ret = snd_pcm_lib_alloc_vmalloc_buffer(substream,
 					       params_buffer_bytes(hw_params));
-	if (ret < 0) {
-		dev_err(&subs->dev->dev,"cannot pcm lib alloc, ret %d\n", ret);
+	if (ret < 0)
 		return ret;
-	}
 
 	subs->pcm_format = params_format(hw_params);
 	subs->period_bytes = params_period_bytes(hw_params);
@@ -771,7 +887,7 @@ static int snd_usb_hw_params(struct snd_pcm_substream *substream,
 
 	fmt = find_format(subs);
 	if (!fmt) {
-		dev_err(&subs->dev->dev,
+		dev_dbg(&subs->dev->dev,
 			"cannot set format: format = %#x, rate = %d, channels = %d\n",
 			   subs->pcm_format, subs->cur_rate, subs->channels);
 		return -EINVAL;
@@ -789,10 +905,6 @@ static int snd_usb_hw_params(struct snd_pcm_substream *substream,
 	subs->altset_idx = fmt->altset_idx;
 	subs->need_setup_ep = true;
 
-	dev_info(&subs->dev->dev,"Dir:%s, intf:%d, alt_id:%d, format:%#x, sample_rate:%d, ch:%d\n",
-			subs->direction? "IN":"OUT", subs->interface,
-			subs->altset_idx, subs->pcm_format, subs->cur_rate,
-			subs->channels);
 	return 0;
 }
 
@@ -817,28 +929,6 @@ static int snd_usb_hw_free(struct snd_pcm_substream *substream)
 	return snd_pcm_lib_free_vmalloc_buffer(substream);
 }
 
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO
-static int snd_usb_audio_setrate(struct snd_usb_audio *chip, int iface,
-				struct usb_host_interface *alts,
-				struct audioformat *fmt, int rate)
-{
-	struct usb_device *dev = chip->dev;
-	unsigned int ep;
-	int err;
-
-	ep = get_endpoint(alts, 0)->bEndpointAddress;
-	err = exynos_usb_audio_setrate(iface, rate, fmt->altsetting);
-	if (err) {
-		dev_err(&dev->dev, "can not transfer sample rate to abox \n");
-		return err;
-	}
-	dev_info(&dev->dev, "[%s] iface : %d / alt : %d / set freq %d to ep #%x\n", __func__,
-			iface, fmt->altsetting, rate, ep);
-
-	return 0;
-}
-#endif
-
 /*
  * prepare callback
  *
@@ -852,14 +942,6 @@ static int snd_usb_pcm_prepare(struct snd_pcm_substream *substream)
 	struct usb_interface *iface;
 	int ret;
 
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO
-	ret = exynos_usb_audio_pcmbuf(subs->dev);
-	if (ret < 0) {
-		dev_err(&subs->dev->dev, "pcm buf transfer failed\n");
-		return ret;
-	}
-#endif
-
 	if (! subs->cur_audiofmt) {
 		dev_err(&subs->dev->dev, "no format is specified!\n");
 		return -ENXIO;
@@ -872,36 +954,26 @@ static int snd_usb_pcm_prepare(struct snd_pcm_substream *substream)
 		ret = -EIO;
 		goto unlock;
 	}
-#ifndef CONFIG_SND_EXYNOS_USB_AUDIO
+
 	snd_usb_endpoint_sync_pending_stop(subs->sync_endpoint);
 	snd_usb_endpoint_sync_pending_stop(subs->data_endpoint);
-#endif
+
 	ret = set_format(subs, subs->cur_audiofmt);
 	if (ret < 0)
 		goto unlock;
 
-	iface = usb_ifnum_to_if(subs->dev, subs->cur_audiofmt->iface);
-	alts = &iface->altsetting[subs->cur_audiofmt->altset_idx];
-	ret = snd_usb_init_sample_rate(subs->stream->chip,
-				subs->cur_audiofmt->iface,
-				alts,
-				subs->cur_audiofmt,
-				subs->cur_rate);
-	if (ret < 0)
-		goto unlock;
-
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO
-	ret = snd_usb_audio_setrate(subs->stream->chip,
-					subs->cur_audiofmt->iface,
-					alts,
-					subs->cur_audiofmt,
-					subs->cur_rate);
-	if (ret < 0)
-		goto unlock;
-#endif
-
-#ifndef CONFIG_SND_EXYNOS_USB_AUDIO
 	if (subs->need_setup_ep) {
+
+		iface = usb_ifnum_to_if(subs->dev, subs->cur_audiofmt->iface);
+		alts = &iface->altsetting[subs->cur_audiofmt->altset_idx];
+		ret = snd_usb_init_sample_rate(subs->stream->chip,
+					       subs->cur_audiofmt->iface,
+					       alts,
+					       subs->cur_audiofmt,
+					       subs->cur_rate);
+		if (ret < 0)
+			goto unlock;
+
 		ret = configure_endpoint(subs);
 		if (ret < 0)
 			goto unlock;
@@ -925,7 +997,7 @@ static int snd_usb_pcm_prepare(struct snd_pcm_substream *substream)
 	 * updates for all URBs would happen at the same time when starting */
 	if (subs->direction == SNDRV_PCM_STREAM_PLAYBACK)
 		ret = start_endpoints(subs);
-#endif
+
  unlock:
 	snd_usb_unlock_shutdown(subs->stream->chip);
 	return ret;
@@ -963,7 +1035,7 @@ static int hw_check_valid_format(struct snd_usb_substream *subs,
 	check_fmts.bits[1] = (u32)(fp->formats >> 32);
 	snd_mask_intersect(&check_fmts, fmts);
 	if (snd_mask_empty(&check_fmts)) {
-		hwc_debug("   > check: no supported format %d\n", fp->formats);
+		hwc_debug("   > check: no supported format %d\n", fp->format);
 		return 0;
 	}
 	/* check the channels */
@@ -1307,9 +1379,6 @@ static int snd_usb_pcm_open(struct snd_pcm_substream *substream, int direction)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_usb_substream *subs = &as->substream[direction];
 
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO
-	exynos_usb_audio_pcm(1, direction);
-#endif
 	subs->interface = -1;
 	subs->altset_idx = 0;
 	runtime->hw = snd_usb_hardware;
@@ -1330,24 +1399,11 @@ static int snd_usb_pcm_close(struct snd_pcm_substream *substream, int direction)
 	struct snd_usb_stream *as = snd_pcm_substream_chip(substream);
 	struct snd_usb_substream *subs = &as->substream[direction];
 
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO
-	if (direction == SNDRV_PCM_STREAM_PLAYBACK)
-		reinit_completion(&usb_audio->out_conn_stop);
-	else if (direction == SNDRV_PCM_STREAM_CAPTURE)
-		reinit_completion(&usb_audio->in_conn_stop);
-
-	exynos_usb_audio_pcm(0, direction);
-#endif
 	stop_endpoints(subs, true);
 
 	if (subs->interface >= 0 &&
 	    !snd_usb_lock_shutdown(subs->stream->chip)) {
 		usb_set_interface(subs->dev, subs->interface, 0);
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO
-		dev_info(&subs->dev->dev, "setting usb interface %d:%d, Direction: %d\n",
-			subs->interface, 0, direction);
-		exynos_usb_audio_setintf(subs->dev, subs->interface, 0, direction);
-#endif
 		subs->interface = -1;
 		snd_usb_unlock_shutdown(subs->stream->chip);
 	}

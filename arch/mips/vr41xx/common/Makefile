@@ -1,5 +1,3 @@
-#
-# Makefile for common code of the NEC VR4100 series.
-#
-
-obj-y	+= bcu.o cmu.o giu.o icu.o init.o irq.o pmu.o rtc.o siu.o type.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:2a090e9239328c44e297571b39e2928bdc5583dc88e76f4d47cd93d224b24a40
+size 129

@@ -1,3 +1,3 @@
-
-obj-$(CONFIG_INPUT_WACOM)	+= wacom_i2c.o wacom_i2c_sec.o wacom_i2c_elec.o
-obj-$(CONFIG_EPEN_WACOM_W9020)	+= w9020_flash.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:c0cb7b2f058900d24e66f831fd450b1c67496f34ada7f3f692e10c2f2469bdd1
+size 175

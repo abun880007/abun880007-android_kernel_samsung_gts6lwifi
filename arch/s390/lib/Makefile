@@ -1,10 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for s390-specific library files..
-#
-
-lib-y += delay.o string.o uaccess.o find.o
-obj-y += mem.o xor.o
-lib-$(CONFIG_SMP) += spinlock.o
-lib-$(CONFIG_KPROBES) += probes.o
-lib-$(CONFIG_UPROBES) += probes.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:3cc810403e31c1595b4fdf3ced3649356e7143a7f37e218457e8896cfeafca29
+size 249

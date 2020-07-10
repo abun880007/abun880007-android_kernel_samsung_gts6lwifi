@@ -1,7 +1,3 @@
-adv748x-objs	:= \
-		adv748x-afe.o \
-		adv748x-core.o \
-		adv748x-csi2.o \
-		adv748x-hdmi.o
-
-obj-$(CONFIG_VIDEO_ADV748X)	+= adv748x.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:e1566116795d0fdccfcf1226275cc9c1aa494c65901934aac13fce6e8b16c4c6
+size 133

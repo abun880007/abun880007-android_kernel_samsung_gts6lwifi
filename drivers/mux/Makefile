@@ -1,13 +1,3 @@
-#
-# Makefile for multiplexer devices.
-#
-
-mux-core-objs			:= core.o
-mux-adg792a-objs		:= adg792a.o
-mux-gpio-objs			:= gpio.o
-mux-mmio-objs			:= mmio.o
-
-obj-$(CONFIG_MULTIPLEXER)	+= mux-core.o
-obj-$(CONFIG_MUX_ADG792A)	+= mux-adg792a.o
-obj-$(CONFIG_MUX_GPIO)		+= mux-gpio.o
-obj-$(CONFIG_MUX_MMIO)		+= mux-mmio.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:2bafc53f8a1b3b74f7343b4f8d6f7c96751f75487e6b1bb6eb36070ff3f868c5
+size 310

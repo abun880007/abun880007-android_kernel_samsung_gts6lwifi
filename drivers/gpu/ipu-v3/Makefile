@@ -1,10 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_IMX_IPUV3_CORE) += imx-ipu-v3.o
-
-imx-ipu-v3-objs := ipu-common.o ipu-cpmem.o ipu-csi.o ipu-dc.o ipu-di.o \
-		ipu-dp.o ipu-dmfc.o ipu-ic.o ipu-image-convert.o \
-		ipu-smfc.o ipu-vdi.o
-
-ifdef CONFIG_DRM
-	imx-ipu-v3-objs += ipu-pre.o ipu-prg.o
-endif
+version https://git-lfs.github.com/spec/v1
+oid sha256:571517fb530282b5b9ef80918cf08ecef5283008bbe7f5c47a4ef587936cd3f1
+size 295

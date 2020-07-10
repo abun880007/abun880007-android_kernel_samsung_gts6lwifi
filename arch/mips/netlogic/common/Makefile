@@ -1,6 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-y				+= irq.o time.o
-obj-y				+= nlm-dma.o
-obj-y				+= reset.o
-obj-$(CONFIG_SMP)		+= smp.o smpboot.o
-obj-$(CONFIG_EARLY_PRINTK)	+= earlycons.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:e3d71a8eaa0f18c20dc732ca0b86bc779cbd97c8dd0e806477618f70cf5ce08c
+size 182

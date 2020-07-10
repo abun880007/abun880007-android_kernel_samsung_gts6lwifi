@@ -177,6 +177,8 @@ static u32 b_imm(unsigned int tgt, struct jit_ctx *ctx)
 		(ctx->idx * 4) - 4;
 }
 
+int bpf_jit_enable __read_mostly;
+
 enum which_ebpf_reg {
 	src_reg,
 	src_reg_no_fp,

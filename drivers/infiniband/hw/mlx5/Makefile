@@ -1,4 +1,3 @@
-obj-$(CONFIG_MLX5_INFINIBAND)	+= mlx5_ib.o
-
-mlx5_ib-y :=	main.o cq.o doorbell.o qp.o mem.o srq.o mr.o ah.o mad.o gsi.o ib_virt.o cmd.o cong.o
-mlx5_ib-$(CONFIG_INFINIBAND_ON_DEMAND_PAGING) += odp.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:dd3f289497ce37604686df7d4252b06fa264f6084a8502cdf5f7807175f14a20
+size 197

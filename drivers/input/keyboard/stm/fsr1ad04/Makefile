@@ -1,6 +1,3 @@
-ifeq ($(CONFIG_SAMSUNG_PRODUCT_SHIP), y)
-obj-$(CONFIG_KEYBOARD_STM_FSR)   += stm_fsr_sidekey.o stm_fsr_fwu.o stm_fsr_functions.o
-else
-obj-$(CONFIG_KEYBOARD_STM_FSR)   += stm_fsr_sidekey.o stm_fsr_fwu.o stm_fsr_functions.o stm_fsr_vendor_functions.o
-endif
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:d3c77fbf553e3cf7dfb947b3b1bcd5964ec922c95b0ed39165e9991e819f053e
+size 256

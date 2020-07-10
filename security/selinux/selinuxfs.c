@@ -135,17 +135,14 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 	length = -EINVAL;
 	if (sscanf(page, "%d", &new_value) != 1)
 		goto out;
-#ifdef CONFIG_ALWAYS_PERMIT
-	new_value = 0;
-#endif
 
 // [ SEC_SELINUX_PORTING_COMMON
 #ifdef CONFIG_ALWAYS_ENFORCE
 	// If build is user build and enforce option is set, selinux is always enforcing
 	new_value = 1;
 	length = avc_has_perm(current_sid(), SECINITSID_SECURITY,
-				SECCLASS_SECURITY, SECURITY__SETENFORCE,
-				NULL);
+			      SECCLASS_SECURITY, SECURITY__SETENFORCE,
+			      NULL);
 	audit_log(current->audit_context, GFP_KERNEL, AUDIT_MAC_STATUS,
 		"config_always_enforce - true; enforcing=%d old_enforcing=%d auid=%u ses=%u",
 		new_value, selinux_enforcing,
@@ -158,6 +155,8 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 	selnl_notify_setenforce(new_value);
 	selinux_status_update_setenforce(new_value);
 #else
+	new_value = !!new_value;
+
 	if (new_value != selinux_enforcing) {
 		length = avc_has_perm(current_sid(), SECINITSID_SECURITY,
 				      SECCLASS_SECURITY, SECURITY__SETENFORCE,
@@ -1928,11 +1927,13 @@ struct vfsmount *selinuxfs_mount;
 static int __init init_sel_fs(void)
 {
 	int err;
+
 // [ SEC_SELINUX_PORTING_COMMON
 #ifdef CONFIG_ALWAYS_ENFORCE
 	selinux_enabled = 1;
 #endif
 // ] SEC_SELINUX_PORTING_COMMON
+
 	if (!selinux_enabled)
 		return 0;
 

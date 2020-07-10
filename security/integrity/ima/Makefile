@@ -1,13 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for building Trusted Computing Group's(TCG) runtime Integrity
-# Measurement Architecture(IMA).
-#
-
-obj-$(CONFIG_IMA) += ima.o
-
-ima-y := ima_fs.o ima_queue.o ima_init.o ima_main.o ima_crypto.o ima_api.o \
-	 ima_policy.o ima_template.o ima_template_lib.o
-ima-$(CONFIG_IMA_APPRAISE) += ima_appraise.o
-ima-$(CONFIG_HAVE_IMA_KEXEC) += ima_kexec.o
-obj-$(CONFIG_IMA_BLACKLIST_KEYRING) += ima_mok.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:ef5647d7dc38253e8ba3e268893dec7933615552c42d3a435e9e3946d7fbd57e
+size 438

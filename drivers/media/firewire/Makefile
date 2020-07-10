@@ -1,6 +1,3 @@
-obj-$(CONFIG_DVB_FIREDTV) += firedtv.o
-
-firedtv-y += firedtv-avc.o firedtv-ci.o firedtv-dvb.o firedtv-fe.o firedtv-fw.o
-firedtv-$(CONFIG_DVB_FIREDTV_INPUT)    += firedtv-rc.o
-
-ccflags-y += -Idrivers/media/dvb-core
+version https://git-lfs.github.com/spec/v1
+oid sha256:f84607d99818329dbe676b46b526acc90e7f509eae1c92bfbe667de4ab93df6c
+size 214

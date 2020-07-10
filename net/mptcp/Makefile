@@ -1,22 +1,3 @@
-#
-## Makefile for MultiPath TCP support code.
-#
-#
-
-obj-$(CONFIG_MPTCP) += mptcp.o
-
-mptcp-y := mptcp_ctrl.o mptcp_ipv4.o mptcp_pm.o \
-	   mptcp_output.o mptcp_input.o mptcp_sched.o
-
-obj-$(CONFIG_TCP_CONG_LIA) += mptcp_coupled.o
-obj-$(CONFIG_TCP_CONG_OLIA) += mptcp_olia.o
-obj-$(CONFIG_TCP_CONG_WVEGAS) += mptcp_wvegas.o
-obj-$(CONFIG_TCP_CONG_BALIA) += mptcp_balia.o
-obj-y += mptcp_fullmesh.o
-obj-$(CONFIG_MPTCP_NDIFFPORTS) += mptcp_ndiffports.o
-obj-$(CONFIG_MPTCP_BINDER) += mptcp_binder.o
-obj-$(CONFIG_MPTCP_ROUNDROBIN) += mptcp_rr.o
-obj-$(CONFIG_MPTCP_REDUNDANT) += mptcp_redundant.o
-
-mptcp-$(subst m,y,$(CONFIG_IPV6)) += mptcp_ipv6.o
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:a8cf25e759ebefbd0f5d2536347eeb9f5f48b4dcc1cb1fea2e67ff844310473c
+size 637

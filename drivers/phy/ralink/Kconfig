@@ -1,11 +1,3 @@
-#
-# PHY drivers for Ralink platforms.
-#
-config PHY_RALINK_USB
-	tristate "Ralink USB PHY driver"
-	depends on RALINK || COMPILE_TEST
-	select GENERIC_PHY
-	select MFD_SYSCON
-	help
-	  This option enables support for the Ralink USB PHY found inside
-	  RT3352, MT7620, MT7628 and MT7688.
+version https://git-lfs.github.com/spec/v1
+oid sha256:ba9c90950d9b61e6ee0a2432243a2fc045326bc85f6df64632a51a9085cb4165
+size 281

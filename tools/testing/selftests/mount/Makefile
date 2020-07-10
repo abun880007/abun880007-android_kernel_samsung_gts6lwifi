@@ -1,17 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-# Makefile for mount selftests.
-CFLAGS = -Wall \
-         -O2
-
-TEST_GEN_PROGS := unprivileged-remount-test
-
-include ../lib.mk
-
-override RUN_TESTS := if [ -f /proc/self/uid_map ] ; \
-		      then	\
-				./unprivileged-remount-test ; \
-		      else	\
-				echo "WARN: No /proc/self/uid_map exist, test skipped." ; \
-		      fi
-override EMIT_TESTS := echo "$(RUN_TESTS)"
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:f7e30bcaaa40dfdd7b65244c4c7280c35d39cf69c17ef127dfd4588288c18ff5
+size 402

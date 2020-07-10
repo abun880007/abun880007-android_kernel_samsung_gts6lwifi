@@ -1,18 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_BCM2835_VCHIQ)	+= vchiq.o
-
-vchiq-objs := \
-   interface/vchiq_arm/vchiq_core.o  \
-   interface/vchiq_arm/vchiq_arm.o \
-   interface/vchiq_arm/vchiq_kern_lib.o \
-   interface/vchiq_arm/vchiq_2835_arm.o \
-   interface/vchiq_arm/vchiq_debugfs.o \
-   interface/vchiq_arm/vchiq_shim.o \
-   interface/vchiq_arm/vchiq_util.o \
-   interface/vchiq_arm/vchiq_connected.o \
-
-obj-$(CONFIG_SND_BCM2835)	+= bcm2835-audio/
-obj-$(CONFIG_VIDEO_BCM2835)	+= bcm2835-camera/
-
-ccflags-y += -DVCOS_VERIFY_BKPTS=1 -Idrivers/staging/vc04_services -DUSE_VCHIQ_ARM -D__VCCOREVER__=0x04000000
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:0404d0d8339a22df7114738d844b47b42b81f1bff6c5b8010903d69688336df0
+size 615

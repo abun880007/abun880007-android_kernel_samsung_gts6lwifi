@@ -1,11 +1,3 @@
-#
-# Makefile for the HISILICON network device drivers.
-#
-
-ccflags-y := -Idrivers/net/ethernet/hisilicon/hns3
-
-obj-$(CONFIG_HNS3_HCLGE) += hclge.o
-hclge-objs = hclge_main.o hclge_cmd.o hclge_mdio.o hclge_tm.o
-
-obj-$(CONFIG_HNS3_ENET) += hns3.o
-hns3-objs = hns3_enet.o hns3_ethtool.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:2e82ecb6f230393da04f6f4dd9cd5dc2b21d15c1d63d521ea6ff549b5fa878cc
+size 282

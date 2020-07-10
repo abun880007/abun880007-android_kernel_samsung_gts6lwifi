@@ -1,7 +1,3 @@
-#
-# DEV_RIL_BRIDGE Device Driver
-#
-
-config DEV_RIL_BRIDGE
-	bool "Support a bridge between device and RIL"
-	default n
+version https://git-lfs.github.com/spec/v1
+oid sha256:36bd334e57e69a9b279fc0971058233ab300f2e2aa6268d15d61089fba8b8366
+size 117

@@ -1,12 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-vmwgfx-y := vmwgfx_execbuf.o vmwgfx_gmr.o vmwgfx_kms.o vmwgfx_drv.o \
-	    vmwgfx_fb.o vmwgfx_ioctl.o vmwgfx_resource.o vmwgfx_buffer.o \
-	    vmwgfx_fifo.o vmwgfx_irq.o vmwgfx_ldu.o vmwgfx_ttm_glue.o \
-	    vmwgfx_overlay.o vmwgfx_marker.o vmwgfx_gmrid_manager.o \
-	    vmwgfx_fence.o vmwgfx_dmabuf.o vmwgfx_scrn.o vmwgfx_context.o \
-	    vmwgfx_surface.o vmwgfx_prime.o vmwgfx_mob.o vmwgfx_shader.o \
-	    vmwgfx_cmdbuf_res.o vmwgfx_cmdbuf.o vmwgfx_stdu.o \
-	    vmwgfx_cotable.o vmwgfx_so.o vmwgfx_binding.o vmwgfx_msg.o \
-	    vmwgfx_simple_resource.o vmwgfx_va.o
-
-obj-$(CONFIG_DRM_VMWGFX) := vmwgfx.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:6c635494a322308c7a77cf693d1dc1fc9c7e71e68c6d4328711f369c5301cb30
+size 641

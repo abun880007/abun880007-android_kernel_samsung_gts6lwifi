@@ -20,11 +20,7 @@
 #include <linux/usb/cdc.h>
 #include <linux/netdevice.h>
 
-#ifdef CONFIG_USB_RNDIS_MULTIPACKET
-#define QMULT_DEFAULT 10
-#else
 #define QMULT_DEFAULT 5
-#endif
 
 /*
  * dev_addr: initial value
@@ -77,11 +73,11 @@ struct gether {
 	bool				is_fixed;
 	u32				fixed_out_len;
 	u32				fixed_in_len;
-	unsigned		ul_max_pkts_per_xfer;
-	unsigned		dl_max_pkts_per_xfer;
+	unsigned int			ul_max_pkts_per_xfer;
+/* Max number of SKB packets to be used to create Multi Packet RNDIS */
+#define TX_SKB_HOLD_THRESHOLD		3
 	bool				multi_pkt_xfer;
 	bool				supports_multi_frame;
-	struct rndis_packet_msg_type	*header;
 	struct sk_buff			*(*wrap)(struct gether *port,
 						struct sk_buff *skb);
 	int				(*unwrap)(struct gether *port,

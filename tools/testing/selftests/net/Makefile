@@ -1,15 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-# Makefile for net selftests
-
-CFLAGS =  -Wall -Wl,--no-as-needed -O2 -g
-CFLAGS += -I../../../../usr/include/
-
-TEST_PROGS := run_netsocktests run_afpackettests test_bpf.sh netdevice.sh rtnetlink.sh
-TEST_GEN_FILES =  socket
-TEST_GEN_FILES += psock_fanout psock_tpacket msg_zerocopy
-TEST_GEN_PROGS = reuseport_bpf reuseport_bpf_cpu reuseport_bpf_numa
-TEST_GEN_PROGS += reuseport_dualstack reuseaddr_conflict
-
-include ../lib.mk
-
-$(OUTPUT)/reuseport_bpf_numa: LDFLAGS += -lnuma
+version https://git-lfs.github.com/spec/v1
+oid sha256:d7dbd71f431b5a10bf21df6800ae8c095aa87ef6de8d61a837a1b8b1aab4315c
+size 508

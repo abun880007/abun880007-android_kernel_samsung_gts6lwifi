@@ -1,26 +1,3 @@
-#
-# MMC subsystem configuration
-#
-
-menuconfig MMC
-	tristate "MMC/SD/SDIO card support"
-	depends on HAS_IOMEM
-	help
-	  This selects MultiMediaCard, Secure Digital and Secure
-	  Digital I/O support.
-
-	  If you want MMC/SD/SDIO support, you should say Y here and
-	  also to your specific host controller driver.
-
-config MMC_SUPPORT_STLOG
- 	bool "Enable storage log"
- 	depends on MMC && PROC_STLOG
- 	default y
-
-if MMC
-
-source "drivers/mmc/core/Kconfig"
-
-source "drivers/mmc/host/Kconfig"
-
-endif # MMC
+version https://git-lfs.github.com/spec/v1
+oid sha256:4bb899a966324ea88fea05a5994949aaaa6f8eb6a6180bc9f4d62054e285ee77
+size 709

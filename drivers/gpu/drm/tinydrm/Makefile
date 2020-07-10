@@ -1,9 +1,3 @@
-obj-$(CONFIG_DRM_TINYDRM)		+= core/
-
-# Controllers
-obj-$(CONFIG_TINYDRM_MIPI_DBI)		+= mipi-dbi.o
-
-# Displays
-obj-$(CONFIG_TINYDRM_MI0283QT)		+= mi0283qt.o
-obj-$(CONFIG_TINYDRM_REPAPER)		+= repaper.o
-obj-$(CONFIG_TINYDRM_ST7586)		+= st7586.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:027d96090c04b76ea0d62b8fc8782b01a3b8c3a922f37e10177f8b9c23438640
+size 241

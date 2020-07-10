@@ -1,30 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the powerpc trace subsystem
-#
-
-subdir-ccflags-$(CONFIG_PPC_WERROR)	:= -Werror
-
-ifdef CONFIG_FUNCTION_TRACER
-# do not trace tracer code
-CFLAGS_REMOVE_ftrace.o = -mno-sched-epilog $(CC_FLAGS_FTRACE)
-endif
-
-obj32-$(CONFIG_FUNCTION_TRACER)		+= ftrace_32.o
-obj64-$(CONFIG_FUNCTION_TRACER)		+= ftrace_64.o
-ifdef CONFIG_MPROFILE_KERNEL
-obj64-$(CONFIG_FUNCTION_TRACER)		+= ftrace_64_mprofile.o
-else
-obj64-$(CONFIG_FUNCTION_TRACER)		+= ftrace_64_pg.o
-endif
-obj-$(CONFIG_DYNAMIC_FTRACE)		+= ftrace.o
-obj-$(CONFIG_FUNCTION_GRAPH_TRACER)	+= ftrace.o
-obj-$(CONFIG_FTRACE_SYSCALLS)		+= ftrace.o
-obj-$(CONFIG_TRACING)			+= trace_clock.o
-
-obj-$(CONFIG_PPC64)			+= $(obj64-y)
-obj-$(CONFIG_PPC32)			+= $(obj32-y)
-
-# Disable GCOV & sanitizers in odd or sensitive code
-GCOV_PROFILE_ftrace.o := n
-UBSAN_SANITIZE_ftrace.o := n
+version https://git-lfs.github.com/spec/v1
+oid sha256:f6fd6f6fedc3d16fdf9967e1ad9bb640d307251200d9348285daff1d7b9810c3
+size 857

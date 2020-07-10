@@ -1,30 +1,3 @@
-#
-# Makefile for the Linux kernel device drivers.
-#
-# Sep 2018, Binse Park <h22yap@gmail.com>
-# Rewritten to use lists instead of if-statements.
-#
-
-FLAG=0
-
-ifeq ($(CONFIG_KPERFMON), y)
-FLAG=1
-endif
-
-ifeq ($(FLAG), 1)
-ifneq ($(shell [ -e $(srctree)/include/linux/olog.pb.h ] && echo exist), exist)
-FLAG=0
-$(warning "kperfmon: olog.pb.h file is missing.")
-endif
-
-ifneq ($(shell [ -e $(srctree)/include/linux/perflog.h ] && echo exist), exist)
-FLAG=0
-$(warning "kperfmon: perflog.h file is missing.")
-endif
-endif
-
-ifeq ($(FLAG), 1)
-	obj-y				+= kperfmon.o
-else
-	obj-y				+= ologk.o
-endif
+version https://git-lfs.github.com/spec/v1
+oid sha256:102f35623db3041f90768bad80151cabc6bf2bf749a4a14d74b3e15085a16950
+size 1752

@@ -1,23 +1,3 @@
-#
-# Freescale Management Complex (MC) bus drivers
-#
-# Copyright (C) 2014 Freescale Semiconductor, Inc.
-#
-# This file is released under the GPLv2
-#
-obj-$(CONFIG_FSL_MC_BUS) += mc-bus-driver.o
-
-mc-bus-driver-objs := fsl-mc-bus.o \
-		      mc-sys.o \
-		      mc-io.o \
-		      dprc.o \
-		      dprc-driver.o \
-		      fsl-mc-allocator.o \
-		      fsl-mc-msi.o \
-		      irq-gic-v3-its-fsl-mc-msi.o \
-		      dpmcp.o \
-		      dpbp.o \
-		      dpcon.o
-
-# MC DPIO driver
-obj-$(CONFIG_FSL_MC_DPIO) += dpio/
+version https://git-lfs.github.com/spec/v1
+oid sha256:06f096115bbf1e6455097765f1540f88bf28501224ee52ac88e2e5d56db24dfc
+size 501

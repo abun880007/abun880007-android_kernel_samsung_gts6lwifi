@@ -1,6 +1,5 @@
 /*
- * include/linux/ccic/ccic_alternate.h
- *	- S2MM005 USB CCIC Alternate mode header file
+ * include/linux/ccic/ccic_alternate.h - S2MM005 USB CCIC Alternate mode header file
  *
  * Copyright (C) 2016 Samsung Electronics
  * Author: Wookwang Lee <wookwang.lee@samsung.com>
@@ -22,13 +21,16 @@
  */
 #ifndef __LINUX_CCIC_ALTERNATE_MODE_H__
 #define __LINUX_CCIC_ALTERNATE_MODE_H__
-
-typedef union {
+#if defined(CONFIG_CCIC_ALTERNATE_MODE)
+typedef union
+{
 	uint32_t        DATA;
-	struct {
+	struct
+	{
 		uint8_t     BDATA[4];
-	} BYTES;
-	struct {
+	}BYTES;
+	struct
+	{
 		uint32_t	Number_of_obj:3,
 				MSG_ID:3,
 				Port_Power_Role:1,
@@ -36,15 +38,18 @@ typedef union {
 				Port_Data_Role:1,
 				Reserved:1,
 				MSG_Type:4;
-	} BITS;
-} U_DATA_MSG_HEADER_Type;
+	}BITS;
+}U_DATA_MSG_HEADER_Type;
 
-typedef union {
+typedef union
+{
 	uint32_t        DATA;
-	struct {
+	struct
+	{
 		uint8_t     BDATA[4];
-	} BYTES;
-	struct {
+	}BYTES;
+	struct
+	{
 		uint32_t	VDM_command:5,
 				Rsvd2_VDM_header:1,
 				VDM_command_type:2,
@@ -53,15 +58,14 @@ typedef union {
 				Structured_VDM_Version:2,
 				VDM_Type:1,
 				Standard_Vendor_ID:16;
-	} BITS;
-} U_DATA_MSG_VDM_HEADER_Type;
+	}BITS;
+}U_DATA_MSG_VDM_HEADER_Type;
 
-typedef union {
+typedef union
+{
 	uint32_t        DATA;
-	struct {
-		uint8_t     BDATA[4];
-	} BYTES;
-	struct {
+	struct
+	{
 		uint32_t	USB_Vendor_ID:16,
 				Rsvd_ID_header:10,
 				Modal_Operation_Supported:1,
@@ -79,54 +83,63 @@ typedef union {
 	struct {
 		uint32_t	Cert_TID:20,
 				Rsvd_cert_VDOer:12;
-	} BITS;
-} U_CERT_STAT_VDO_Type;
+	}BITS;
+}U_CERT_STAT_VDO_Type;
 
-typedef union {
+typedef union
+{
 	uint32_t        DATA;
-	struct {
+	struct
+	{
 		uint8_t     BDATA[4];
-	} BYTES;
-	struct {
+	}BYTES;
+	struct
+	{
 		uint32_t    Device_Version:16,
 			    Product_ID:16;
-	} BITS;
-} U_PRODUCT_VDO_Type;
+	}BITS;
+}U_PRODUCT_VDO_Type;
 
-typedef union {
+typedef union
+{
 	uint32_t        DATA;
-	struct {
+	struct
+	{
 		uint8_t     BDATA[4];
-	} BYTES;
-	struct {
-		uint32_t	USB_Superspeed_Signaling_Support:3,
-				SOP_contoller_present:1,
-				Vbus_through_cable:1,
-				Vbus_Current_Handling_Capability:2,
-				SSRX2_Directionality_Support:1,
-				SSRX1_Directionality_Support:1,
-				SSTX2_Directionality_Support:1,
-				SSTX1_Directionality_Support:1,
-				Cable_Termination_Type:2,
-				Cable_Latency:4,
-				TypeC_to_Plug_Receptacle:1,
-				TypeC_to_ABC:2,
-				Rsvd_CABLE_VDO:4,
-				Cable_Firmware_Version:4,
-				Cable_HW_Version:4;
-	} BITS;
-} U_CABLE_VDO_Type;
+	}BYTES;
+	struct
+	{
+		uint32_t    USB_Superspeed_Signaling_Support:3,
+			    SOP_controller_present:1,
+			    Vbus_through_cable:1,
+			    Vbus_Current_Handling_Capability:2,
+			    SSRX2_Directionality_Support:1,
+			    SSRX1_Directionality_Support:1,
+			    SSTX2_Directionality_Support:1,
+			    SSTX1_Directionality_Support:1,
+			    Cable_Termination_Type:2,
+			    Cable_Latency:4,
+			    TypeC_to_Plug_Receptacle:1,
+			    TypeC_to_ABC:2,
+			    Rsvd_CABLE_VDO:4,
+			    Cable_Firmware_Version:4,
+			    Cable_HW_Version:4;
+	}BITS;
+}U_CABLE_VDO_Type;
 
-typedef union {
+typedef union
+{
 	uint32_t        DATA;
-	struct {
+	struct
+	{
 		uint8_t     BDATA[4];
-	} BYTES;
-	struct {
+	}BYTES;
+	struct
+	{
 		uint32_t    SVID_1:16,
 			    SVID_0:16;
-	} BITS;
-} U_VDO1_Type;
+	}BITS;
+}U_VDO1_Type;
 
 typedef union {
 	uint32_t	DATA;
@@ -147,11 +160,11 @@ typedef union {
 	} BYTES;
 	struct {
 		uint32_t	DATA:8,
-				TOTAL_NUMBER_OF_UVDM_SET:4,
-				RESERVED:1,
-				COMMAND_TYPE:2,
-				DATA_TYPE:1,
-				PID:16;
+					TOTAL_NUMBER_OF_UVDM_SET:4,
+					RESERVED:1,
+					COMMAND_TYPE:2,
+					DATA_TYPE:1,
+					PID:16;
 	} BITS;
 } U_SEC_UNSTRUCTURED_VDM_HEADER_Type;
 
@@ -216,6 +229,7 @@ typedef struct {
 
 /* For Dex */
 #define TypeC_Dex_SUPPORT	(0x04E8)
+#define TypeC_SAMSUNG_SVID	(0x04E8)
 
 /* For DP VDM Modes VDO Port_Capability */
 typedef enum
@@ -226,7 +240,6 @@ typedef enum
     num_DFP_D_and_UFP_D_Capable = 3
 }Num_DP_Port_Capability_Type;
 
-#endif
 /* For DP VDM Modes VDO Receptacle_Indication */
 typedef enum
 {
@@ -334,17 +347,80 @@ typedef struct {
 	U_VDO_DP_STATUS_UPDATES_Type		DATA_MSG_DP_STATUS;
 } DIS_ATTENTION_MESSAGE_DP_STATUS_Type;
 
-
 enum VDM_MSG_IRQ_State {
 	VDM_DISCOVER_ID		=	(1 << 0),
 	VDM_DISCOVER_SVIDS	=	(1 << 1),
 	VDM_DISCOVER_MODES	=	(1 << 2),
 	VDM_ENTER_MODE		=	(1 << 3),
-	VDM_EXIT_MODE		=	(1 << 4),
+	VDM_EXIT_MODE 		=	(1 << 4),
 	VDM_ATTENTION		=	(1 << 5),
 	VDM_DP_STATUS_UPDATE	=	(1 << 6),
 	VDM_DP_CONFIGURE	=	(1 << 7),
 };
+
+typedef union sec_uvdm_header {
+	uint32_t		data;
+	struct {
+		uint8_t		bdata[4];
+	} BYTES;
+	struct {
+		uint32_t	data:8,
+				total_number_of_uvdm_set:4,
+				direction:1,
+				command_type:2,
+				data_type:1,
+				pid:16;
+	} BITS;
+} U_SEC_UVDM_HEADER;
+
+typedef U_SEC_UVDM_HEADER U_SEC_UVDM_RESPONSE_HEADER;
+
+typedef union sec_tx_data_header {
+	uint32_t		data;
+	struct {
+		uint8_t		bdata[4];
+	} BYTES;
+	struct {
+		uint32_t	data_size_of_current_set:8,
+				total_data_size:8,
+				reserved:12,
+				order_of_current_uvdm_set:4;
+	} BITS;
+} U_SEC_TX_DATA_HEADER;
+
+typedef union sec_data_tx_tailer {
+	uint32_t		data;
+	struct {
+		uint8_t		bdata[4];
+	} BYTES;
+	struct {
+		uint32_t	checksum:16,
+				reserved:16;
+	} BITS;
+} U_SEC_TX_DATA_TAILER;
+
+typedef union sec_data_rx_header {
+	uint32_t		data;
+	struct {
+		uint8_t		bdata[4];
+	} BYTES;
+	struct {
+		uint32_t	reserved:18,
+				result_value:2,
+				received_data_size_of_current_set:8,
+				order_of_current_uvdm_set:4;
+	} BITS;
+} U_SEC_RX_DATA_HEADER;
+
+//Test
+#define S2MM005_SECUVDM_START_ADDR	(8)
+#define SAMSUNGUVDM_MAX_LONGPACKET_SIZE	(236)
+#define SAMSUNGUVDM_MAX_SHORTPACKET_SIZE (1)
+#define SASMSUNGUVDM_WAIT_MS (5000)
+#define SAMSUNGUVDM_ALIGN		(4)
+#define SAMSUNGUVDM_MAXDATA_FIRST_UVDMSET	(12)
+#define SAMSUNGUVDM_MAXDATA_NORMAL_UVDMSET	(16)
+#define SAMSUNGUVDM_CHECKSUM_DATA_COUNT		(20)
 
 #define ALTERNATE_MODE_NOT_READY	(1 << 0)
 #define ALTERNATE_MODE_READY		(1 << 1)
@@ -352,29 +428,32 @@ enum VDM_MSG_IRQ_State {
 #define ALTERNATE_MODE_START		(1 << 3)
 #define ALTERNATE_MODE_RESET		(1 << 4)
 
-/* VMD Message Register I2C address by S.LSI */
-#define REG_VDM_MSG_REQ			0x02C0
-#define REG_SSM_MSG_READ		0x0340
-#define REG_SSM_MSG_SEND		0x0360
+// VMD Message Register I2C address by S.LSI
+#define REG_VDM_MSG_REQ				0x02C0
+#define REG_SSM_MSG_READ			0x0340
+#define REG_SSM_MSG_SEND			0x0360
 
-#define REG_TX_DIS_ID_RESPONSE		0x0400
-#define REG_TX_DIS_SVID_RESPONSE	0x0420
-#define REG_TX_DIS_MODE_RESPONSE	0x0440
-#define REG_TX_ENTER_MODE_RESPONSE	0x0460
-#define REG_TX_EXIT_MODE_RESPONSE	0x0480
-#define REG_TX_DIS_ATTENTION_RESPONSE	0x04A0
+#define REG_TX_DIS_ID_RESPONSE			0x0400
+#define REG_TX_DIS_SVID_RESPONSE		0x0420
+#define REG_TX_DIS_MODE_RESPONSE		0x0440
+#define REG_TX_ENTER_MODE_RESPONSE		0x0460
+#define REG_TX_EXIT_MODE_RESPONSE		0x0480
+#define REG_TX_DIS_ATTENTION_RESPONSE		0x04A0
 
-#define REG_RX_DIS_ID_CABLE		0x0500
-#define REG_RX_DIS_ID			0x0520
-#define REG_RX_DIS_SVID			0x0540
-#define REG_RX_MODE			0x0560
-#define REG_RX_ENTER_MODE		0x0580
-#define REG_RX_EXIT_MODE		0x05A0
-#define REG_RX_DIS_ATTENTION		0x05C0
-#define REG_RX_DIS_DP_STATUS_UPDATE	0x0600
-#define REG_RX_DIS_DP_CONFIGURE		0x0620
+#define REG_RX_DIS_ID_CABLE			0x0500
+#define REG_RX_DIS_ID				0x0520
+#define REG_RX_DIS_SVID				0x0540
+#define REG_RX_MODE				0x0560
+#define REG_RX_ENTER_MODE			0x0580
+#define REG_RX_EXIT_MODE			0x05A0
+#define REG_RX_DIS_ATTENTION			0x05C0
+#define REG_RX_DIS_DP_STATUS_UPDATE		0x0600
+#define REG_RX_DIS_DP_CONFIGURE			0x0620
 
 #define GEAR_VR_DETACH_WAIT_MS		1000
+#define HOST_DRIVER_RECOGNITION_WAIT_MS	2000
+#define USB_PHY_SUSPEND_WAIT_MS		12000
+#define USB_PHY_RESUME_WAIT_MS		3000
 #define MODE_INT_CLEAR			0x01
 #define PD_NEXT_STATE			0x02
 #define MODE_INTERFACE			0x03
@@ -396,13 +475,21 @@ enum VDM_MSG_IRQ_State {
 #define DEXDOCK_PRODUCT_ID		0xA020
 #define HDMI_PRODUCT_ID			0xA025
 #define MPA_PRODUCT_ID			0x2122
+#define UVDM_PROTOCOL_ID		0xA028
+#define DEXPAD_PRODUCT_ID		0xA029
+#define DISPLAY_PORT_SVID		0xFF01
+
 /* Samsung UVDM structure */
 #define SEC_UVDM_SHORT_DATA		0x0
 #define SEC_UVDM_LONG_DATA		0x1
 #define SEC_UVDM_ININIATOR		0x0
+#define SEC_UVDM_RESPONDER_INIT	0x0
 #define SEC_UVDM_RESPONDER_ACK	0x1
 #define SEC_UVDM_RESPONDER_NAK	0x2
 #define SEC_UVDM_RESPONDER_BUSY	0x3
+#define SEC_UVDM_RX_HEADER_ACK	0x0
+#define SEC_UVDM_RX_HEADER_NAK	0x1
+#define SEC_UVDM_RX_HEADER_BUSY	0x2
 #define SEC_UVDM_UNSTRUCTURED_VDM	0x0
 
 /*For DP Pin Assignment */
@@ -414,17 +501,64 @@ enum VDM_MSG_IRQ_State {
 #define DP_PIN_ASSIGNMENT_E	0x00000010	/* ( 1 << 4 ) */
 #define DP_PIN_ASSIGNMENT_F	0x00000020	/* ( 1 << 5 ) */
 
-void send_alternate_message(void *data, int cmd);
-void receive_alternate_message(void *data, VDM_MSG_IRQ_STATUS_Type
-			       *VDM_MSG_IRQ_State);
+#define MODE_INT_CLEAR					0x01
+#define PD_NEXT_STATE					0x02
+#define MODE_INTERFACE 					0x03
+#define REQ_PR_SWAP					0x10
+#define REQ_DR_SWAP					0x11
+#define SEL_SSM_MSG_REQ 				0x20
+
+#define SAMSUNG_VENDOR_ID 				0x04E8
+#define GEARVR_PRODUCT_ID				0xA500
+
+void send_alternate_message(void * data, int cmd);
+void receive_alternate_message(void * data, VDM_MSG_IRQ_STATUS_Type *VDM_MSG_IRQ_State);
 int ccic_register_switch_device(int mode);
 void acc_detach_check(struct work_struct *work);
+void acc_detach_process(void * data);
 void send_unstructured_vdm_message(void * data, int cmd);
 void send_dna_audio_unstructured_vdm_message(void * data, int cmd);
 void receive_unstructured_vdm_message(void * data, SSM_MSG_IRQ_STATUS_Type *SSM_MSG_IRQ_State);
+void send_role_swap_message(void * data, int cmd);
+void send_attention_message(void * data, int cmd);
 void do_alternate_mode_step_by_step(void * data, int cmd);
 void send_dex_fan_unstructured_vdm_message(void * data, int cmd);
+void set_usb_phy_completion(int kind);
 int send_samsung_unstructured_vdm_message(void * data, const char *buf, size_t size);
+ssize_t send_samsung_unstructured_long_uvdm_message(void *data, void *buf, size_t size);
+extern int samsung_uvdm_in_request_message(void *data);
+extern int samsung_uvdm_out_request_message(void *data, int size);
+extern int samsung_uvdm_ready(void);
+extern void samsung_uvdm_close(void);
+//void receive_samsung_unstructured_vdm_message(void * data, int size);
 void set_enable_alternate_mode(int mode);
 void set_clear_discover_mode(void);
 void set_host_turn_on_event(int mode);
+int get_diplayport_status(void);
+void ccic_send_dock_uevent(u32 vid, u32 pid, int state);
+int process_check_accessory(void *data);
+#else
+inline void send_alternate_message(void * data, int cmd) {}
+inline void receive_alternate_message(void * data, VDM_MSG_IRQ_STATUS_Type *VDM_MSG_IRQ_State) {}
+#ifdef CONFIG_CCIC_TEMP_BLOCK
+inline int ccic_register_switch_device(int mode) {}
+#endif
+inline void acc_detach_check(struct work_struct *work) {}
+inline void acc_detach_process(void * data) {}
+inline void send_unstructured_vdm_message(void * data, int cmd) {}
+inline void send_dna_audio_unstructured_vdm_message(void * data, int cmd) {}
+inline void receive_unstructured_vdm_message(void * data, SSM_MSG_IRQ_STATUS_Type *SSM_MSG_IRQ_State) {}
+inline void send_role_swap_message(void * data, int cmd) {}
+inline void send_attention_message(void * data, int cmd) {}
+inline void do_alternate_mode_step_by_step(void * data, int cmd) {}
+inline void send_dex_fan_unstructured_vdm_message(void * data, int cmd) {}
+inline void set_usb_phy_completion(int kind) {}
+inline int send_samsung_unstructured_vdm_message(void * data, const char *buf, size_t size) {}
+inline void set_enable_alternate_mode(int mode) {}
+inline void set_clear_discover_mode(void) {}
+inline void set_host_turn_on_event(int mode) {}
+inline int get_diplayport_status(void) {}
+inline void ccic_send_dock_uevent(u32 vid, u32 pid, int state) {}
+inline int process_check_accessory(void *data) {}
+#endif
+#endif

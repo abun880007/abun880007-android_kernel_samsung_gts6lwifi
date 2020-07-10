@@ -1,16 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-ccflags-y := -Idrivers/net/ethernet/cisco/enic
-
-obj-$(CONFIG_INFINIBAND_USNIC)+= usnic_verbs.o
-
-usnic_verbs-y=\
-usnic_fwd.o \
-usnic_transport.o \
-usnic_uiom.o \
-usnic_uiom_interval_tree.o \
-usnic_vnic.o \
-usnic_ib_main.o \
-usnic_ib_qp_grp.o \
-usnic_ib_sysfs.o \
-usnic_ib_verbs.o \
-usnic_debugfs.o \
+version https://git-lfs.github.com/spec/v1
+oid sha256:5bf1b6eaec0bab20aa378985c02de5c30006c58c0f6e425bfe1a8111b81f2ded
+size 334

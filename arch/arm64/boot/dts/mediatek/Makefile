@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_ARCH_MEDIATEK) += mt2712-evb.dtb
-dtb-$(CONFIG_ARCH_MEDIATEK) += mt6755-evb.dtb
-dtb-$(CONFIG_ARCH_MEDIATEK) += mt6795-evb.dtb
-dtb-$(CONFIG_ARCH_MEDIATEK) += mt6797-evb.dtb
-dtb-$(CONFIG_ARCH_MEDIATEK) += mt7622-rfb1.dtb
-dtb-$(CONFIG_ARCH_MEDIATEK) += mt8173-evb.dtb
-
-always		:= $(dtb-y)
-subdir-y	:= $(dts-dirs)
-clean-files	:= *.dtb
+version https://git-lfs.github.com/spec/v1
+oid sha256:fd9ebd9d9cd664e67a03b62d0243da7b8890a94c7d59af46a3ebc2aeeb8feca7
+size 378

@@ -1,9 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-ccflags-y := -Idrivers/net/ethernet/chelsio/cxgb3
-
-obj-$(CONFIG_INFINIBAND_CXGB3) += iw_cxgb3.o
-
-iw_cxgb3-y :=  iwch_cm.o iwch_ev.o iwch_cq.o iwch_qp.o iwch_mem.o \
-	       iwch_provider.o iwch.o cxio_hal.o cxio_resource.o
-
-ccflags-$(CONFIG_INFINIBAND_CXGB3_DEBUG) += -DDEBUG
+version https://git-lfs.github.com/spec/v1
+oid sha256:e80c377a534bf25e59194676757fb5d6cfae148ea50200324f0c2d36362e920a
+size 311

@@ -1,19 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-# $Id: Makefile,v 1.12 2004/10/19 13:07:43 starvik Exp $
-#
-# Makefile for the linux kernel.
-#
-
-CPPFLAGS_vmlinux.lds := -DDRAM_VIRTUAL_BASE=0x$(CONFIG_ETRAX_DRAM_VIRTUAL_BASE)
-extra-y	:= vmlinux.lds
-
-obj-y   := process.o traps.o irq.o ptrace.o setup.o time.o sys_cris.o
-obj-y += devicetree.o
-obj-y += stacktrace.o
-
-obj-$(CONFIG_MODULES)    += crisksyms.o
-obj-$(CONFIG_MODULES)	 += module.o
-obj-$(CONFIG_SYSTEM_PROFILER)   += profile.o
-
-clean:
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:be0aaae8ee66ca065e3e0e81f978b52666b8a05799b1365b0643903b6ef6ed82
+size 478

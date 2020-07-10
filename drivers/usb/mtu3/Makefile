@@ -1,19 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-
-ccflags-$(CONFIG_USB_MTU3_DEBUG)	+= -DDEBUG
-
-obj-$(CONFIG_USB_MTU3)	+= mtu3.o
-
-mtu3-y	:= mtu3_plat.o
-
-ifneq ($(filter y,$(CONFIG_USB_MTU3_HOST) $(CONFIG_USB_MTU3_DUAL_ROLE)),)
-	mtu3-y	+= mtu3_host.o
-endif
-
-ifneq ($(filter y,$(CONFIG_USB_MTU3_GADGET) $(CONFIG_USB_MTU3_DUAL_ROLE)),)
-	mtu3-y	+= mtu3_core.o mtu3_gadget_ep0.o mtu3_gadget.o mtu3_qmu.o
-endif
-
-ifneq ($(CONFIG_USB_MTU3_DUAL_ROLE),)
-	mtu3-y	+= mtu3_dr.o
-endif
+version https://git-lfs.github.com/spec/v1
+oid sha256:c9c771ab21da5918b875f143f9e2456c65129ca0ff730a8d6fd8e2dffa859cb5
+size 456

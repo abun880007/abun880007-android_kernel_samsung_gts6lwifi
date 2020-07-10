@@ -1,9 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-armada-y	:= armada_crtc.o armada_drv.o armada_fb.o armada_fbdev.o \
-		   armada_gem.o armada_overlay.o armada_trace.o
-armada-y	+= armada_510.o
-armada-$(CONFIG_DEBUG_FS) += armada_debugfs.o
-
-obj-$(CONFIG_DRM_ARMADA) := armada.o
-
-CFLAGS_armada_trace.o := -I$(src)
+version https://git-lfs.github.com/spec/v1
+oid sha256:301e7e2d3ca4738bfee2edc7611954a773bf3d44de48e0a778e40e80205b0dbc
+size 297

@@ -1,10 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-# arch/m32r/platforms/Makefile
-obj-$(CONFIG_PLAT_M32104UT)	+= m32104ut/
-obj-$(CONFIG_PLAT_M32700UT)	+= m32700ut/
-obj-$(CONFIG_PLAT_MAPPI)	+= mappi/
-obj-$(CONFIG_PLAT_MAPPI2)	+= mappi2/
-obj-$(CONFIG_PLAT_MAPPI3)	+= mappi3/
-obj-$(CONFIG_PLAT_OAKS32R)	+= oaks32r/
-obj-$(CONFIG_PLAT_OPSPUT)	+= opsput/
-obj-$(CONFIG_PLAT_USRV)		+= usrv/
+version https://git-lfs.github.com/spec/v1
+oid sha256:9ca648f18c6a3333ddbe57a7ba28880abcd46ec3cfd487487c3bbbe31392ef78
+size 367

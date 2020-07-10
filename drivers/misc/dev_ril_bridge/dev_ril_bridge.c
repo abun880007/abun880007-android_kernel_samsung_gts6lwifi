@@ -259,7 +259,7 @@ static const struct file_operations misc_io_fops = {
 	.read = misc_read,
 };
 
-static int dev_ril_bridge_probe(struct platform_device *pdev)
+static int __init dev_ril_bridge_init(void)
 {
 	int err = 0;
 
@@ -296,51 +296,13 @@ out:
 	return err;
 }
 
-static void dev_ril_bridge_shutdown(struct platform_device *pdev)
+static void __exit dev_ril_bridge_exit(void)
 {
 	drb_info("\n");
 }
 
-#ifdef CONFIG_PM
-static int dev_ril_bridge_suspend(struct device *dev)
-{
-	return 0;
-}
-
-static int dev_ril_bridge_resume(struct device *dev)
-{
-	return 0;
-}
-#else
-#define dev_ril_bridge_suspend NULL
-#define dev_ril_bridge_resume NULL
-#endif
-
-static const struct dev_pm_ops dev_ril_bridge_pm_ops = {
-	.suspend = dev_ril_bridge_suspend,
-	.resume = dev_ril_bridge_resume,
-};
-
-static const struct of_device_id dev_ril_bridge_match[] = {
-	{ .compatible = "samsung,dev_ril_bridge_pdata", },
-	{},
-};
-MODULE_DEVICE_TABLE(of, dev_ril_bridge_match);
-
-static struct platform_driver dev_ril_bridge_driver = {
-	.probe = dev_ril_bridge_probe,
-	.shutdown = dev_ril_bridge_shutdown,
-	.driver = {
-		.name = "dev_ril_bridge",
-		.owner = THIS_MODULE,
-		.suppress_bind_attrs = true,
-		.pm = &dev_ril_bridge_pm_ops,
-#ifdef CONFIG_OF
-		.of_match_table = of_match_ptr(dev_ril_bridge_match),
-#endif
-	},
-};
-module_platform_driver(dev_ril_bridge_driver);
+module_init(dev_ril_bridge_init);
+module_exit(dev_ril_bridge_exit);
 
 MODULE_DESCRIPTION("dev_ril_bridge driver");
 MODULE_LICENSE("GPL");

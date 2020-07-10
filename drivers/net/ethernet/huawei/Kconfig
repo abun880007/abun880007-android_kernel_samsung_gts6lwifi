@@ -1,19 +1,3 @@
-#
-# Huawei driver configuration
-#
-
-config NET_VENDOR_HUAWEI
-	bool "Huawei devices"
-	default y
-	---help---
-	  If you have a network (Ethernet) card belonging to this class, say Y.
-	  Note that the answer to this question doesn't directly affect the
-	  kernel: saying N will just cause the configurator to skip all
-	  the questions about Huawei cards. If you say Y, you will be asked
-	  for your specific card in the following questions.
-
-if NET_VENDOR_HUAWEI
-
-source "drivers/net/ethernet/huawei/hinic/Kconfig"
-
-endif # NET_VENDOR_HUAWEI
+version https://git-lfs.github.com/spec/v1
+oid sha256:dc1467e923c17cb37af63aa00b5d2bd76deb71518f21418a430b633de9119c68
+size 537

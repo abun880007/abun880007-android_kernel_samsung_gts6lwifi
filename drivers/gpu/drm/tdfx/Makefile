@@ -1,7 +1,3 @@
-#
-# Makefile for the drm device driver.  This driver provides support for the
-# Direct Rendering Infrastructure (DRI) in XFree86 4.1.0 and higher.
-
-tdfx-y := tdfx_drv.o
-
-obj-$(CONFIG_DRM_TDFX)	+= tdfx.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:41257b217fd72afe6243ec3a3169f3abe504ac8d75bac6170dc0b66cffcca6c2
+size 203

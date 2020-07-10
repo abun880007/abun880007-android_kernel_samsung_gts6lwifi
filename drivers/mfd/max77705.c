@@ -1,23 +1,9 @@
 /*
  * max77705.c - mfd core driver for the Maxim 77705
  *
- * Copyright (C) 2016 Samsung Electronics
- * Insun Choi <insun77.choi@samsung.com>
- *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * This driver is based on max8997.c
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  */
 
 #include <linux/module.h>
@@ -36,21 +22,25 @@
 #include <linux/muic/muic.h>
 #include <linux/muic/max77705-muic.h>
 #include <linux/ccic/max77705_usbc.h>
-//#include <linux/ccic/max77705_pass2.h>
 #include <linux/ccic/max77705_pass3.h>
 #include <linux/ccic/max77705_pass4.h>
-#if defined(CONFIG_MAX77705_FW_PID03_SUPPORT)
+#if defined(CONFIG_SEC_BEYONDXQ_PROJECT) || defined(CONFIG_SEC_D1Q_PROJECT) ||    \
+	defined(CONFIG_SEC_D2Q_PROJECT) || defined(CONFIG_SEC_D1XQ_PROJECT) ||    \
+	defined(CONFIG_SEC_D2XQ_PROJECT) || defined(CONFIG_SEC_D2XQ2_PROJECT)
 #include <linux/ccic/max77705C_pass2_PID03.h>
+#elif defined(CONFIG_MACH_BEYOND1QLTE_JPN_DCM) || defined(CONFIG_MACH_BEYOND1QLTE_JPN_KDI) ||    \
+	defined(CONFIG_MACH_BEYOND2QLTE_JPN_DCM) || defined(CONFIG_MACH_BEYOND2QLTE_JPN_KDI)
+#include <linux/ccic/max77705C_pass2_PID04.h>
+#elif defined(CONFIG_SEC_R3Q_PROJECT) || defined(CONFIG_SEC_BLOOMQ_PROJECT)
+#include <linux/ccic/max77705C_pass2_PID05.h>
 #else
 #include <linux/ccic/max77705C_pass2.h>
 #endif
-
 #include <linux/usb_notify.h>
 #if defined(CONFIG_OF)
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #endif /* CONFIG_OF */
-#include "../battery_v2/include/sec_charging_common.h"
 
 #define I2C_ADDR_PMIC	(0xCC >> 1)	/* Top sys, Haptic */
 #define I2C_ADDR_MUIC	(0x4A >> 1)
@@ -283,16 +273,12 @@ static int of_max77705_dt(struct device *dev, struct max77705_platform_data *pda
 {
 	struct device_node *np_max77705 = dev->of_node;
 	struct device_node *np_battery;
-	int ret = 0;
 
 	if (!np_max77705)
 		return -EINVAL;
 
 	pdata->irq_gpio = of_get_named_gpio(np_max77705, "max77705,irq-gpio", 0);
 	pdata->wakeup = of_property_read_bool(np_max77705, "max77705,wakeup");
-	if (of_property_read_u32(np_max77705, "max77705,fw_product_id", &pdata->fw_product_id))
-		pdata->fw_product_id = 0;
-	
 #if defined(CONFIG_SEC_FACTORY)
 	pdata->blocking_waterevent = 0;
 #else
@@ -309,10 +295,6 @@ static int of_max77705_dt(struct device *dev, struct max77705_platform_data *pda
 			pr_info("%s: can't get wpc_en (%d)\n", __func__, pdata->wpc_en);
 			pdata->wpc_en = 0;
 		}
-		ret = of_property_read_string(np_battery,
-				"battery,wireless_charger_name", (char const **)&pdata->wireless_charger_name);
-		if (ret)
-			pr_info("%s: Wireless charger name is Empty\n", __func__);
 	}
 	pdata->support_audio = of_property_read_bool(np_max77705, "max77705,support-audio");
 	pr_info("%s: support_audio %d\n", __func__, pdata->support_audio);
@@ -540,35 +522,19 @@ static int max77705_fuelgauge_read_vcell(struct max77705_dev *max77705)
 
 static void max77705_wc_control(struct max77705_dev *max77705, bool enable)
 {
-	struct power_supply *psy = NULL;
-	union power_supply_propval value = {0, };
-	char wpc_en_status[2];
-
-	psy = get_power_supply_by_name(max77705->pdata->wireless_charger_name);
-
-	if (psy) {
-		wpc_en_status[0] = WPC_EN_CCIC;
-		wpc_en_status[1] = enable ? true : false;
-		value.strval= wpc_en_status;
-		if ((psy->desc->set_property != NULL) &&
-			(psy->desc->set_property(psy, (enum power_supply_property)POWER_SUPPLY_EXT_PROP_WPC_EN, &value) >= 0))
-			pr_info("%s: WC CONTROL: %s", __func__, wpc_en_status[1] ? "Enable" : "Disable");
-		power_supply_put(psy);
-	} else {
-		if (max77705->pdata->wpc_en) {
-			if (enable) {
-				gpio_direction_output(max77705->pdata->wpc_en, 0);
-				pr_info("%s: WC CONTROL: ENABLE", __func__);
-			} else {
-				gpio_direction_output(max77705->pdata->wpc_en, 1);
-				pr_info("%s: WC CONTROL: DISABLE", __func__);
-			}
+	if (max77705->pdata->wpc_en) {
+		if (enable) {
+			gpio_direction_output(max77705->pdata->wpc_en, 0);
+			pr_info("%s: WC CONTROL: ENABLE", __func__);
 		} else {
-			pr_info("%s : no wpc_en\n", __func__);
+			gpio_direction_output(max77705->pdata->wpc_en, 1);
+			pr_info("%s: WC CONTROL: DISABLE", __func__);
 		}
+		pr_info("%s: wpc_en(%d)\n",
+			__func__, gpio_get_value(max77705->pdata->wpc_en));
+	} else {
+		pr_info("%s : no wpc_en\n", __func__);
 	}
-
-	pr_info("%s: wpc_en(%d)\n", __func__, gpio_get_value(max77705->pdata->wpc_en));
 }
 
 int max77705_usbc_fw_update(struct max77705_dev *max77705,
@@ -599,10 +565,6 @@ int max77705_usbc_fw_update(struct max77705_dev *max77705,
 	fw_header = (max77705_fw_header *)fw_bin;
 	msg_maxim("FW: magic/%x/ major/%x/ minor/%x/ product_id/%x/ rev/%x/ id/%x/",
 		  fw_header->magic, fw_header->major, fw_header->minor, fw_header->product_id, fw_header->rev, fw_header->id);
-	if(max77705->device_product_id != fw_header->product_id) {
-		msg_maxim("product indicator mismatch");
-		return 0;
-	}
 	if(fw_header->magic == MAX77705_SIGN)
 		msg_maxim("FW: matched");
 
@@ -744,6 +706,7 @@ retry:
 		msg_maxim("Start FW updating (%02X.%02X)", max77705->FW_Revision, max77705->FW_Minor_Revision);
 		if (max77705->FW_Revision != 0xFF && try_command < 3) {
 			try_command++;
+			msg_maxim("can not enter secure mode. try_command %d", try_command);			
 			max77705_reset_ic(max77705);
 			msleep(1000);
 			goto retry;
@@ -891,7 +854,7 @@ void max77705_usbc_fw_setting(struct max77705_dev *max77705, int enforce_do)
 		pr_info("[MAX77705] Doesn't update the MAX77705_PASS1\n");
 		break;
 	case MAX77705_PASS2:
-		pr_info("[MAX77705] Doesn't update the MAX77705_PASS2\n");
+		max77705_usbc_fw_update(max77705, BOOT_FLASH_FW_PASS2, ARRAY_SIZE(BOOT_FLASH_FW_PASS2), enforce_do);
 		break;
 	case MAX77705_PASS3:
 		max77705_usbc_fw_update(max77705, BOOT_FLASH_FW_PASS3,  ARRAY_SIZE(BOOT_FLASH_FW_PASS3), enforce_do);
@@ -912,8 +875,7 @@ EXPORT_SYMBOL_GPL(max77705_usbc_fw_setting);
 
 static u8 max77705_revision_check(u8 pmic_id, u8 pmic_rev) {
 	int i, logical_id = 0;
-	int pmic_arrary = ARRAY_SIZE(max77705_revision);
-	for (i = 0; i < pmic_arrary; i++) {
+	for (i = 0; i < ARRAY_SIZE(max77705_revision); i++) {
 		if (max77705_revision[i].id == pmic_id &&
 		    max77705_revision[i].rev  == pmic_rev)
 			logical_id = max77705_revision[i].logical_id;
@@ -926,6 +888,7 @@ static int max77705_i2c_probe(struct i2c_client *i2c,
 {
 	struct max77705_dev *max77705;
 	struct max77705_platform_data *pdata = i2c->dev.platform_data;
+
 	int ret = 0;
 	u8 pmic_id, pmic_rev = 0;
 
@@ -971,7 +934,6 @@ static int max77705_i2c_probe(struct i2c_client *i2c,
 		max77705->irq_gpio = pdata->irq_gpio;
 		max77705->wakeup = pdata->wakeup;
 		max77705->blocking_waterevent = pdata->blocking_waterevent;
-		max77705->device_product_id = pdata->fw_product_id;
 	} else {
 		ret = -EINVAL;
 		goto err;
@@ -1015,6 +977,7 @@ static int max77705_i2c_probe(struct i2c_client *i2c,
 		return -ENOMEM;
 	INIT_WORK(&max77705->fw_work, max77705_usbc_wait_response_q);
 #endif
+	init_waitqueue_head(&max77705->queue_empty_wait_q);
 	max77705->muic = i2c_new_dummy(i2c->adapter, I2C_ADDR_MUIC);
 	i2c_set_clientdata(max77705->muic, max77705);
 
@@ -1050,9 +1013,6 @@ err_mfd:
 	mfd_remove_devices(max77705->dev);
 err_irq_init:
 	i2c_unregister_device(max77705->muic);
-	i2c_unregister_device(max77705->charger);
-	i2c_unregister_device(max77705->fuelgauge);
-	i2c_unregister_device(max77705->debug);
 err_w_lock:
 	mutex_destroy(&max77705->i2c_lock);
 err:
@@ -1065,12 +1025,8 @@ static int max77705_i2c_remove(struct i2c_client *i2c)
 	struct max77705_dev *max77705 = i2c_get_clientdata(i2c);
 
 	device_init_wakeup(max77705->dev, 0);
-	max77705_irq_exit(max77705);
 	mfd_remove_devices(max77705->dev);
 	i2c_unregister_device(max77705->muic);
-	i2c_unregister_device(max77705->charger);
-	i2c_unregister_device(max77705->fuelgauge);
-	i2c_unregister_device(max77705->debug);
 	kfree(max77705);
 
 	return 0;
@@ -1096,11 +1052,16 @@ static int max77705_suspend(struct device *dev)
 	struct i2c_client *i2c = container_of(dev, struct i2c_client, dev);
 	struct max77705_dev *max77705 = i2c_get_clientdata(i2c);
 
-	pr_info("%s:%s\n", MFD_DEV_NAME, __func__);
+	pr_info("%s:%s +\n", MFD_DEV_NAME, __func__);
 
 	if (device_may_wakeup(dev))
 		enable_irq_wake(max77705->irq);
+	
+	wait_event_interruptible_timeout(max77705->queue_empty_wait_q,
+					(!max77705->doing_irq) && (!max77705->is_usbc_queue), 1*HZ);
 
+	pr_info("%s:%s -\n", MFD_DEV_NAME, __func__);
+	
 	disable_irq(max77705->irq);
 
 	return 0;
@@ -1274,8 +1235,14 @@ static struct i2c_driver max77705_i2c_driver = {
 
 static int __init max77705_i2c_init(void)
 {
+	int val;
+
 	pr_info("%s:%s\n", MFD_DEV_NAME, __func__);
-	return i2c_add_driver(&max77705_i2c_driver);
+
+	val = i2c_add_driver(&max77705_i2c_driver);
+	pr_info("%s:%d\n", MFD_DEV_NAME, val);
+
+	return val;
 }
 /* init early so consumer devices can complete system boot */
 subsys_initcall(max77705_i2c_init);

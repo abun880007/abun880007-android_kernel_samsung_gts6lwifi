@@ -4,7 +4,7 @@
  * Copyright (C) 2011-2017 Samsung, Inc.
  * Author: Dongrak Shin <dongrak.shin@samsung.com>
  *
- */
+*/
 
  /* usb notify layer v3.2 */
 
@@ -122,6 +122,7 @@ static ssize_t booster_store(
 
 	if (size < strlen(buf))
 		goto error;
+
 	booster = kzalloc(size+1, GFP_KERNEL);
 	if (!booster)
 		goto error;

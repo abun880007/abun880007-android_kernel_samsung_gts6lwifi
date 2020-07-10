@@ -1,18 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the linux kernel.
-#
-
-extra-y	:= head.o
-
-
-obj-y   := entry.o traps.o shadows.o debugport.o irq.o \
-	   process.o setup.o signal.o traps.o time.o ptrace.o \
-	   dma.o io_interface_mux.o
-
-obj-$(CONFIG_ETRAX_KGDB) += kgdb.o
-obj-$(CONFIG_ETRAX_FAST_TIMER) += fasttimer.o
-obj-$(CONFIG_MODULES)    += crisksyms.o
-
-clean:
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:e353baca727f5a049f5a7eebd36270dd27514e1ad35d325b02ca82fdea40c7e8
+size 367

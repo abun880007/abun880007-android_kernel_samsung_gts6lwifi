@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# arch/blackfin/mach-bf533/boards/Makefile
-#
-
-obj-$(CONFIG_BFIN533_STAMP)            += stamp.o
-obj-$(CONFIG_BFIN532_IP0X)             += ip0x.o
-obj-$(CONFIG_BFIN533_EZKIT)            += ezkit.o
-obj-$(CONFIG_BFIN533_BLUETECHNIX_CM)   += cm_bf533.o
-obj-$(CONFIG_BLACKSTAMP)               += blackstamp.o
-obj-$(CONFIG_H8606_HVSISTEMAS)         += H8606.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:a709ca06e224da729df7d97fc60f17823a307ba2f17475473f5f2574819fd284
+size 390

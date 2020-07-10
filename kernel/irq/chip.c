@@ -17,6 +17,10 @@
 #include <linux/kernel_stat.h>
 #include <linux/irqdomain.h>
 
+#ifdef CONFIG_SEC_DEBUG
+#include <linux/sec_debug.h>
+#endif
+
 #include <trace/events/irq.h>
 
 #include "internals.h"
@@ -390,10 +394,8 @@ static inline void mask_ack_irq(struct irq_desc *desc)
 
 void mask_irq(struct irq_desc *desc)
 {
-#if 0
 	if (irqd_irq_masked(&desc->irq_data))
 		return;
-#endif
 
 	if (desc->irq_data.chip->irq_mask) {
 		desc->irq_data.chip->irq_mask(&desc->irq_data);
@@ -403,10 +405,8 @@ void mask_irq(struct irq_desc *desc)
 
 void unmask_irq(struct irq_desc *desc)
 {
-#if 0
 	if (!irqd_irq_masked(&desc->irq_data))
 		return;
-#endif
 
 	if (desc->irq_data.chip->irq_unmask) {
 		desc->irq_data.chip->irq_unmask(&desc->irq_data);
@@ -881,9 +881,18 @@ void handle_percpu_devid_irq(struct irq_desc *desc)
 		chip->irq_ack(&desc->irq_data);
 
 	if (likely(action)) {
+#ifdef CONFIG_SEC_DEBUG_SCHED_LOG
+		sec_debug_irq_sched_log(irq, action->handler,
+					(char *)action->name, IRQ_ENTRY);
+#endif
 		trace_irq_handler_entry(irq, action);
 		res = action->handler(irq, raw_cpu_ptr(action->percpu_dev_id));
 		trace_irq_handler_exit(irq, action, res);
+#ifdef CONFIG_SEC_DEBUG_SCHED_LOG
+		sec_debug_irq_sched_log(irq, action->handler,
+					(char *)action->name, IRQ_EXIT);
+#endif
+
 	} else {
 		unsigned int cpu = smp_processor_id();
 		bool enabled = cpumask_test_cpu(cpu, desc->percpu_enabled);
@@ -938,10 +947,8 @@ __irq_do_set_handler(struct irq_desc *desc, irq_flow_handler_t handle,
 		if (desc->irq_data.chip != &no_irq_chip)
 			mask_ack_irq(desc);
 		irq_state_set_disabled(desc);
-		if (is_chained) {
-			printk("%s : desc action of irq_desc %llx becomes null\n", __func__, (unsigned long long)desc);
+		if (is_chained)
 			desc->action = NULL;
-		}
 		desc->depth = 1;
 	}
 	desc->handle_irq = handle;

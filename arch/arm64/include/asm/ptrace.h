@@ -50,6 +50,7 @@
 #define COMPAT_PSR_I_BIT	0x00000080
 #define COMPAT_PSR_A_BIT	0x00000100
 #define COMPAT_PSR_E_BIT	0x00000200
+#define COMPAT_PSR_SSBS_BIT	0x00800000
 #define COMPAT_PSR_J_BIT	0x01000000
 #define COMPAT_PSR_Q_BIT	0x08000000
 #define COMPAT_PSR_V_BIT	0x10000000
@@ -150,15 +151,6 @@ static inline void forget_syscall(struct pt_regs *regs)
 	regs->syscallno = NO_SYSCALL;
 }
 
-/*
- * This macro defines the preserved data size on the stack during an exception.
- */
-#ifdef CONFIG_DEBUG_EXCEPTION_STACK
-#define PRESERVE_STACK_SIZE	(256)
-#else
-#define PRESERVE_STACK_SIZE	(0)
-#endif
-
 #define MAX_REG_OFFSET offsetof(struct pt_regs, pstate)
 
 #define arch_has_single_step()	(1)
@@ -166,8 +158,12 @@ static inline void forget_syscall(struct pt_regs *regs)
 #ifdef CONFIG_COMPAT
 #define compat_thumb_mode(regs) \
 	(((regs)->pstate & COMPAT_PSR_T_BIT))
+#define compat_arm_instr_set(regs) \
+	(((regs)->pstate & (COMPAT_PSR_T_BIT | COMPAT_PSR_J_BIT)) == 0)
 #else
 #define compat_thumb_mode(regs) (0)
+#define compat_arm_instr_set(regs) (0)
+
 #endif
 
 #define user_mode(regs)	\

@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the usb common parts.
-#
-
-obj-$(CONFIG_USB_COMMON)	  += usb-common.o
-usb-common-y			  += common.o
-usb-common-$(CONFIG_USB_LED_TRIG) += led.o
-
-obj-$(CONFIG_USB_OTG_FSM) += usb-otg-fsm.o
-obj-$(CONFIG_USB_ULPI_BUS)	+= ulpi.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:777637ad49d44650ea74c688599dfa6bd2e0ce0ab78d34cacfc492dd0c3a3ba6
+size 273

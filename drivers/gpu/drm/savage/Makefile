@@ -1,8 +1,3 @@
-#
-# Makefile for the drm device driver.  This driver provides support for the
-# Direct Rendering Infrastructure (DRI) in XFree86 4.1.0 and higher.
-
-savage-y := savage_drv.o savage_bci.o savage_state.o
-
-obj-$(CONFIG_DRM_SAVAGE)+= savage.o
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:aafb0f245310c89ca4fdd3d59b93213ea6d74949ea070e02e4c69c50b6c74c5a
+size 239

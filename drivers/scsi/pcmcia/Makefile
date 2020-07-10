@@ -1,14 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-
-ccflags-y		:= -Idrivers/scsi
-
-# 16-bit client drivers
-obj-$(CONFIG_PCMCIA_QLOGIC)	+= qlogic_cs.o
-obj-$(CONFIG_PCMCIA_FDOMAIN)	+= fdomain_cs.o
-obj-$(CONFIG_PCMCIA_AHA152X)	+= aha152x_cs.o
-obj-$(CONFIG_PCMCIA_NINJA_SCSI)	+= nsp_cs.o
-obj-$(CONFIG_PCMCIA_SYM53C500)	+= sym53c500_cs.o
-
-aha152x_cs-objs	:= aha152x_stub.o aha152x_core.o
-fdomain_cs-objs	:= fdomain_stub.o fdomain_core.o
-qlogic_cs-objs	:= qlogic_stub.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:54994e13ca62ac79f0036db6306b8d71025983e27dc8d40e03db7fd740b6381b
+size 447

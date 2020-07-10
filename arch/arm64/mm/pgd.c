@@ -54,7 +54,8 @@ pgd_t *pgd_alloc(struct mm_struct *mm)
 		return ret;
 	}
 
-	uh_call(UH_APP_RKP, RKP_NEW_PGD, (u64)ret, 0, 0, 0);
+	if (rkp_started)
+		uh_call(UH_APP_RKP, RKP_NEW_PGD, (u64)ret, 0, 0, 0);
 
 	return ret;
 #else
@@ -62,19 +63,19 @@ pgd_t *pgd_alloc(struct mm_struct *mm)
 		return (pgd_t *)__get_free_page(PGALLOC_GFP);
 	else
 		return kmem_cache_alloc(pgd_cache, PGALLOC_GFP);
-#endif	
+#endif
 }
 
 void pgd_free(struct mm_struct *mm, pgd_t *pgd)
 {
 #ifdef CONFIG_UH_RKP
-	uh_call(UH_APP_RKP, RKP_FREE_PGD, (u64)pgd, 0, 0, 0);
+	if (rkp_started)
+		uh_call(UH_APP_RKP, RKP_FREE_PGD, (u64)pgd, 0, 0, 0);
 
 	/* if pgd memory come from read only buffer, the put it back */
-	/*TODO: use a macro*/
-	if (is_rkp_ro_page((u64)pgd))
-		rkp_ro_free((void *)pgd);
-	else {
+	if (is_rkp_ro_page((unsigned long)pgd)) {
+		rkp_ro_free((void *)pgd); 
+	} else {
 		if (PGD_SIZE == PAGE_SIZE)
 			free_page((unsigned long)pgd);
 		else

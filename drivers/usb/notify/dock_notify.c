@@ -217,35 +217,24 @@ skip:
 	return 0;
 }
 
-static int call_device_notify(struct usb_device *dev, int connect)
+static int call_device_notify(struct usb_device *dev)
 {
 	struct otg_notify *o_notify = get_otg_notify();
 
 	if (dev->bus->root_hub != dev) {
-		if (connect) {
-			pr_info("%s device\n", __func__);
-			send_otg_notify(o_notify,
-				NOTIFY_EVENT_DEVICE_CONNECT, 1);
+		pr_info("%s device\n", __func__);
+		send_otg_notify(o_notify, NOTIFY_EVENT_DEVICE_CONNECT, 1);
 
-			if (check_gamepad_device(dev))
-				send_otg_notify(o_notify,
-					NOTIFY_EVENT_GAMEPAD_CONNECT, 1);
-			else if (check_lanhub_device(dev))
-				send_otg_notify(o_notify,
-					NOTIFY_EVENT_LANHUB_CONNECT, 1);
-			else
-				;
-			store_usblog_notify(NOTIFY_PORT_CONNECT,
-				(void *)&dev->descriptor.idVendor,
-				(void *)&dev->descriptor.idProduct);
-		} else
-			store_usblog_notify(NOTIFY_PORT_DISCONNECT,
-				(void *)&dev->descriptor.idVendor,
-				(void *)&dev->descriptor.idProduct);
-	} else {
-		if (connect)
-			pr_info("%s root hub\n", __func__);
-	}
+		if (check_gamepad_device(dev))
+			send_otg_notify(o_notify,
+				NOTIFY_EVENT_GAMEPAD_CONNECT, 1);
+		else if (check_lanhub_device(dev))
+			send_otg_notify(o_notify,
+				NOTIFY_EVENT_LANHUB_CONNECT, 1);
+		else
+			;
+	} else
+		pr_info("%s root hub\n", __func__);
 
 	return 0;
 }
@@ -282,8 +271,8 @@ static void check_device_speed(struct usb_device *dev, bool on)
 	struct usb_hub *hub;
 	int port = 0;
 	int speed = USB_SPEED_UNKNOWN;
-	static int hs_hub;
-	static int ss_hub;
+	static int hs_hub = 0;
+	static int ss_hub = 0;
 
 	if (!o_notify) {
 		pr_err("%s otg_notify is null\n", __func__);
@@ -320,8 +309,7 @@ static void check_device_speed(struct usb_device *dev, bool on)
 			hs_hub = 1;
 		else
 			hs_hub = 0;
-	} else
-		;
+	} else ;
 
 	if (ss_hub || hs_hub) {
 		if (speed > o_notify->speed)
@@ -417,7 +405,7 @@ static int dev_notify(struct notifier_block *self,
 {
 	switch (action) {
 	case USB_DEVICE_ADD:
-		call_device_notify(dev, 1);
+		call_device_notify(dev);
 		call_battery_notify(dev, 1);
 		check_device_speed(dev, 1);
 		update_hub_autosuspend_timer(dev);
@@ -426,7 +414,6 @@ static int dev_notify(struct notifier_block *self,
 #endif
 		break;
 	case USB_DEVICE_REMOVE:
-		call_device_notify(dev, 0);
 		call_battery_notify(dev, 0);
 		check_device_speed(dev, 0);
 		break;

@@ -23,6 +23,12 @@
 #define MAX_CPU_FEATURES	(8 * sizeof(elf_hwcap))
 #define cpu_feature(x)		ilog2(HWCAP_ ## x)
 
+#define ARM64_SSBD_UNKNOWN		-1
+#define ARM64_SSBD_FORCE_DISABLE	0
+#define ARM64_SSBD_KERNEL		1
+#define ARM64_SSBD_FORCE_ENABLE		2
+#define ARM64_SSBD_MITIGATED		3
+
 #ifndef __ASSEMBLY__
 
 #include <linux/bug.h>
@@ -48,9 +54,6 @@ enum ftr_type {
 	FTR_LOWER_SAFE,	/* Smaller value is safe */
 	FTR_HIGHER_SAFE,/* Bigger value is safe */
 };
-
-#define FTR_STRICT_WITH(config)	\
-		(IS_ENABLED(config) ? FTR_STRICT : FTR_NONSTRICT)
 
 #define FTR_STRICT	true	/* SANITY check strict matching required */
 #define FTR_NONSTRICT	false	/* SANITY check ignored */
@@ -264,12 +267,6 @@ static inline bool system_uses_ttbr0_pan(void)
 	return IS_ENABLED(CONFIG_ARM64_SW_TTBR0_PAN) &&
 		!cpus_have_const_cap(ARM64_HAS_PAN);
 }
-
-#define ARM64_SSBD_UNKNOWN		-1
-#define ARM64_SSBD_FORCE_DISABLE	0
-#define ARM64_SSBD_KERNEL		1
-#define ARM64_SSBD_FORCE_ENABLE		2
-#define ARM64_SSBD_MITIGATED		3
 
 static inline int arm64_get_ssbd_state(void)
 {

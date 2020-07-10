@@ -1,10 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-c8sectpfe-y += c8sectpfe-core.o c8sectpfe-common.o c8sectpfe-dvb.o \
-		c8sectpfe-debugfs.o
-
-obj-$(CONFIG_DVB_C8SECTPFE) += c8sectpfe.o
-
-ccflags-y += -Idrivers/media/i2c
-ccflags-y += -Idrivers/media/common
-ccflags-y += -Idrivers/media/dvb-core/ -Idrivers/media/dvb-frontends/ \
-		-Idrivers/media/tuners/
+version https://git-lfs.github.com/spec/v1
+oid sha256:b165565619e228548706850a7458a4fd076bc3663d1946bc0de2da0f28a4ca9f
+size 338

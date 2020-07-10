@@ -1,30 +1,3 @@
-generic-y += barrier.h
-generic-y += bpf_perf_event.h
-generic-y += bug.h
-generic-y += clkdev.h
-generic-y += current.h
-generic-y += delay.h
-generic-y += device.h
-generic-y += emergency-restart.h
-generic-y += exec.h
-generic-y += extable.h
-generic-y += ftrace.h
-generic-y += futex.h
-generic-y += hardirq.h
-generic-y += hw_irq.h
-generic-y += io.h
-generic-y += irq_regs.h
-generic-y += irq_work.h
-generic-y += kdebug.h
-generic-y += mcs_spinlock.h
-generic-y += mm-arch-hooks.h
-generic-y += param.h
-generic-y += pci.h
-generic-y += percpu.h
-generic-y += preempt.h
-generic-y += switch_to.h
-generic-y += topology.h
-generic-y += trace_clock.h
-generic-y += word-at-a-time.h
-generic-y += xor.h
-generic-y += kprobes.h
+version https://git-lfs.github.com/spec/v1
+oid sha256:9899a1613aba71263f3170146626e30c61b1693dd8ba2510702bc7fccd2d2e94
+size 702

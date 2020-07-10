@@ -39,10 +39,17 @@
 #if defined(CONFIG_USB_HOST_NOTIFY)
 #include <linux/usb_notify.h>
 #endif
-#include "../battery_v2/include/sec_charging_common.h"
+#if defined(CONFIG_CCIC_ALTERNATE_MODE)
 #include <linux/ccic/max77705_alternate.h>
-#if defined(CONFIG_COMBO_REDRIVER_PTN36502)
+#endif
+#include "../battery_v2/include/sec_charging_common.h"
+#if defined(CONFIG_COMBO_REDRIVER)
+#include <linux/combo_redriver/ptn38003.h>
+#elif defined(CONFIG_COMBO_REDRIVER_PTN36502)
 #include <linux/combo_redriver/ptn36502.h>
+#endif
+#if defined(CONFIG_USB_REDRIVER_NB7VPQ904M)
+#include <linux/combo_redriver/ssusb-redriver-nb7vpq904m.h>
 #endif
 
 extern struct pdic_notifier_struct pd_noti;
@@ -190,6 +197,7 @@ void max77705_dp_detach(void *data)
 void max77705_notify_dr_status(struct max77705_usbc_platform_data *usbpd_data, uint8_t attach)
 {
 	struct max77705_pd_data *pd_data = usbpd_data->pd_data;
+	int timeleft = 0;
 
 	msg_maxim("Data Role: %s Power Role: %s State: %s",
 		pd_data->current_dr ? "DFP":"UFP",
@@ -207,10 +215,16 @@ void max77705_notify_dr_status(struct max77705_usbc_platform_data *usbpd_data, u
 						usbpd_data->pd_state);
 				if (usbpd_data->dp_is_connect == 1)
 					max77705_dp_detach(usbpd_data);
+				reinit_completion(&usbpd_data->suspend_wait);
 				max77705_ccic_event_work(usbpd_data,
 						CCIC_NOTIFY_DEV_USB, CCIC_NOTIFY_ID_USB,
 						0/*attach*/, USB_STATUS_NOTIFY_DETACH/*drp*/, 0);
 				usbpd_data->is_host = HOST_OFF;
+				if (!dwc3_msm_is_suspended()) {
+					timeleft = wait_for_completion_interruptible_timeout(&usbpd_data->suspend_wait,
+						msecs_to_jiffies(USB_PHY_SUSPEND_WAIT_MS));
+					msg_maxim("%s suspend_wait timeleft = %d\n", __func__, timeleft);
+				}
 			}
 			if (usbpd_data->is_client == CLIENT_OFF) {
 				usbpd_data->is_client = CLIENT_ON;
@@ -226,16 +240,22 @@ void max77705_notify_dr_status(struct max77705_usbc_platform_data *usbpd_data, u
 
 		} else if (pd_data->current_dr == DFP) {
 			if (usbpd_data->is_client == CLIENT_ON) {
-				msg_maxim("pd_state:%02d, turn off client",
-						usbpd_data->pd_state);
+				msg_maxim("%s : pd_state:%02d, turn off client\n",
+							__func__, usbpd_data->pd_state);
+				reinit_completion(&usbpd_data->suspend_wait);
 				max77705_ccic_event_work(usbpd_data,
 					CCIC_NOTIFY_DEV_USB, CCIC_NOTIFY_ID_USB,
 					0/*attach*/, USB_STATUS_NOTIFY_DETACH/*drp*/, 0);
 				usbpd_data->is_client = CLIENT_OFF;
+				if (!dwc3_msm_is_suspended()) {
+					timeleft = wait_for_completion_interruptible_timeout(&usbpd_data->suspend_wait,
+						msecs_to_jiffies(USB_PHY_SUSPEND_WAIT_MS));
+					msg_maxim("%s suspend_wait timeleft = %d\n", __func__, timeleft);
+				}
 			}
 			if (usbpd_data->is_host == HOST_OFF) {
 				usbpd_data->is_host = HOST_ON;
-#if defined(CONFIG_USB_AUDIO_ENHANCED_DETECT_TIME)
+#ifdef CONFIG_USB_AUDIO_ENHANCED_DETECT_TIME
 				max77705_clk_booster_set(usbpd_data, 1);
 #endif
 				/* muic */
@@ -265,10 +285,9 @@ void max77705_notify_dr_status(struct max77705_usbc_platform_data *usbpd_data, u
 				schedule_delayed_work(&usbpd_data->acc_detach_work,
 					msecs_to_jiffies(0));
 		}
-#if defined(CONFIG_USB_AUDIO_ENHANCED_DETECT_TIME)
+#ifdef CONFIG_USB_AUDIO_ENHANCED_DETECT_TIME
 		max77705_clk_booster_set(usbpd_data, 0);
 #endif
-		usbpd_data->mdm_block = 0;
 		usbpd_data->is_host = HOST_OFF;
 		usbpd_data->is_client = CLIENT_OFF;
 		/* muic */
@@ -441,22 +460,22 @@ static irqreturn_t max77705_ccistat_irq(int irq, void *data)
 	pr_debug("%s: IRQ(%d)_IN\n", __func__, irq);
 	ccistat = (cc_data->cc_status0 & BIT_CCIStat) >> FFS(BIT_CCIStat);
 	switch (ccistat) {
-	case NOT_IN_UFP_MODE:
+	case 0:
 		msg_maxim("Not in UFP");
 		break;
 
-	case CCI_500mA:
+	case 1:
 		msg_maxim("Vbus Current is 500mA!");
 		break;
 
-	case CCI_1_5A:
+	case 2:
 		msg_maxim("Vbus Current is 1.5A!");
 #if defined(CONFIG_TYPEC)
 		mode = TYPEC_PWR_MODE_1_5A;
 #endif
 		break;
 
-	case CCI_3_0A:
+	case 3:
 		msg_maxim("Vbus Current is 3.0A!");
 #if defined(CONFIG_TYPEC)
 		mode = TYPEC_PWR_MODE_3_0A;
@@ -551,9 +570,6 @@ static void max77705_ccstat_irq_handler(void *data, int irq)
 #if defined(CONFIG_USB_HOST_NOTIFY)
 	struct otg_notify *o_notify = get_otg_notify();
 #endif
-#ifdef CONFIG_USB_NOTIFY_PROC_LOG
-	int event;
-#endif
 
 	max77705_read_reg(usbc_data->muic, REG_CC_STATUS0, &cc_data->cc_status0);
 	ccstat =  (cc_data->cc_status0 & BIT_CCStat) >> FFS(BIT_CCStat);
@@ -595,14 +611,19 @@ static void max77705_ccstat_irq_handler(void *data, int irq)
 				complete(&usbc_data->typec_reverse_completion);
 			}
 #endif
+
 			max77705_notify_dr_status(usbc_data, 0);
-			usbc_data->plug_attach_done = 0;
 			usbc_data->cc_data->current_pr = 0xFF;
 			usbc_data->pd_data->current_dr = 0xFF;
 			usbc_data->cc_data->current_vcon = 0xFF;
 			usbc_data->detach_done_wait = 1;
-#if defined(CONFIG_COMBO_REDRIVER_PTN36502)
+#if defined(CONFIG_COMBO_REDRIVER)
+			ptn38003_config(SAFE_STATE, 0);
+#elif defined(CONFIG_COMBO_REDRIVER_PTN36502)
 			ptn36502_config(SAFE_STATE, 0);
+#endif
+#if defined(CONFIG_USB_REDRIVER_NB7VPQ904M)
+			ssusb_redriver_config(OP_MODE_USB, false);
 #endif
 		}
 	} else {
@@ -636,13 +657,17 @@ static void max77705_ccstat_irq_handler(void *data, int irq)
 #endif
 			max77705_detach_pd(usbc_data);
 			usbc_data->pd_pr_swap = cc_No_Connection;
-			max77705_vbus_turn_on_ctrl(usbc_data, OFF, false);
+			if (usbc_data->plug_attach_done)
+				max77705_vbus_turn_on_ctrl(usbc_data, OFF, false);
 #if defined(CONFIG_SEC_FACTORY)
 			factory_execute_monitor(FAC_ABNORMAL_REPEAT_STATE);
 #endif
+			cancel_delayed_work(&usbc_data->check_discover_modes_work);
+			usbc_data->plug_attach_done = 0;
 			break;
 	case cc_SINK:
 			msg_maxim("ccstat : cc_SINK");
+			wake_lock_timeout(&cc_data->ccstat_wake_lock, HZ);
 			usbc_data->pd_data->cc_status = CC_SNK;
 			usbc_data->pn_flag = false;
 #if defined(CONFIG_DUAL_ROLE_USB_INTF)
@@ -650,6 +675,12 @@ static void max77705_ccstat_irq_handler(void *data, int irq)
 			if (usbc_data->dual_role != NULL &&
 				usbc_data->data_role != USB_STATUS_NOTIFY_DETACH)
 				dual_role_instance_changed(usbc_data->dual_role);
+			if (usbc_data->try_state_change) {
+				/* Role change try and new mode detected */
+				msg_maxim("usb: reverse_completion");
+				usbc_data->try_state_change = TYPE_C_DETACH;
+				complete(&usbc_data->reverse_completion);
+			}
 #elif defined(CONFIG_TYPEC)
 			usbc_data->typec_power_role = TYPEC_SINK;
 			typec_set_pwr_role(usbc_data->port, TYPEC_SINK);
@@ -689,6 +720,12 @@ static void max77705_ccstat_irq_handler(void *data, int irq)
 			if (usbc_data->dual_role != NULL &&
 				usbc_data->data_role != USB_STATUS_NOTIFY_DETACH)
 				dual_role_instance_changed(usbc_data->dual_role);
+			if (usbc_data->try_state_change) {
+				/* Role change try and new mode detected */
+				msg_maxim("usb: reverse_completion");
+				usbc_data->try_state_change = TYPE_C_DETACH;
+				complete(&usbc_data->reverse_completion);
+			}
 #elif defined(CONFIG_TYPEC)
 			usbc_data->typec_power_role = TYPEC_SOURCE;
 			typec_set_pwr_role(usbc_data->port, TYPEC_SOURCE);
@@ -713,10 +750,6 @@ static void max77705_ccstat_irq_handler(void *data, int irq)
 			break;
 	case cc_Audio_Accessory:
 			msg_maxim("ccstat : cc_Audio_Accessory");
-#ifdef CONFIG_USB_NOTIFY_PROC_LOG
-			event = NOTIFY_EXTRA_USB_ANALOGAUDIO;
-			store_usblog_notify(NOTIFY_EXTRA, (void *)&event, NULL);
-#endif
 			usbc_data->acc_type = CCIC_DOCK_TYPEC_ANALOG_EARPHONE;
 			max77705_process_check_accessory(usbc_data);
 			break;

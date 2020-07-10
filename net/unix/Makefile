@@ -1,12 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the Linux unix domain socket layer.
-#
-
-obj-$(CONFIG_UNIX)	+= unix.o
-
-unix-y			:= af_unix.o garbage.o
-unix-$(CONFIG_SYSCTL)	+= sysctl_net_unix.o
-
-obj-$(CONFIG_UNIX_DIAG)	+= unix_diag.o
-unix_diag-y		:= diag.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:6285d59568c27eb798b94ab4eae6d2f03b6f9799e1222739923c27e859a6ed96
+size 259

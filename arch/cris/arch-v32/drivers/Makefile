@@ -1,12 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for Etrax-specific drivers
-#
-
-obj-$(CONFIG_ETRAX_STREAMCOPROC)        += cryptocop.o
-obj-$(CONFIG_ETRAX_AXISFLASHMAP)        += axisflashmap.o
-obj-$(CONFIG_ETRAXFS)                   += mach-fs/
-obj-$(CONFIG_CRIS_MACH_ARTPEC3)         += mach-a3/
-obj-$(CONFIG_ETRAX_IOP_FW_LOAD)         += iop_fw_load.o
-obj-$(CONFIG_ETRAX_SYNCHRONOUS_SERIAL)	+= sync_serial.o
-obj-$(CONFIG_PCI)			+= pci/
+version https://git-lfs.github.com/spec/v1
+oid sha256:a67dda647055d61840502ca748c3e01edcb0a7142fb9b5d9ea5171051bc01d2b
+size 436

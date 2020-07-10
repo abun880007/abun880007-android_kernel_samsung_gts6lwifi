@@ -1,8 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-hostprogs-y	:= mdp
-HOST_EXTRACFLAGS += \
-	-I$(srctree)/include/uapi -I$(srctree)/include \
-	-I$(srctree)/security/selinux/include
-
-always		:= $(hostprogs-y)
-clean-files	:= policy.* file_contexts
+version https://git-lfs.github.com/spec/v1
+oid sha256:182052352978ea62fcb9e21dcb388990c9a4f0cef9058457a441fe0225f0ad52
+size 230

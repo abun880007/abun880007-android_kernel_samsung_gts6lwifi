@@ -1,9 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_EEPROM_AT24)	+= at24.o
-obj-$(CONFIG_EEPROM_AT25)	+= at25.o
-obj-$(CONFIG_EEPROM_LEGACY)	+= eeprom.o
-obj-$(CONFIG_EEPROM_MAX6875)	+= max6875.o
-obj-$(CONFIG_EEPROM_93CX6)	+= eeprom_93cx6.o
-obj-$(CONFIG_EEPROM_93XX46)	+= eeprom_93xx46.o
-obj-$(CONFIG_EEPROM_DIGSY_MTC_CFG) += digsy_mtc_eeprom.o
-obj-$(CONFIG_EEPROM_IDT_89HPESX) += idt_89hpesx.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:afc822e08a02702863ee0f35c30510482a55fb59f178d06a5697403fa33f786d
+size 388

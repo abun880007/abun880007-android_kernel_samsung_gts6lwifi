@@ -1,15 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_DTB_RT2880_EVAL)	+= rt2880_eval.dtb
-dtb-$(CONFIG_DTB_RT305X_EVAL)	+= rt3052_eval.dtb
-dtb-$(CONFIG_DTB_RT3883_EVAL)	+= rt3883_eval.dtb
-dtb-$(CONFIG_DTB_MT7620A_EVAL)	+= mt7620a_eval.dtb
-dtb-$(CONFIG_DTB_OMEGA2P)	+= omega2p.dtb
-dtb-$(CONFIG_DTB_VOCORE2)	+= vocore2.dtb
-
-obj-y				+= $(patsubst %.dtb, %.dtb.o, $(dtb-y))
-
-# Force kbuild to make empty built-in.o if necessary
-obj-				+= dummy.o
-
-always				:= $(dtb-y)
-clean-files			:= *.dtb *.dtb.S
+version https://git-lfs.github.com/spec/v1
+oid sha256:1f645ad448494c0664d52a18eb12ad754f5ba18f918711e00ac1984a24202366
+size 492

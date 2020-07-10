@@ -1,10 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the PowerPC 8xx linux kernel.
-#
-obj-y			+= m8xx_setup.o machine_check.o pic.o
-obj-$(CONFIG_MPC885ADS)   += mpc885ads_setup.o
-obj-$(CONFIG_MPC86XADS)   += mpc86xads_setup.o
-obj-$(CONFIG_PPC_EP88XC)  += ep88xc.o
-obj-$(CONFIG_PPC_ADDER875) += adder875.o
-obj-$(CONFIG_TQM8XX)      += tqm8xx_setup.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:6fb4d5297c68cf86f0d079e9472100c6a072f5b200ede7429bc8977b544ff631
+size 347

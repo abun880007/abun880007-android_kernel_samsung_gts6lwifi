@@ -67,7 +67,7 @@ static int abc_hub_bootc_get_boot_time(void)
 			break;
 		pos += offset;
 		if (!strcmp(buf, "bootcomplete")) {
-			if (sscanf(boot_stat + pos, "%d %n", &boot_time, &offset) != 1)
+			if (sscanf(boot_stat + pos, "%20s %d %n", buf, &boot_time, &offset) != 2)
 				break;
 		}
 	}
@@ -104,7 +104,7 @@ static void abc_hub_bootc_work_func(struct work_struct *work)
 	pr_info("%s: boot_time : %d, time_spec : %d(%d + %d))\n",
 		__func__, boot_time, fixed_time_spec, bootc_pdata->time_spec, bootc_pdata->time_spec_offset);
 
-	if (boot_time > fixed_time_spec) {
+	if (boot_time > bootc_pdata->time_spec) {
 		pr_info("%s: booting time is spec out\n", __func__);
 		abc_hub_send_event("MODULE=bootc@ERROR=boot_time_fail");
 	} else if (boot_time < 0) {

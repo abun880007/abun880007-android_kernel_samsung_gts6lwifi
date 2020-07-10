@@ -1,7 +1,3 @@
-#
-# Makefile for Xillybus driver
-#
-
-obj-$(CONFIG_XILLYBUS)		+= xillybus_core.o
-obj-$(CONFIG_XILLYBUS_PCIE)	+= xillybus_pcie.o
-obj-$(CONFIG_XILLYBUS_OF)	+= xillybus_of.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:6ce42b06df7d1bbba292e62132b57dc0b41dc6be3e01b3a5cca26ea4505c318a
+size 169

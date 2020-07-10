@@ -1,17 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-#  Makefile for the Linux Controller Area Network core.
-#
-
-obj-$(CONFIG_CAN)	+= can.o
-can-y			:= af_can.o
-can-$(CONFIG_PROC_FS)	+= proc.o
-
-obj-$(CONFIG_CAN_RAW)	+= can-raw.o
-can-raw-y		:= raw.o
-
-obj-$(CONFIG_CAN_BCM)	+= can-bcm.o
-can-bcm-y		:= bcm.o
-
-obj-$(CONFIG_CAN_GW)	+= can-gw.o
-can-gw-y		:= gw.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:0ec071303a3c408e658f70f572bd5372bf702b8005c3dab5b3dfa54ff2c6080c
+size 339

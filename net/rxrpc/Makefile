@@ -1,35 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for Linux kernel RxRPC
-#
-
-obj-$(CONFIG_AF_RXRPC) += rxrpc.o
-
-rxrpc-y := \
-	af_rxrpc.o \
-	call_accept.o \
-	call_event.o \
-	call_object.o \
-	conn_client.o \
-	conn_event.o \
-	conn_object.o \
-	conn_service.o \
-	input.o \
-	insecure.o \
-	key.o \
-	local_event.o \
-	local_object.o \
-	misc.o \
-	net_ns.o \
-	output.o \
-	peer_event.o \
-	peer_object.o \
-	recvmsg.o \
-	security.o \
-	sendmsg.o \
-	skbuff.o \
-	utils.o
-
-rxrpc-$(CONFIG_PROC_FS) += proc.o
-rxrpc-$(CONFIG_RXKAD) += rxkad.o
-rxrpc-$(CONFIG_SYSCTL) += sysctl.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:c8c0ffb5eabcca9c7b5e89aa8211b7f0ed21872039023600b0ddcf6a7767b201
+size 554

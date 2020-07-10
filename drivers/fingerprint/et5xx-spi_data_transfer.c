@@ -1054,3 +1054,148 @@ end:
 	return status;
 #endif
 }
+
+int etspi_io_nbm_read(struct etspi_data *etspi, struct egis_ioc_transfer *ioc)
+{
+#ifdef ENABLE_SENSORS_FPRINT_SECURE
+	return 0;
+#else
+	int status;
+	struct spi_message m;
+	u8 *buf = NULL;
+
+	struct spi_transfer xfer = {
+		.tx_buf = NULL,
+		.rx_buf = NULL,
+		.len = ioc->len + 1,
+	};
+
+	if ( xfer.len >= LARGE_SPI_TRANSFER_BUFFER) {
+		if ((xfer.len) % DIVISION_OF_IMAGE != 0)
+			xfer.len = xfer.len + (DIVISION_OF_IMAGE - (xfer.len % DIVISION_OF_IMAGE));
+	}
+
+	buf = kzalloc(xfer.len, GFP_KERNEL);
+
+	if (buf == NULL) return -ENOMEM;
+
+	xfer.tx_buf = xfer.rx_buf = buf;
+	buf[0] = OP_NBM_R;
+	
+	pr_debug("%s len = %d, xfer.len = %d, buf = %p, rx_buf = %p\n", __func__,
+		ioc->len, xfer.len, buf, ioc->rx_buf);
+
+	spi_message_init(&m);
+	spi_message_add_tail(&xfer, &m);
+	status = spi_sync(etspi->spi, &m);
+	if (status < 0) {
+		pr_err(KERN_ERR "%s read data error status = %d\n", __func__, status);
+		goto end;
+	}
+
+	if (copy_to_user((u8 __user *) (uintptr_t) ioc->rx_buf, buf + 1, ioc->len)) {
+		pr_err(KERN_ERR "buffer copy_to_user fail status\n");
+		status = -EFAULT;
+	}
+end:	
+	if(buf) kfree(buf);
+	return status;
+#endif
+}
+
+int etspi_io_clb_read(struct etspi_data *etspi, struct egis_ioc_transfer *ioc)
+{
+#ifdef ENABLE_SENSORS_FPRINT_SECURE
+	return 0;
+#else
+	int status;
+	struct spi_message m;
+	u8 *buf = NULL;
+
+	struct spi_transfer xfer = {
+		.tx_buf = NULL,
+		.rx_buf = NULL,
+		.len = ioc->len + 1,
+	};
+
+	if ( xfer.len >= LARGE_SPI_TRANSFER_BUFFER) {
+		if ((xfer.len) % DIVISION_OF_IMAGE != 0)
+			xfer.len = xfer.len + (DIVISION_OF_IMAGE - (xfer.len % DIVISION_OF_IMAGE));
+	}
+
+	buf = kzalloc(xfer.len, GFP_KERNEL);
+
+	if (buf == NULL) return -ENOMEM;
+
+	xfer.tx_buf = xfer.rx_buf = buf;
+	buf[0] = OP_CLB_R;
+	
+	pr_debug("%s len = %d, xfer.len = %d, buf = %p, rx_buf = %p\n", __func__,
+		ioc->len, xfer.len, buf, ioc->rx_buf);
+
+	spi_message_init(&m);
+	spi_message_add_tail(&xfer, &m);
+	status = spi_sync(etspi->spi, &m);
+	if (status < 0) {
+		pr_err(KERN_ERR "%s read data error status = %d\n", __func__, status);
+		goto end;
+	}
+
+	if (copy_to_user((u8 __user *) (uintptr_t) ioc->rx_buf, buf + 1, ioc->len)) {
+		pr_err(KERN_ERR "buffer copy_to_user fail status\n");
+		status = -EFAULT;
+	}
+end:	
+	if(buf) kfree(buf);
+	return status;
+#endif
+}
+
+int etspi_io_clb_write(struct etspi_data *etspi, struct egis_ioc_transfer *ioc)
+{
+#ifdef ENABLE_SENSORS_FPRINT_SECURE
+	return 0;
+#else
+	int status;
+	struct spi_message m;
+	u8 *buf = NULL;
+
+	struct spi_transfer xfer = {
+		.tx_buf = NULL,
+		.rx_buf = NULL,
+		.len = ioc->len + 1,
+	};
+
+
+	if ( xfer.len >= LARGE_SPI_TRANSFER_BUFFER) {
+		if ((xfer.len) % DIVISION_OF_IMAGE != 0)
+			xfer.len = xfer.len + (DIVISION_OF_IMAGE - (xfer.len % DIVISION_OF_IMAGE));
+	}
+	
+	buf = kzalloc(xfer.len, GFP_KERNEL);
+	if (buf == NULL) return -ENOMEM;
+
+	if (copy_from_user((u8 __user *) (uintptr_t) buf + 1, ioc->tx_buf, ioc->len)) {
+		pr_err(KERN_ERR "buffer copy_from_user fail status\n");
+		status = -EFAULT;
+		goto end;
+	}
+
+	xfer.tx_buf = xfer.rx_buf = buf;
+	buf[0] = OP_CLB_W;
+	
+	pr_debug("%s len = %d, xfer.len = %d, buf = %p, tx_buf = %p\n", __func__,
+		ioc->len, xfer.len, buf, ioc->tx_buf);
+
+	spi_message_init(&m);
+	spi_message_add_tail(&xfer, &m);
+	status = spi_sync(etspi->spi, &m);
+
+	if (status < 0) {
+		pr_err(KERN_ERR "%s read data error status = %d\n", __func__, status);
+	}
+end:
+	if(buf) kfree(buf);
+	return status;
+#endif
+}

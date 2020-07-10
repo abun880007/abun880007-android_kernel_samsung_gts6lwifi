@@ -1,5 +1,3 @@
-obj-y += events.o
-
-events-y += events_base.o
-events-y += events_2l.o
-events-y += events_fifo.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:5b5759bcc5eaa141b99f62063a9e4cfdd7b6a2eea1dfac89619d719bdbd306be
+size 95

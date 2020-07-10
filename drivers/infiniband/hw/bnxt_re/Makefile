@@ -1,7 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-
-ccflags-y := -Idrivers/net/ethernet/broadcom/bnxt
-obj-$(CONFIG_INFINIBAND_BNXT_RE) += bnxt_re.o
-bnxt_re-y := main.o ib_verbs.o \
-	     qplib_res.o qplib_rcfw.o	\
-	     qplib_sp.o qplib_fp.o  hw_counters.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:236eb4d2c922ec0cd49301ae726e863e3f6d4b6d0913290900bff465fb0b1819
+size 241

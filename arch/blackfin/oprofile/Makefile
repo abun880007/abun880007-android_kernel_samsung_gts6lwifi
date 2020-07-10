@@ -1,14 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# arch/blackfin/oprofile/Makefile
-#
-
-obj-$(CONFIG_OPROFILE) += oprofile.o
-
-DRIVER_OBJS := $(addprefix ../../../drivers/oprofile/, \
-		oprof.o cpu_buffer.o buffer_sync.o \
-		event_buffer.o oprofile_files.o \
-		oprofilefs.o oprofile_stats.o \
-		timer_int.o )
-
-oprofile-y := $(DRIVER_OBJS) bfin_oprofile.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:af0ddf5651d365dd5505df44c66659ac8cbfbd5136564d56a76b685b0456dce5
+size 340

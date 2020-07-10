@@ -1,24 +1,3 @@
-# When adding new entries keep the list in alphabetical order
-choice
-	prompt "Version of GAF structure"
-	default GAF_V5 if PROCA
-	default GAF_V4 if FIVE
-	default GAF_V3
-	config GAF_V3
-		bool "Use GAF structure version 3"
-		help
-		  Default option for FIVE-disabled kernel
-	config GAF_V4
-		bool "Use GAF structure version 4"
-		help
-		  Default option for kernel without PROCA LSM module.
-	config GAF_V5
-		bool "Use GAF structure version 5"
-		help
-		  Default option for kernel with PROCA 2.0-2.1 LSM module.
-	config GAF_V6
-		bool "Use GAF structure version 6"
-		help
-		  Default option for kernel with PROCA 2.2+ LSM module.
-endchoice
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:14660cdf0dd30aefe0ca025be4922a7446c53f97048691188a761de57468b1cd
+size 635

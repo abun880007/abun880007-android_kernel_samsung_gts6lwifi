@@ -1,9 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-ch7006-y := ch7006_drv.o ch7006_mode.o
-obj-$(CONFIG_DRM_I2C_CH7006) += ch7006.o
-
-sil164-y := sil164_drv.o
-obj-$(CONFIG_DRM_I2C_SIL164) += sil164.o
-
-tda998x-y := tda998x_drv.o
-obj-$(CONFIG_DRM_I2C_NXP_TDA998X) += tda998x.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:6606e8e2dc85af14d0f1443d501d676e9880e220f2bfc8b7d4d0801108d3490b
+size 257

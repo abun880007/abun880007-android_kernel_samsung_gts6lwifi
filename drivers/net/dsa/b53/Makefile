@@ -1,7 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_B53)		+= b53_common.o
-
-obj-$(CONFIG_B53_SPI_DRIVER)	+= b53_spi.o
-obj-$(CONFIG_B53_MDIO_DRIVER)	+= b53_mdio.o
-obj-$(CONFIG_B53_MMAP_DRIVER)	+= b53_mmap.o
-obj-$(CONFIG_B53_SRAB_DRIVER)	+= b53_srab.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:5c30b6a0cc48c5efd24f7866009b509320bec00efcb0a4bfcf34b1a34d060866
+size 245

@@ -1,11 +1,3 @@
-config USB_PULSE8_CEC
-	tristate "Pulse Eight HDMI CEC"
-	depends on USB_ACM
-	select CEC_CORE
-	select SERIO
-	select SERIO_SERPORT
-	---help---
-	  This is a cec driver for the Pulse Eight HDMI CEC device.
-
-	  To compile this driver as a module, choose M here: the
-	  module will be called pulse8-cec.
+version https://git-lfs.github.com/spec/v1
+oid sha256:523332c130d8c2620bb5aba949772c15a685d3b54e62e179a1513f1d1c510561
+size 297

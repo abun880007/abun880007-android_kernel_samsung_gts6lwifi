@@ -1,12 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-TEST_GEN_PROGS := gettimeofday context_switch mmap_bench futex_bench null_syscall
-
-CFLAGS += -O2
-
-include ../../lib.mk
-
-$(TEST_GEN_PROGS): ../harness.c
-
-$(OUTPUT)/context_switch: ../utils.c
-$(OUTPUT)/context_switch: CFLAGS += -maltivec -mvsx -mabi=altivec
-$(OUTPUT)/context_switch: LDLIBS += -lpthread
+version https://git-lfs.github.com/spec/v1
+oid sha256:cd89193db9661af511a4190420f240def521146c2c7290d8c3a8e1ddcb0a90df
+size 337

@@ -1,2 +1,3 @@
-obj-$(CONFIG_PHY_SUN4I_USB)		+= phy-sun4i-usb.o
-obj-$(CONFIG_PHY_SUN9I_USB)		+= phy-sun9i-usb.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:b19653e52ccfe82419a785d53f509d38031bc58bbae39a232fc998dac1960ee5
+size 96

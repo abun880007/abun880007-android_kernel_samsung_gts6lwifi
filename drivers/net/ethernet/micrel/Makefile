@@ -1,10 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the Micrel network device drivers.
-#
-
-obj-$(CONFIG_ARM_KS8695_ETHER) += ks8695net.o
-obj-$(CONFIG_KS8842) += ks8842.o
-obj-$(CONFIG_KS8851) += ks8851.o
-obj-$(CONFIG_KS8851_MLL) += ks8851_mll.o
-obj-$(CONFIG_KSZ884X_PCI) += ksz884x.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:40d8b729630d296c9e925184c6b24ed7f2ecc8b32b1941c6b8390dd3f16f4714
+size 282

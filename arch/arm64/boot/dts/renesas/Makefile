@@ -1,9 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_ARCH_R8A7795) += r8a7795-salvator-x.dtb r8a7795-h3ulcb.dtb
-dtb-$(CONFIG_ARCH_R8A7795) += r8a7795-salvator-xs.dtb
-dtb-$(CONFIG_ARCH_R8A7795) += r8a7795-es1-salvator-x.dtb r8a7795-es1-h3ulcb.dtb
-dtb-$(CONFIG_ARCH_R8A7796) += r8a7796-salvator-x.dtb r8a7796-m3ulcb.dtb
-dtb-$(CONFIG_ARCH_R8A77995) += r8a77995-draak.dtb
-
-always		:= $(dtb-y)
-clean-files	:= *.dtb
+version https://git-lfs.github.com/spec/v1
+oid sha256:3a4cb69156eb67b5c5bbc6fdd23859ac41029618b854d66df804db5f2a3ca9f4
+size 405

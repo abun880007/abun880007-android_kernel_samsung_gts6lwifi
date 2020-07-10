@@ -43,8 +43,8 @@
  * determine the type of error, make appropriate log entries, and
  * return an error code.
  */
-#ifdef CONFIG_ECRYPTFS_FEK_INTEGRITY
-static int eCryptfs_hmac_sha256(u8 *key, u8 ksize, char *plaintext, u8 psize, u8 *output)
+ #ifdef CONFIG_ECRYPTFS_FEK_INTEGRITY
+static int calculate_hmac_sha256(u8 *key, u8 ksize, char *plaintext, u8 psize, u8 *output)
 {
 	struct crypto_shash *tfm;
 	int rc = 0;
@@ -1863,13 +1863,13 @@ decrypt_passphrase_encrypted_session_key(struct ecryptfs_auth_tok *auth_tok,
 	if(crypt_stat->flags & ECRYPTFS_ENABLE_HMAC) {
 		if (crypt_stat->flags & ECRYPTFS_SUPPORT_HMAC_KEY
 				&& auth_tok->token.password.session_key_encryption_key_bytes == ECRYPTFS_MAX_KEY_BYTES) {
-			rz = eCryptfs_hmac_sha256(auth_tok->token.password.session_key_encryption_key + SEC_ECRYPTFS_HMAC_KEY_SIZE,
+			rz = calculate_hmac_sha256(auth_tok->token.password.session_key_encryption_key + SEC_ECRYPTFS_HMAC_KEY_SIZE,
 				crypt_stat->key_size, auth_tok->session_key.decrypted_key, auth_tok->session_key.encrypted_key_size, hmac_hash);
 		} else {
-			rz = eCryptfs_hmac_sha256(auth_tok->token.password.session_key_encryption_key,
+			rz = calculate_hmac_sha256(auth_tok->token.password.session_key_encryption_key,
 				crypt_stat->key_size, auth_tok->session_key.decrypted_key, auth_tok->session_key.encrypted_key_size, hmac_hash);
 		}
-
+	
 		if (unlikely(rz)) {
 			mutex_unlock(tfm_mutex);
 			ecryptfs_printk(KERN_ERR, "Error Generating Hash : rz = [%d]\n", rz);
@@ -2371,10 +2371,10 @@ write_tag_3_packet(char *dest, size_t *remaining_bytes,
 	struct crypto_skcipher *tfm;
 	struct skcipher_request *req;
 	int rc = 0;
+	char *iv = NULL;
 
 #ifdef CONFIG_CRYPTO_FIPS
 	char *hash_key = NULL;
-	char *iv = NULL;
 #endif
 	(*packet_size) = 0;
 	ecryptfs_from_hex(key_rec->sig, auth_tok->token.password.signature,
@@ -2434,16 +2434,15 @@ write_tag_3_packet(char *dest, size_t *remaining_bytes,
 				auth_tok->token.password.
 				session_key_encryption_key_bytes);
 		memcpy(session_key_encryption_key,
-		       auth_tok->token.password.session_key_encryption_key,
-		       crypt_stat->key_size);
-							
+			 	auth_tok->token.password.session_key_encryption_key,
+				crypt_stat->key_size);
+						
 		if (crypt_stat->flags & ECRYPTFS_SUPPORT_HMAC_KEY 
 				&& auth_tok->token.password.session_key_encryption_key_bytes == ECRYPTFS_MAX_KEY_BYTES){
-			memcpy(session_hmac_key,
+		memcpy(session_hmac_key,
 				auth_tok->token.password.session_key_encryption_key + SEC_ECRYPTFS_HMAC_KEY_SIZE,
 				crypt_stat->key_size);
 		}
-			
 		ecryptfs_printk(KERN_DEBUG,
 				"Cached session key encryption key:\n");
 		if (ecryptfs_verbosity > 0)
@@ -2457,13 +2456,12 @@ write_tag_3_packet(char *dest, size_t *remaining_bytes,
 	if(crypt_stat->flags & ECRYPTFS_ENABLE_HMAC) {
 		if(crypt_stat->flags & ECRYPTFS_SUPPORT_HMAC_KEY 
 				&& auth_tok->token.password.session_key_encryption_key_bytes == ECRYPTFS_MAX_KEY_BYTES ) {
-			rc = eCryptfs_hmac_sha256(session_hmac_key, crypt_stat->key_size,
+			rc = calculate_hmac_sha256(session_hmac_key, crypt_stat->key_size,
 				crypt_stat->key, crypt_stat->key_size, crypt_stat->hash);
 		}else {
-			rc = eCryptfs_hmac_sha256(session_key_encryption_key, crypt_stat->key_size,
+			rc = calculate_hmac_sha256(session_key_encryption_key, crypt_stat->key_size,
 				crypt_stat->key, crypt_stat->key_size, crypt_stat->hash);
 		}
-		
 		if (rc < 0) {
 			mutex_unlock(tfm_mutex);
 			ecryptfs_printk(KERN_ERR, "Error Generating Hash for FEK : rc = [%d]\n", rc);

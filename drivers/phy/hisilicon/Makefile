@@ -1,2 +1,3 @@
-obj-$(CONFIG_PHY_HI6220_USB)		+= phy-hi6220-usb.o
-obj-$(CONFIG_PHY_HIX5HD2_SATA)		+= phy-hix5hd2-sata.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:735e40871a0a608812a5468c5983b22a7d7d97af7284ef28ba879384906f2374
+size 104

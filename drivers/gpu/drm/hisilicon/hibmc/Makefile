@@ -1,3 +1,3 @@
-hibmc-drm-y := hibmc_drm_drv.o hibmc_drm_de.o hibmc_drm_vdac.o hibmc_drm_fbdev.o hibmc_ttm.o
-
-obj-$(CONFIG_DRM_HISI_HIBMC) += hibmc-drm.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:2ba7e7154b482af87c8121b30fcd0732f001fc3bf005cb64725871c38ee0959d
+size 138

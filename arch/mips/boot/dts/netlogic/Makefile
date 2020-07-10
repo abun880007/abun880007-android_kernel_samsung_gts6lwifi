@@ -1,14 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_DT_XLP_EVP)	+= xlp_evp.dtb
-dtb-$(CONFIG_DT_XLP_SVP)	+= xlp_svp.dtb
-dtb-$(CONFIG_DT_XLP_FVP)	+= xlp_fvp.dtb
-dtb-$(CONFIG_DT_XLP_GVP)	+= xlp_gvp.dtb
-dtb-$(CONFIG_DT_XLP_RVP)	+= xlp_rvp.dtb
-
-obj-y				+= $(patsubst %.dtb, %.dtb.o, $(dtb-y))
-
-# Force kbuild to make empty built-in.o if necessary
-obj-				+= dummy.o
-
-always				:= $(dtb-y)
-clean-files			:= *.dtb *.dtb.S
+version https://git-lfs.github.com/spec/v1
+oid sha256:fc0470d00ae5c9979dd70557848c5794113b957dceae66fe2e1d1cad75eb8e69
+size 412

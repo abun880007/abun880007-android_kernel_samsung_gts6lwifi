@@ -15,13 +15,17 @@
 #define __LINUX_MFD_S2DOS05_H
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
+#ifdef CONFIG_SEC_FACTORY
+#include <linux/kernel.h>
+#include <linux/notifier.h>
+#endif /* CONFIG_SEC_FACTORY */
 
 #define MFD_DEV_NAME "s2dos05"
 
 /**
  * sec_regulator_data - regulator data
  * @id: regulator id
- * @initdata: regulator init data (contraints, supplies, ...)
+ * @initdata: regulator init data (constraints, supplies, ...)
  */
 
 struct s2dos05_dev {
@@ -32,9 +36,9 @@ struct s2dos05_dev {
 	int type;
 	u8 rev_num; /* pmic Rev */
 	bool wakeup;
-	int dp_pmic_irq;
-	int		adc_mode;
-	int		adc_sync_mode;
+	int dp_irq;
+	int adc_mode;
+	int adc_sync_mode;
 	u8 adc_en_val;
 
 	struct s2dos05_platform_data *pdata;
@@ -51,16 +55,16 @@ struct s2dos05_platform_data {
 	int num_regulators;
 	struct	s2dos05_regulator_data *regulators;
 	int	device_type;
-	int dp_pmic_irq;
+	int dp_irq;
 
 	/* adc_mode
 	 * 0 : not use
 	 * 1 : current meter
 	 * 2 : power meter
-	*/
-	int		adc_mode;
+	 */
+	int adc_mode;
 	/* 1 : sync mode, 2 : async mode  */
-	int		adc_sync_mode;
+	int adc_sync_mode;
 };
 
 struct s2dos05 {
@@ -86,7 +90,7 @@ enum S2DOS05_reg {
 	S2DOS05_REG_UVLO_FD = 0x0F,
 	S2DOS05_REG_OCL = 0x10,
 #endif
-	S2DOS05_REG_IRQ = 0x11,
+	S2DOS05_REG_IRQ = 0x11
 };
 
 /* S2DOS05 regulator ids */
@@ -115,17 +119,19 @@ enum S2DOS05_regulators {
 #define S2DOS05_BUCK_STEP1	6250
 #define S2DOS05_LDO_STEP1	25000
 #define S2DOS05_LDO_VSEL_MASK	0x7F
+#define S2DOS05_LDO_FD_MASK	0x80
 #define S2DOS05_BUCK_VSEL_MASK	0xFF
+#define S2DOS05_BUCK_FD_MASK	0x08
 #ifdef CONFIG_SEC_PM
 #define S2DOS05_ELVSS_SEL_SSD_MASK	(3 << 5)
 #define S2DOS05_ELVSS_SSD_EN_MASK	(3 << 3)
 #endif
 
-#define S2DOS05_ENABLE_MASK_L1	1 << 0
-#define S2DOS05_ENABLE_MASK_L2	1 << 1
-#define S2DOS05_ENABLE_MASK_L3	1 << 2
-#define S2DOS05_ENABLE_MASK_L4	1 << 3
-#define S2DOS05_ENABLE_MASK_B1	1 << 4
+#define S2DOS05_ENABLE_MASK_L1	(1 << 0)
+#define S2DOS05_ENABLE_MASK_L2	(1 << 1)
+#define S2DOS05_ENABLE_MASK_L3	(1 << 2)
+#define S2DOS05_ENABLE_MASK_L4	(1 << 3)
+#define S2DOS05_ENABLE_MASK_B1	(1 << 4)
 
 #define S2DOS05_RAMP_DELAY	12000
 
@@ -155,7 +161,7 @@ enum S2DOS05_regulators {
 #define CURRENT_L4			2000
 
 #define POWER_ELVDD			24500
-#define	POWER_ELVSS			24500
+#define POWER_ELVSS			24500
 #define POWER_AVDD			3060
 #define POWER_BUCK			1525
 #define POWER_L1			5000
@@ -164,7 +170,7 @@ enum S2DOS05_regulators {
 #define POWER_L4			5000
 
 #define ADC_EN_MASK			0x80
-#define ADC_ASYNCRD_MASK	0x80
+#define ADC_ASYNCRD_MASK		0x80
 #define ADC_PTR_MASK			0x0F
 #define ADC_PGEN_MASK			0x30
 #define CURRENT_MODE			0x00
@@ -174,13 +180,26 @@ enum S2DOS05_regulators {
 
 #define S2DOS05_MAX_ADC_CHANNEL		8
 
-extern void s2dos05_powermeter_init(struct s2dos05_dev *s2dos05,
-					struct device *sec_disp_pmic_dev);
+extern void s2dos05_powermeter_init(struct s2dos05_dev *s2dos05);
 extern void s2dos05_powermeter_deinit(struct s2dos05_dev *s2dos05);
 
 /* S2DOS05 shared i2c API function */
 extern int s2dos05_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest);
 extern int s2dos05_write_reg(struct i2c_client *i2c, u8 reg, u8 value);
 extern int s2dos05_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask);
+
+#ifdef CONFIG_SEC_FACTORY
+int msm_drm_register_notifier_client(struct notifier_block *nb);
+int msm_drm_unregister_notifier_client(struct notifier_block *nb);
+#if defined(CONFIG_SEC_WINNERLTE_PROJECT) || defined(CONFIG_SEC_WINNERX_PROJECT)
+int enable_sub_fd_store(int enable);
+int enable_sub_fd_show(void);
+int s2mpb02_recovery(int pmic_id);
+#endif /* CONFIG_SEC_WINNERLTE_PROJECT */
+#endif /* CONFIG_SEC_FACTORY */
+
+#ifdef CONFIG_SEC_PM
+extern struct device *sec_disp_pmic_dev;
+#endif /* CONFIG_SEC_PM */
 
 #endif /*  __LINUX_MFD_S2DOS05_H */

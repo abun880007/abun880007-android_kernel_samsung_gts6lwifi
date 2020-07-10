@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  */
-
+ 
 #define pr_fmt(fmt) "type-c manager: " fmt
 
 #include <linux/device.h>
@@ -22,37 +22,38 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/workqueue.h>
+#if defined(CONFIG_DRV_SAMSUNG)
 #include <linux/sec_class.h>
-#include <linux/sec_batt.h>
+#endif
 
 #if defined(CONFIG_VBUS_NOTIFIER)
 #include <linux/vbus_notifier.h>
 #endif
 #include <linux/usb_notify.h>
 #include <linux/delay.h>
-#if defined(CONFIG_CCIC_S2MM005)
 #include <linux/ccic/s2mm005_ext.h>
-#endif
 #include <linux/time.h>
 #include <linux/ktime.h>
 #include <linux/rtc.h>
 #include <linux/ccic/max77705_usbc.h>
 #include <linux/ccic/max77705_alternate.h>
-#include <linux/of.h>
 
 #if defined(CONFIG_BATTERY_SAMSUNG_V2)
 #include "../../battery_v2/include/sec_charging_common.h"
+#elif defined(CONFIG_BATTERY_SAMSUNG_LEGO_STYLE)
+#include "../../battery/common/include/sec_charging_common.h"
 #else
 #include <linux/battery/sec_charging_common.h>
 #endif
 
-#if defined(CONFIG_SEC_ABC)
-#include <linux/sti/abc_common.h>
+#if defined(CONFIG_CCIC_S2MU106) || defined(CONFIG_CCIC_S2MU107)
+#include <linux/of.h>
 #endif
 
 /* dwc3 irq storm patch */
 /* need to check dwc3 link state during dcd time out case */
 extern int dwc3_gadget_get_cmply_link_state_wrapper(void);
+
 #define DEBUG
 #define SET_MANAGER_NOTIFIER_BLOCK(nb, fn, dev) do {	\
 		(nb)->notifier_call = (fn);		\
@@ -68,6 +69,8 @@ typedef enum
 	CCIC_NOTIFIER,
 	MUIC_NOTIFIER
 }notifier_register;
+
+extern unsigned int lpcharge;
 
 static int manager_notifier_init_done = 0;
 static int confirm_manager_notifier_register = 0;
@@ -91,11 +94,11 @@ static int manager_notifier_notify(void *data)
 
 	pr_info("%s: src:%s dest:%s id:%s "
 		"sub1:%02x sub2:%02x sub3:%02x\n", __func__,
-		(manager_noti.src<CCIC_NOTI_DEST_NUM)?
+		(manager_noti.src < CCIC_NOTI_DEST_NUM) ?
 		CCIC_NOTI_DEST_Print[manager_noti.src]:"unknown",
-		(manager_noti.dest<CCIC_NOTI_DEST_NUM)?
+		(manager_noti.dest < CCIC_NOTI_DEST_NUM) ?
 		CCIC_NOTI_DEST_Print[manager_noti.dest]:"unknown",
-		(manager_noti.id<CCIC_NOTI_ID_NUM)?
+		(manager_noti.id < CCIC_NOTI_ID_NUM) ?
 		CCIC_NOTI_ID_Print[manager_noti.id]:"unknown",
 		manager_noti.sub1, manager_noti.sub2, manager_noti.sub3);
 
@@ -219,7 +222,7 @@ void manager_muic_event_notifier(struct work_struct *data)
 		manager_event_noti.sub1, manager_event_noti.sub2, manager_event_noti.sub3);
 
 #ifdef CONFIG_USB_NOTIFY_PROC_LOG
-	store_usblog_notify(NOTIFY_MANAGER, (void*)&manager_event_noti, NULL);
+	store_usblog_notify(NOTIFY_MANAGER, (void*)&manager_event_noti , NULL);
 #endif
 
 	ret = blocking_notifier_call_chain(&(typec_manager.manager_muic_notifier),
@@ -263,10 +266,10 @@ void set_usb_enumeration_state(int state)
 		typec_manager.usb_enum_state = state;
 
 #if defined(CONFIG_USB_HW_PARAM)
-		if(typec_manager.usb_enum_state >= 0x300)
-			typec_manager.usb_superspeed_count++;
-		else if(typec_manager.usb_enum_state >= 0x200)
-			typec_manager.usb_highspeed_count++;
+		if(typec_manager.usb_enum_state == 0x310 || typec_manager.usb_enum_state == 0x320)
+			typec_manager.usb310_count++;
+		else if(typec_manager.usb_enum_state == 0x210)
+			typec_manager.usb210_count++;
 #endif
 	}
 }
@@ -327,12 +330,12 @@ unsigned long manager_hw_param_update(int param)
 		typec_manager.dry_count = 0;
 		break;
 	case USB_CLIENT_SUPER_SPEED_COUNT:
-		ret = typec_manager.usb_superspeed_count;
-		typec_manager.usb_superspeed_count = 0;
+		ret = typec_manager.usb310_count;
+		typec_manager.usb310_count = 0;
 		break;
 	case USB_CLIENT_HIGH_SPEED_COUNT:
-		ret = typec_manager.usb_highspeed_count;
-		typec_manager.usb_highspeed_count = 0;
+		ret = typec_manager.usb210_count;
+		typec_manager.usb210_count = 0;
 		break;
 	case USB_CCIC_WATER_TIME_DURATION:
 		ret = get_waterdet_duration();
@@ -519,14 +522,14 @@ void manager_notifier_usbdp_support(void)
 	if( typec_manager.dp_check_done == 1 ) {
 		manager_event_work(CCIC_NOTIFY_DEV_MANAGER, CCIC_NOTIFY_DEV_USB_DP,
 			CCIC_NOTIFY_ID_USB_DP, typec_manager.dp_is_connect, typec_manager.dp_hs_connect, 0);
-
+		
 		typec_manager.dp_check_done = 0;
 	}
 	return;
 }
 
 static int manager_external_notifier_notification(struct notifier_block *nb,
-		unsigned long action, void *data)
+				unsigned long action, void *data)
 {
 	int ret = 0;
 	int enable = *(int *)data;
@@ -534,19 +537,21 @@ static int manager_external_notifier_notification(struct notifier_block *nb,
 	switch (action) {
 	case EXTERNAL_NOTIFY_DEVICEADD:
 		pr_info("%s EXTERNAL_NOTIFY_DEVICEADD, enable=%d\n", __func__, enable);
+		
+		pr_info("drp_state %d, ccic_attach_state %d, muic_attach_state %d\n", typec_manager.ccic_drp_state, typec_manager.ccic_attach_state, typec_manager.muic_attach_state);
 		if (enable &&
 			typec_manager.ccic_drp_state == USB_STATUS_NOTIFY_ATTACH_DFP &&
-			typec_manager.ccic_attach_state == CCIC_NOTIFY_ATTACH &&
 			typec_manager.muic_attach_state != MUIC_NOTIFY_CMD_DETACH) {
-				pr_info("%s: a usb device is added in host mode\n", __func__);
-				/* USB Cable type */
-				manager_event_work(CCIC_NOTIFY_DEV_MANAGER, CCIC_NOTIFY_DEV_BATTERY,
-						CCIC_NOTIFY_ID_USB, 0, 0, PD_USB_TYPE);
+			pr_info("%s: a usb device is added in host mode\n", __func__);
+			/* USB cable Type */
+			manager_event_work(CCIC_NOTIFY_DEV_MANAGER, CCIC_NOTIFY_DEV_BATTERY,
+				CCIC_NOTIFY_ID_USB, 0, 0, PD_USB_TYPE);
 		}
 		break;
 	default:
 		break;
 	}
+
 	return ret;
 }
 
@@ -556,17 +561,17 @@ static void manager_cable_type_check_work(struct work_struct *work)
 
 	dwc3_link_check= dwc3_gadget_get_cmply_link_state_wrapper();
 
-	if ((typec_manager.ccic_drp_state != USB_STATUS_NOTIFY_ATTACH_UFP) ||
-		typec_manager.is_MPSM || dwc3_link_check == 1 ) {
+	if ( (typec_manager.ccic_drp_state != USB_STATUS_NOTIFY_ATTACH_UFP) ||
+		typec_manager.is_MPSM || dwc3_link_check == 1 ){
 		pr_info("%s: skip case : dwc3_link = %d\n", __func__, dwc3_link_check);
 		return;
 	}
 	pr_info("%s: usb=0x%X, pd=%d cable_type=%d, dwc3_link_check=%d\n", __func__,
-		typec_manager.usb_enum_state, typec_manager.pd_con_state,
+		typec_manager.usb_enum_state, typec_manager.pd_con_state, 
 		typec_manager.cable_type, dwc3_link_check);
 
-	if (!typec_manager.usb_enum_state ||
-		typec_manager.cable_type == MANAGER_NOTIFY_MUIC_CHARGER) {
+	if(!typec_manager.usb_enum_state ||
+		typec_manager.cable_type==MANAGER_NOTIFY_MUIC_CHARGER) {
 		/* If USB recognition is not performed, turn off the USB PHY */
 		manager_event_work(CCIC_NOTIFY_DEV_MANAGER, CCIC_NOTIFY_DEV_USB,
 			CCIC_NOTIFY_ID_USB, CCIC_NOTIFY_DETACH, USB_STATUS_NOTIFY_DETACH, 0);
@@ -579,9 +584,9 @@ static void manager_cable_type_check_work(struct work_struct *work)
 }
 
 static void manager_cable_type_check(bool state, int time) {
-	if (typec_manager.usb_enable_state) {
+	if(typec_manager.usb_enable_state) {
 		cancel_delayed_work_sync(&typec_manager.cable_check_work);
-		if (state) {
+		if(state) {
 			schedule_delayed_work(&typec_manager.cable_check_work, msecs_to_jiffies(time*100));
 		}
 	}
@@ -597,7 +602,7 @@ static void manager_usb_event_work(struct work_struct *work)
 		switch (typec_manager.muic_attach_state) {
 		case MUIC_NOTIFY_CMD_ATTACH:
 #if defined(CONFIG_VBUS_NOTIFIER)
-			if(typec_manager.vbus_state == STATUS_VBUS_HIGH ||
+			if(typec_manager.vbus_state == STATUS_VBUS_HIGH || 
 				typec_manager.muic_cable_type == ATTACHED_DEV_JIG_USB_OFF_MUIC)
 #endif
 			{
@@ -619,7 +624,7 @@ static void manager_usb_event_work(struct work_struct *work)
 void manager_usb_cable_connection_event(int delay)
 {
 	schedule_delayed_work(&typec_manager.usb_event_work, msecs_to_jiffies(delay));
-}
+ }
 
 #if defined(CONFIG_VBUS_NOTIFIER)
 void manager_handle_muic_event(int event)
@@ -680,9 +685,9 @@ static int manager_handle_ccic_notification(struct notifier_block *nb,
 	int ret = 0;
 
 	pr_info("%s: src:%s dest:%s id:%s attach/rid:%d\n", __func__,
-		(p_noti.src<CCIC_NOTI_DEST_NUM)? CCIC_NOTI_DEST_Print[p_noti.src]:"unknown",
-		(p_noti.dest<CCIC_NOTI_DEST_NUM)? CCIC_NOTI_DEST_Print[p_noti.dest]:"unknown",
-		(p_noti.id<CCIC_NOTI_ID_NUM)? CCIC_NOTI_ID_Print[p_noti.id]:"unknown",
+		(p_noti.src < CCIC_NOTI_DEST_NUM) ? CCIC_NOTI_DEST_Print[p_noti.src]:"unknown",
+		(p_noti.dest < CCIC_NOTI_DEST_NUM) ? CCIC_NOTI_DEST_Print[p_noti.dest]:"unknown",
+		(p_noti.id < CCIC_NOTI_ID_NUM) ? CCIC_NOTI_ID_Print[p_noti.id]:"unknown",
 		p_noti.sub1);
 
 #if defined(CONFIG_VBUS_NOTIFIER)
@@ -752,13 +757,10 @@ static int manager_handle_ccic_notification(struct notifier_block *nb,
 				mutex_unlock(&typec_manager.mo_lock);
 #endif
 			}
-#if defined(CONFIG_SEC_ABC)
-			sec_abc_send_event("MODULE=pdic@ERROR=water_det");
-#endif
 		} else {
 			typec_manager.water_det = 0;
-			manager_event_work(p_noti.src, CCIC_NOTIFY_DEV_MUIC,
-					CCIC_NOTIFY_ID_WATER, p_noti.sub1, p_noti.sub2, p_noti.sub3);
+			manager_event_work(CCIC_NOTIFY_DEV_CCIC, CCIC_NOTIFY_DEV_MUIC,
+				CCIC_NOTIFY_ID_WATER, CCIC_NOTIFY_DETACH, 0, 0);
 #if defined(CONFIG_USB_HW_PARAM)
 			typec_manager.dry_count++;
 			/* update run_dry time */
@@ -799,42 +801,6 @@ static int manager_handle_ccic_notification(struct notifier_block *nb,
 	return ret;
 }
 
-static void manager_set_alternate_mode(int listener)
-{
-	pccic_data_t pccic_data;
-
-	pr_info("%s : listener %d\n", __func__, listener);
-
-	pccic_data = dev_get_drvdata(ccic_device);
-  	if (!pccic_data) {
-		pr_err("there is no set_enable_alternate_mode\n");
-		return;
-	}
-	if (!pccic_data->set_enable_alternate_mode) {
-		pr_err("there is no set_enable_alternate_mode\n");
-		return;
-	}
-
-	if (listener == MANAGER_NOTIFY_CCIC_BATTERY)
-		typec_manager.alt_is_support |= CCIC_BATTERY;
-	else if (listener == MANAGER_NOTIFY_CCIC_USB)
-		typec_manager.alt_is_support |= CCIC_USB;
-	else if (listener == MANAGER_NOTIFY_CCIC_DP)
-		typec_manager.alt_is_support |= CCIC_DP;
-	else
-		pr_info("no support driver to start alternate mode\n");
-
-	if (typec_manager.dp_is_support) {
-		if (typec_manager.alt_is_support == (CCIC_DP|CCIC_USB|CCIC_BATTERY))
-			pccic_data->set_enable_alternate_mode(ALTERNATE_MODE_READY | ALTERNATE_MODE_START);
-
-	} else {
-		if (typec_manager.alt_is_support == (CCIC_USB|CCIC_BATTERY))
-			pccic_data->set_enable_alternate_mode(ALTERNATE_MODE_READY | ALTERNATE_MODE_START);
-	}
-
-}
-
 static int manager_handle_muic_notification(struct notifier_block *nb,
 				unsigned long action, void *data)
 {
@@ -860,13 +826,20 @@ static int manager_handle_muic_notification(struct notifier_block *nb,
 	}
 
 	if(typec_manager.water_det){
-		if(p_noti.attach) typec_manager.muic_attach_state_without_ccic = 1;
+		if (p_noti.attach)
+			typec_manager.muic_attach_state_without_ccic = 1;
 		pr_info("%s: Water detected case\n", __func__);
 		return 0;
 	}
+	pr_info("usb: [M] %s:attach:%d, ccic_drp_state=%d, ccic_rid_state:%d\n", __func__,
+		p_noti.attach, typec_manager.ccic_drp_state, typec_manager.ccic_rid_state);
 
-	if (p_noti.attach &&  typec_manager.ccic_drp_state == USB_STATUS_NOTIFY_DETACH) {
-		if(typec_manager.ccic_rid_state != RID_523K &&  typec_manager.ccic_rid_state != RID_619K)
+	if (p_noti.attach && typec_manager.ccic_drp_state == USB_STATUS_NOTIFY_DETACH
+		&& (typec_manager.ccic_rid_state != RID_523K && typec_manager.ccic_rid_state != RID_619K)
+#if defined(CONFIG_CCIC_S2MM005)
+		&& !get_diplayport_status()
+#endif
+		) {
 			typec_manager.muic_attach_state_without_ccic = 1;
 	}
 
@@ -905,6 +878,9 @@ static int manager_handle_muic_notification(struct notifier_block *nb,
 
 		if(p_noti.attach) {
 			typec_manager.cable_type = MANAGER_NOTIFY_MUIC_CHARGER;
+#if defined(CONFIG_CCIC_S2MM005)
+			s2mm005_set_cabletype_as_TA();
+#endif
 		}
 
 		if(p_noti.attach && typec_manager.ccic_drp_state == USB_STATUS_NOTIFY_ATTACH_UFP) {
@@ -923,7 +899,7 @@ static int manager_handle_muic_notification(struct notifier_block *nb,
 	case ATTACHED_DEV_TIMEOUT_OPEN_MUIC:
 		pr_info("%s: DCD Timeout is detected(%d) %s \n",
 			__func__, p_noti.cable_type,
-			p_noti.attach ? "Attached": "Detached");
+			p_noti.attach ? "Attached" : "Detached");
 
 		if(p_noti.attach)
 			typec_manager.cable_type = MANAGER_NOTIFY_MUIC_TIMEOUT_OPEN_DEVICE;
@@ -957,7 +933,7 @@ static int manager_handle_vbus_notification(struct notifier_block *nb,
 	mutex_lock(&typec_manager.mo_lock);
 	pr_info("%s: cmd=%lu, vbus_type=%s, WATER DET=%d ATTACH=%s (%d)\n", __func__,
 		action, vbus_type == STATUS_VBUS_HIGH ? "HIGH" : "LOW", typec_manager.water_det,
-		typec_manager.ccic_attach_state == CCIC_NOTIFY_ATTACH ? "ATTACH":"DETACH",
+		typec_manager.ccic_attach_state == CCIC_NOTIFY_ATTACH ? "ATTACH":"DETATCH",
 		typec_manager.muic_attach_state_without_ccic);
 
 	typec_manager.vbus_state = vbus_type;
@@ -989,12 +965,25 @@ int manager_notifier_register(struct notifier_block *nb, notifier_fn_t notifier,
 {
 	int ret = 0;
 	MANAGER_NOTI_TYPEDEF m_noti = {0, };
+	static int alternate_mode_start_wait = 0;
+	pccic_data_t pccic_data = NULL;
+#if defined(CONFIG_CCIC_S2MU106) || defined(CONFIG_CCIC_S2MU107)
+	struct device_node *np = NULL;
+	np = of_find_compatible_node(NULL, NULL, "maxim,max77705");
+#endif
 
 	pr_info("%s: listener=%d register\n", __func__, listener);
 	if(!manager_notifier_init_done)
 		manager_notifier_init();
 
 	ccic_notifier_init();
+	if(ccic_device)
+		pccic_data = dev_get_drvdata(ccic_device);
+
+#if defined(CONFIG_CCIC_S2MU106) || defined(CONFIG_CCIC_S2MU107)
+	if (!np)
+		pccic_data = NULL;
+#endif
 
 	/* Check if MANAGER Notifier is ready. */
 	if (!manager_device) {
@@ -1045,7 +1034,19 @@ int manager_notifier_register(struct notifier_block *nb, notifier_fn_t notifier,
 			(m_noti.id<CCIC_NOTI_ID_NUM)? CCIC_NOTI_ID_Print[m_noti.id]:"unknown",
 			m_noti.sub3, m_noti.sub1 ? "Attached": "Detached");
 		nb->notifier_call(nb, m_noti.id, &(m_noti));
-		manager_set_alternate_mode(listener);
+		alternate_mode_start_wait |= 0x100;
+#if !defined(CONFIG_SEC_DISPLAYPORT)
+        	if (alternate_mode_start_wait == 0x101) {
+            		pr_info("%s: USB & BATTERY driver is registered! Alternate mode Start!\n", __func__);
+#else
+		if (alternate_mode_start_wait == 0x111) {
+			pr_info("%s: USB & DP & BATTERY driver is registered! Alternate mode Start!\n", __func__);
+#endif
+#if defined(CONFIG_CCIC_ALTERNATE_MODE)
+			if (pccic_data && pccic_data->set_enable_alternate_mode)
+				pccic_data->set_enable_alternate_mode(ALTERNATE_MODE_READY | ALTERNATE_MODE_START);
+#endif
+		}
 		break;
 	case MANAGER_NOTIFY_CCIC_SUB_BATTERY:
 		m_noti.src = CCIC_NOTIFY_DEV_MANAGER;
@@ -1078,7 +1079,21 @@ int manager_notifier_register(struct notifier_block *nb, notifier_fn_t notifier,
 
 		pr_info("%s: [USB] drp:%s \n", __func__,	CCIC_NOTI_USB_STATUS_Print[m_noti.sub2]);
 		nb->notifier_call(nb, m_noti.id, &(m_noti));
-		manager_set_alternate_mode(listener);
+
+		alternate_mode_start_wait |= 0x1;
+#if !defined(CONFIG_SEC_DISPLAYPORT)
+        	if (alternate_mode_start_wait == 0x101) {
+            		pr_info("%s: USB & BATTERY driver is registered! Alternate mode Start!\n", __func__);
+#else
+		if (alternate_mode_start_wait == 0x111) {
+			pr_info("%s: USB & DP & BATTERY driver is registered! Alternate mode Start!\n", __func__);
+#endif
+#if defined(CONFIG_CCIC_ALTERNATE_MODE)
+			if (pccic_data && pccic_data->set_enable_alternate_mode)
+				pccic_data->set_enable_alternate_mode(ALTERNATE_MODE_READY | ALTERNATE_MODE_START);
+#endif
+		}
+
 		break;
 	case MANAGER_NOTIFY_CCIC_DP:
 		m_noti.src = CCIC_NOTIFY_DEV_MANAGER;
@@ -1098,12 +1113,16 @@ int manager_notifier_register(struct notifier_block *nb, notifier_fn_t notifier,
 				nb->notifier_call(nb, m_noti.id, &(m_noti));
 			}
 		}
-		manager_set_alternate_mode(listener);
+		alternate_mode_start_wait |= 0x10;
+		if (alternate_mode_start_wait == 0x111) {
+			pr_info("%s: USB & DP & BATTERY driver is registered! Alternate mode Start!\n", __func__);
+			if (pccic_data && pccic_data->set_enable_alternate_mode)
+				pccic_data->set_enable_alternate_mode(ALTERNATE_MODE_READY | ALTERNATE_MODE_START);
+		}
 		break;
 	default:
 		break;
 	}
-
 	return ret;
 }
 
@@ -1151,12 +1170,14 @@ static void delayed_manger_notifier_init(struct work_struct *work)
 			notifier_result |= (1 << CCIC_NOTIFIER);
 	}
 
+#if defined(CONFIG_MUIC_NOTIFIER)
 	if(confirm_manager_notifier_register & (1 << MUIC_NOTIFIER))
 	{
 		ret = muic_notifier_register(&typec_manager.muic_nb, manager_handle_muic_notification,MUIC_NOTIFY_DEV_MANAGER);
 		if(ret)
 			notifier_result |= (1 << MUIC_NOTIFIER);
 	}
+#endif
 
 	confirm_manager_notifier_register = notifier_result;
 	pr_info("%s : result of register = %d!\n",__func__, confirm_manager_notifier_register);
@@ -1180,12 +1201,12 @@ static int manager_notifier_init(void)
 {
 	int ret = 0;
 	int notifier_result = 0;
-	pccic_data_t pccic_data;
-	struct device_node *np = NULL;
+	pccic_data_t pccic_data = NULL;
 
 	pr_info("%s\n", __func__);
 	ccic_notifier_init();
-	pccic_data = dev_get_drvdata(ccic_device);
+	if(ccic_device)
+		pccic_data = dev_get_drvdata(ccic_device);
 
 	if(manager_notifier_init_done)
 	{
@@ -1194,7 +1215,10 @@ static int manager_notifier_init(void)
 	}
 	manager_notifier_init_done = 1;
 
-	manager_device = sec_device_create(NULL, "typec_manager");
+#if defined(CONFIG_DRV_SAMSUNG)
+	manager_device = sec_device_create(0, NULL, "typec_manager");
+#endif
+
 	if (IS_ERR(manager_device)) {
 		pr_err("%s Failed to create device(switch)!\n", __func__);
 		ret = -ENODEV;
@@ -1218,19 +1242,17 @@ static int manager_notifier_init(void)
 #if defined(CONFIG_USB_HW_PARAM)
 	typec_manager.water_count =0;
 	typec_manager.dry_count = 0;
-	typec_manager.usb_highspeed_count = 0;
-	typec_manager.usb_superspeed_count = 0;
+	typec_manager.usb210_count = 0;
+	typec_manager.usb310_count = 0;
 	typec_manager.waterChg_count = 0;
 	typec_manager.waterDet_duration = 0;
 	typec_manager.wVbus_duration = 0;
 #endif
-	typec_manager.alt_is_support = 0;
-	typec_manager.dp_is_support = 0;
 	typec_manager.dp_is_connect = 0;
 	typec_manager.dp_hs_connect = 0;
 	typec_manager.dp_check_done = 1;
- 	usb_external_notify_register(&typec_manager.manager_external_notifier_nb,
- 		manager_external_notifier_notification, EXTERNAL_NOTIFY_DEV_MANAGER);
+	usb_external_notify_register(&typec_manager.manager_external_notifier_nb,
+		manager_external_notifier_notification, EXTERNAL_NOTIFY_DEV_MANAGER);
 	typec_manager.muic_attach_state_without_ccic = 0;
 #if defined(CONFIG_VBUS_NOTIFIER)
 	typec_manager.muic_fake_event_wq_processing = 0;
@@ -1269,8 +1291,10 @@ static int manager_notifier_init(void)
 		water_det_rtc_time_update);
 #endif
 
+#if defined(CONFIG_CCIC_ALTERNATE_MODE)
 	if (pccic_data && pccic_data->set_enable_alternate_mode)
 		pccic_data->set_enable_alternate_mode(ALTERNATE_MODE_NOT_READY);
+#endif
 #if defined(CONFIG_VBUS_NOTIFIER)
 	INIT_DELAYED_WORK(&typec_manager.muic_event_work,
 		manager_muic_event_work);
@@ -1302,15 +1326,6 @@ static int manager_notifier_init(void)
 		pr_info("%s : done!\n",__func__);
 	}
 
-	np = of_find_node_by_name(NULL, "displayport");
-	if (!of_get_property(np, "dp,displayport_not_support", NULL)) {
-		pr_info("%s: usb_host: support DP\n", __func__);
-		typec_manager.dp_is_support = 1;
-	} else {
-		pr_info("%s: usb_host: no support DP\n", __func__);
-		typec_manager.dp_is_support = 0;
-	}
-
 	pr_info("%s end\n", __func__);
 out:
 	return ret;
@@ -1324,7 +1339,9 @@ static void __exit manager_notifier_exit(void)
 	vbus_notifier_unregister(&typec_manager.vbus_nb);
 #endif
 	ccic_notifier_unregister(&typec_manager.ccic_nb);
+#if defined(CONFIG_MUIC_NOTIFIER)
 	muic_notifier_unregister(&typec_manager.muic_nb);
+#endif
 	usb_external_notify_unregister(&typec_manager.manager_external_notifier_nb);
 }
 

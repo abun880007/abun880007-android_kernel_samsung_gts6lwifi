@@ -12,11 +12,6 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
  */
 
 #include <linux/module.h>
@@ -36,7 +31,7 @@
 #include <linux/regulator/machine.h>
 #include <linux/regulator/s2dos05.h>
 #include <linux/regulator/of_regulator.h>
-
+#include <linux/debugfs.h>
 #ifdef CONFIG_SEC_PM
 #include <linux/sec_class.h>
 #ifdef CONFIG_SEC_FACTORY
@@ -45,7 +40,11 @@
 #endif /* CONFIG_SEC_PM */
 
 #ifdef CONFIG_SEC_PM
-static struct i2c_client *s2dos05_i2c;
+struct device *sec_disp_pmic_dev;
+static struct s2dos05_data *s2dos05_info;
+#ifdef CONFIG_SEC_FACTORY
+static struct delayed_work fd_work;
+#endif /* CONFIG_SEC_FACTORY */
 #endif /* CONFIG_SEC_PM */
 
 struct s2dos05_data {
@@ -53,9 +52,6 @@ struct s2dos05_data {
 	int num_regulators;
 	struct regulator_dev *rdev[S2DOS05_REGULATOR_MAX];
 	int opmode[S2DOS05_REGULATOR_MAX];
-#ifdef CONFIG_SEC_PM
-	struct device *sec_disp_pmic_dev;
-#endif /* CONFIG_SEC_PM */
 };
 
 int s2dos05_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest)
@@ -151,6 +147,39 @@ int s2dos05_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask)
 	return ret;
 }
 
+#ifdef CONFIG_DEBUG_FS
+static int s2dos05_regdump_show(struct seq_file *s, void *unused)
+{
+	struct s2dos05_dev *s2dos05_dev = s->private;
+	u8 i, val = 0;
+
+	for (i = S2DOS05_REG_STAT; i <= S2DOS05_REG_IRQ; i++) {
+		s2dos05_read_reg(s2dos05_dev->i2c, i, &val);
+		seq_printf(s, "0x%x: 0x%x\n", i, val);
+	}
+
+	return 0;
+}
+
+static int s2dos05_regdump_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, s2dos05_regdump_show, inode->i_private);
+}
+
+static const struct file_operations s2dos05_regdump_operations = {
+	.open           = s2dos05_regdump_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
+static void s2dos05_debugfs_init(struct s2dos05_dev *s2dos05)
+{
+	debugfs_create_file("s2dos05_regdump", 0440,
+			NULL, s2dos05, &s2dos05_regdump_operations);
+}
+#endif
+
 static int s2m_enable(struct regulator_dev *rdev)
 {
 	struct s2dos05_data *info = rdev_get_drvdata(rdev);
@@ -209,7 +238,8 @@ static int s2m_get_voltage_sel_regmap(struct regulator_dev *rdev)
 	return val;
 }
 
-static int s2m_set_voltage_sel_regmap(struct regulator_dev *rdev, unsigned sel)
+static int s2m_set_voltage_sel_regmap(struct regulator_dev *rdev,
+					unsigned int sel)
 {
 	struct s2dos05_data *info = rdev_get_drvdata(rdev);
 	struct i2c_client *i2c = info->iodev->i2c;
@@ -231,7 +261,7 @@ out:
 }
 
 static int s2m_set_voltage_sel_regmap_buck(struct regulator_dev *rdev,
-					unsigned sel)
+					unsigned int sel)
 {
 	struct s2dos05_data *info = rdev_get_drvdata(rdev);
 	struct i2c_client *i2c = info->iodev->i2c;
@@ -270,6 +300,24 @@ static int s2m_set_voltage_time_sel(struct regulator_dev *rdev,
 	return 0;
 }
 
+static int s2m_set_active_discharge(struct regulator_dev *rdev,
+					bool enable)
+{
+	struct s2dos05_data *info = rdev_get_drvdata(rdev);
+	struct i2c_client *i2c = info->iodev->i2c;
+	int ret;
+	u8 val;
+
+	if (enable)
+		val = rdev->desc->active_discharge_on;
+	else
+		val = rdev->desc->active_discharge_off;
+
+	ret = s2dos05_update_reg(i2c, rdev->desc->active_discharge_reg,
+				val, rdev->desc->active_discharge_mask);
+	return ret;
+}
+
 #ifdef CONFIG_SEC_PM
 static int s2m_set_elvss_short_detection(struct regulator_dev *rdev,
 					 bool enable, int lv_uA)
@@ -303,6 +351,7 @@ static struct regulator_ops s2dos05_ldo_ops = {
 	.get_voltage_sel	= s2m_get_voltage_sel_regmap,
 	.set_voltage_sel	= s2m_set_voltage_sel_regmap,
 	.set_voltage_time_sel	= s2m_set_voltage_time_sel,
+	.set_active_discharge	= s2m_set_active_discharge,
 };
 
 static struct regulator_ops s2dos05_buck_ops = {
@@ -314,6 +363,7 @@ static struct regulator_ops s2dos05_buck_ops = {
 	.get_voltage_sel	= s2m_get_voltage_sel_regmap,
 	.set_voltage_sel	= s2m_set_voltage_sel_regmap_buck,
 	.set_voltage_time_sel	= s2m_set_voltage_time_sel,
+	.set_active_discharge	= s2m_set_active_discharge,
 };
 
 #ifdef CONFIG_SEC_PM
@@ -331,7 +381,7 @@ static struct regulator_ops s2dos05_elvss_ops = {
 #define _MASK(macro)	S2DOS05_ENABLE_MASK##macro
 #define _TIME(macro)	S2DOS05_ENABLE_TIME##macro
 
-#define BUCK_DESC(_name, _id, _ops, m, s, v, e, em, t)	{	\
+#define BUCK_DESC(_name, _id, _ops, m, s, v, e, em, t, a) {	\
 	.name		= _name,				\
 	.id		= _id,					\
 	.ops		= _ops,					\
@@ -344,10 +394,14 @@ static struct regulator_ops s2dos05_elvss_ops = {
 	.vsel_mask	= S2DOS05_BUCK_VSEL_MASK,		\
 	.enable_reg	= e,					\
 	.enable_mask	= em,					\
-	.enable_time	= t					\
+	.enable_time	= t,					\
+	.active_discharge_off = 0,				\
+	.active_discharge_on = S2DOS05_BUCK_FD_MASK,		\
+	.active_discharge_reg	= a,				\
+	.active_discharge_mask	= S2DOS05_BUCK_FD_MASK		\
 }
 
-#define LDO_DESC(_name, _id, _ops, m, s, v, e, em, t)	{	\
+#define LDO_DESC(_name, _id, _ops, m, s, v, e, em, t, a) {	\
 	.name		= _name,				\
 	.id		= _id,					\
 	.ops		= _ops,					\
@@ -360,7 +414,11 @@ static struct regulator_ops s2dos05_elvss_ops = {
 	.vsel_mask	= S2DOS05_LDO_VSEL_MASK,		\
 	.enable_reg	= e,					\
 	.enable_mask	= em,					\
-	.enable_time	= t					\
+	.enable_time	= t,					\
+	.active_discharge_off = 0,				\
+	.active_discharge_on = S2DOS05_LDO_FD_MASK,		\
+	.active_discharge_reg	= a,				\
+	.active_discharge_mask	= S2DOS05_LDO_FD_MASK		\
 }
 
 #ifdef CONFIG_SEC_PM
@@ -377,36 +435,23 @@ static struct regulator_desc regulators[S2DOS05_REGULATOR_MAX] = {
 		/* name, id, ops, min_uv, uV_step, vsel_reg, enable_reg */
 		LDO_DESC("s2dos05-ldo1", _LDO(1), &_ldo_ops(), _LDO(_MIN1),
 			_LDO(_STEP1), _REG(_LDO1_CFG),
-			_REG(_EN), _MASK(_L1), _TIME(_LDO)),
+			_REG(_EN), _MASK(_L1), _TIME(_LDO), _REG(_LDO1_CFG)),
 		LDO_DESC("s2dos05-ldo2", _LDO(2), &_ldo_ops(), _LDO(_MIN1),
 			_LDO(_STEP1), _REG(_LDO2_CFG),
-			_REG(_EN), _MASK(_L2), _TIME(_LDO)),
+			_REG(_EN), _MASK(_L2), _TIME(_LDO), _REG(_LDO2_CFG)),
 		LDO_DESC("s2dos05-ldo3", _LDO(3), &_ldo_ops(), _LDO(_MIN2),
 			_LDO(_STEP1), _REG(_LDO3_CFG),
-			_REG(_EN), _MASK(_L3), _TIME(_LDO)),
+			_REG(_EN), _MASK(_L3), _TIME(_LDO), _REG(_LDO3_CFG)),
 		LDO_DESC("s2dos05-ldo4", _LDO(4), &_ldo_ops(), _LDO(_MIN2),
 			_LDO(_STEP1), _REG(_LDO4_CFG),
-			_REG(_EN), _MASK(_L4), _TIME(_LDO)),
+			_REG(_EN), _MASK(_L4), _TIME(_LDO), _REG(_LDO4_CFG)),
 		BUCK_DESC("s2dos05-buck1", _BUCK(1), &_buck_ops(), _BUCK(_MIN1),
 			_BUCK(_STEP1), _REG(_BUCK_VOUT),
-			_REG(_EN), _MASK(_B1), _TIME(_BUCK)),
+			_REG(_EN), _MASK(_B1), _TIME(_BUCK), _REG(_BUCK_CFG)),
 #ifdef CONFIG_SEC_PM
 		ELVSS_DESC("s2dos05-elvss", S2DOS05_ELVSS),
 #endif
 };
-
-#ifdef CONFIG_SEC_PM
-static void s2dos05_irq_notifier_call_chain(struct s2dos05_data *s2dos05,
-					u8 reg_val)
-{
-	int i;
-	int data = reg_val;
-
-	for (i = 0; i < s2dos05->num_regulators; i++)
-		regulator_notifier_call_chain(s2dos05->rdev[i],
-				REGULATOR_EVENT_FAIL, (void *)&data);
-}
-#endif /* CONFIG_SEC_PM */
 
 static irqreturn_t s2dos05_irq_thread(int irq, void *irq_data)
 {
@@ -416,22 +461,19 @@ static irqreturn_t s2dos05_irq_thread(int irq, void *irq_data)
 	const char *irq_bit[] = { "OCD", "UVLO", "SCP", "SSD", "TSD", "PWRMT" };
 	char irq_name[32];
 	ssize_t ret = 0;
-	unsigned long bit, lval;
+	size_t i;
 #endif /* CONFIG_SEC_PM_DEBUG */
+
 
 	s2dos05_read_reg(s2dos05->iodev->i2c, S2DOS05_REG_IRQ, &val);
 	pr_info("%s:irq(%d) S2DOS05_REG_IRQ : 0x%x\n", __func__, irq, val);
 #ifdef CONFIG_SEC_PM_DEBUG
-	lval = val;
-	for_each_set_bit(bit, &lval, ARRAY_SIZE(irq_bit))
-		ret += sprintf(irq_name + ret, " %s", irq_bit[bit]);
+	for (i = 0; i < ARRAY_SIZE(irq_bit); i++)
+		if (val & (1 << i))
+			ret += sprintf(irq_name + ret, " %s", irq_bit[i]);
 
 	pr_info("%s: IRQ:%s\n", __func__, irq_name);
 #endif /* CONFIG_SEC_PM_DEBUG */
-
-#ifdef CONFIG_SEC_PM
-	s2dos05_irq_notifier_call_chain(s2dos05, val);
-#endif /* CONFIG_SEC_PM */
 
 	return IRQ_HANDLED;
 }
@@ -452,10 +494,10 @@ static int s2dos05_pmic_dt_parse_pdata(struct device *dev,
 		return -ENODEV;
 	}
 
-	pdata->dp_pmic_irq = of_get_named_gpio(pmic_np, "s2dos05,s2dos05_int", 0);
-	if (pdata->dp_pmic_irq < 0)
+	pdata->dp_irq = of_get_named_gpio(pmic_np, "s2dos05,s2dos05_int", 0);
+	if (pdata->dp_irq < 0)
 		pr_err("%s error reading s2dos05_irq = %d\n",
-			__func__, pdata->dp_pmic_irq);
+			__func__, pdata->dp_irq);
 
 	pdata->wakeup = of_property_read_bool(pmic_np, "s2dos05,wakeup");
 
@@ -528,9 +570,8 @@ static int s2dos05_pmic_dt_parse_pdata(struct s2dos05_dev *iodev,
 static ssize_t enable_fd_show(struct device *dev, struct device_attribute *attr,
 				char *buf)
 {
-	struct s2dos05_data *info = dev_get_drvdata(dev);
-	struct i2c_client *i2c = info->iodev->i2c;
-	u8 uvlo_fd;
+	struct i2c_client *i2c = s2dos05_info->iodev->i2c;
+	u8 uvlo_fd = 0;
 	bool enabled;
 
 	s2dos05_read_reg(i2c, S2DOS05_REG_UVLO_FD, &uvlo_fd);
@@ -539,17 +580,21 @@ static ssize_t enable_fd_show(struct device *dev, struct device_attribute *attr,
 
 	enabled = !(uvlo_fd & 1);
 
+#if defined(CONFIG_SEC_FACTORY) && \
+	(defined(CONFIG_SEC_WINNERLTE_PROJECT) || defined(CONFIG_SEC_WINNERX_PROJECT))
+	enable_sub_fd_show();
+#endif /* CONFIG_SEC_FACTORY && CONFIG_SEC_WINNERLTE_PROJECT */
+
 	return sprintf(buf, "%s\n", enabled ? "enabled" :  "disabled");
 }
 
 static ssize_t enable_fd_store(struct device *dev, struct device_attribute *attr,
 				const char *buf, size_t count)
 {
-	struct s2dos05_data *info = dev_get_drvdata(dev);
-	struct i2c_client *i2c = info->iodev->i2c;
+	struct i2c_client *i2c = s2dos05_info->iodev->i2c;
 	int ret;
-	bool enable;
 	u8 uvlo_fd;
+	bool enable;
 
 	ret = strtobool(buf, &enable);
 	if (ret)
@@ -561,9 +606,14 @@ static ssize_t enable_fd_store(struct device *dev, struct device_attribute *attr
 
 	ret = s2dos05_update_reg(i2c, S2DOS05_REG_UVLO_FD, uvlo_fd, 1);
 	if (ret < 0) {
-		dev_err(&i2c->dev, "%s: Failed to update FD(%d)\n", __func__, ret);
+		dev_err(dev, "%s: Failed to update FD(%d)\n", __func__, ret);
 		return ret;
 	}
+
+#if defined(CONFIG_SEC_FACTORY) && \
+	(defined(CONFIG_SEC_WINNERLTE_PROJECT) || defined(CONFIG_SEC_WINNERX_PROJECT))
+	enable_sub_fd_store(enable);
+#endif /* CONFIG_SEC_FACTORY && CONFIG_SEC_WINNERLTE_PROJECT */
 
 	return count;
 }
@@ -571,33 +621,37 @@ static ssize_t enable_fd_store(struct device *dev, struct device_attribute *attr
 static DEVICE_ATTR(enable_fd, 0664, enable_fd_show, enable_fd_store);
 
 #ifdef CONFIG_SEC_FACTORY
+static void handle_fd_work(struct work_struct *work)
+{
+	struct i2c_client *i2c = s2dos05_info->iodev->i2c;
+	u8 uvlo_fd = 0;
+	int ret;
+
+	dev_info(&i2c->dev, "%s: Enable FD\n", __func__);
+	ret = s2dos05_update_reg(i2c, S2DOS05_REG_UVLO_FD, 0, 1);
+	if (ret < 0)
+		dev_err(&i2c->dev, "%s: Failed to enable FD(%d)\n", __func__, ret);
+	s2dos05_read_reg(i2c, S2DOS05_REG_UVLO_FD, &uvlo_fd);
+	dev_info(&i2c->dev, "%s: uvlo_fd(0x%02X)\n", __func__, uvlo_fd);
+}
+
 static int fb_state_change(struct notifier_block *nb, unsigned long val,
 			   void *data)
 {
-	struct i2c_client *i2c = s2dos05_i2c;
-	struct fb_event *evdata = data;
-	struct fb_info *info = evdata->info;
-	unsigned int blank;
-	int ret;
+	int *blank;
 
-	if (val != FB_EVENT_BLANK && val != FB_R_EARLY_EVENT_BLANK)
+	if (val != FB_EVENT_BLANK)
 		return 0;
 
-	/*
-	 * If FBNODE is not zero, it is not primary display(LCD)
-	 * and don't need to process these scheduling.
-	 */
-	if (info->node)
-		return NOTIFY_OK;
+	blank = data;
 
-	blank = *(int *)evdata->data;
-
-	if (blank == FB_BLANK_UNBLANK) {
-		dev_info(&i2c->dev, "%s: Enable FD\n", __func__);
-		ret = s2dos05_update_reg(i2c, S2DOS05_REG_UVLO_FD, 0, 1);
-		if (ret < 0)
-			dev_err(&i2c->dev, "%s: Failed to enable FD(%d)\n",
-					__func__, ret);
+	if (*blank == FB_BLANK_UNBLANK) {
+#if defined(CONFIG_SEC_WINNERLTE_PROJECT) || defined(CONFIG_SEC_WINNERX_PROJECT)
+		s2mpb02_recovery(1);
+#endif
+		schedule_delayed_work(&fd_work, msecs_to_jiffies(500));
+ 	} else {
+		cancel_delayed_work_sync(&fd_work);
 	}
 
 	return NOTIFY_OK;
@@ -608,15 +662,13 @@ static struct notifier_block fb_block = {
 };
 #endif /* CONFIG_SEC_FACTORY */
 
-static int s2dos05_sec_pm_init(struct s2dos05_dev *iodev,
-				struct s2dos05_data *info)
+static int s2dos05_sec_pm_init(struct s2dos05_dev *iodev, struct device *dev)
 {
-	struct device *dev = &iodev->i2c->dev;
 	int ret = 0;
 
-	info->sec_disp_pmic_dev = sec_device_create(info, "disp_pmic");
-	if (unlikely(IS_ERR(info->sec_disp_pmic_dev))) {
-		ret = PTR_ERR(info->sec_disp_pmic_dev);
+	sec_disp_pmic_dev = sec_device_create(0, NULL, "disp_pmic");
+	if (unlikely(IS_ERR(sec_disp_pmic_dev))) {
+		ret = PTR_ERR(sec_disp_pmic_dev);
 		dev_err(dev, "%s: Failed to create disp_pmic(%d)\n", __func__,
 				ret);
 		return ret;
@@ -630,10 +682,11 @@ static int s2dos05_sec_pm_init(struct s2dos05_dev *iodev,
 		goto remove_sec_disp_pmic_dev;
 	}
 
-	fb_register_client(&fb_block);
+	msm_drm_register_notifier_client(&fb_block);
+	INIT_DELAYED_WORK(&fd_work, handle_fd_work);
 #endif /* CONFIG_SEC_FACTORY */
 
-	ret = device_create_file(info->sec_disp_pmic_dev, &dev_attr_enable_fd);
+	ret = device_create_file(sec_disp_pmic_dev, &dev_attr_enable_fd);
 	if (ret) {
 		dev_err(dev, "%s: Failed to create enable_fd(%d)\n", __func__,
 				ret);
@@ -643,15 +696,18 @@ static int s2dos05_sec_pm_init(struct s2dos05_dev *iodev,
 	return 0;
 
 remove_sec_disp_pmic_dev:
-	sec_device_destroy(info->sec_disp_pmic_dev->devt);
+	sec_device_destroy(sec_disp_pmic_dev->devt);
 
 	return ret;
 }
 
-static void s2dos05_sec_pm_deinit(struct s2dos05_data *info)
+static void s2dos05_sec_pm_deinit(void)
 {
-	device_remove_file(info->sec_disp_pmic_dev, &dev_attr_enable_fd);
-	sec_device_destroy(info->sec_disp_pmic_dev->devt);
+	device_remove_file(sec_disp_pmic_dev, &dev_attr_enable_fd);
+#ifdef CONFIG_SEC_FACTORY
+	msm_drm_unregister_notifier_client(&fb_block);
+#endif /* CONFIG_SEC_FACTORY */
+	sec_device_destroy(sec_disp_pmic_dev->devt);
 }
 #endif /* CONFIG_SEC_PM */
 
@@ -736,9 +792,8 @@ static int s2dos05_pmic_probe(struct i2c_client *i2c,
 	}
 
 #ifdef CONFIG_SEC_PM
-	s2dos05_i2c = iodev->i2c;
-
-	ret = s2dos05_sec_pm_init(iodev, s2dos05);
+	s2dos05_info = s2dos05;
+	ret = s2dos05_sec_pm_init(iodev, &i2c->dev);
 	if (ret < 0)
 		goto err_s2dos05_data;
 #endif /* CONFIG_SEC_PM */
@@ -746,7 +801,7 @@ static int s2dos05_pmic_probe(struct i2c_client *i2c,
 	iodev->adc_mode = pdata->adc_mode;
 	iodev->adc_sync_mode = pdata->adc_sync_mode;
 	if (iodev->adc_mode > 0)
-		s2dos05_powermeter_init(iodev, s2dos05->sec_disp_pmic_dev);
+		s2dos05_powermeter_init(iodev);
 
 	/* Enable SSD, SCP interrupt */
 	val = (S2DOS05_IRQ_PWRMT_MASK | S2DOS05_IRQ_TSD_MASK
@@ -759,11 +814,11 @@ static int s2dos05_pmic_probe(struct i2c_client *i2c,
 		return ret;
 	}
 
-	if (pdata->dp_pmic_irq > 0) {
-		iodev->dp_pmic_irq = gpio_to_irq(pdata->dp_pmic_irq);
-		pr_info("%s : dp_pmic_irq = %d\n", __func__, iodev->dp_pmic_irq);
-		if (iodev->dp_pmic_irq > 0) {
-			ret = request_threaded_irq(iodev->dp_pmic_irq,
+	if (pdata->dp_irq > 0) {
+		iodev->dp_irq = gpio_to_irq(pdata->dp_irq);
+		pr_info("%s : dp_irq = %d\n", __func__, iodev->dp_irq);
+		if (iodev->dp_irq > 0) {
+			ret = request_threaded_irq(iodev->dp_irq,
 					NULL, s2dos05_irq_thread,
 					IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 					"dp-pmic-irq", s2dos05);
@@ -773,17 +828,21 @@ static int s2dos05_pmic_probe(struct i2c_client *i2c,
 				goto err_s2dos05_data;
 			}
 
-			ret = enable_irq_wake(iodev->dp_pmic_irq);
+			ret = enable_irq_wake(iodev->dp_irq);
 			if (ret < 0)
 				dev_err(&i2c->dev,
 						"%s: Failed to Enable Wakeup Source(%d)\n",
 						__func__, ret);
 		} else {
 			dev_err(&i2c->dev, "%s: Failed gpio_to_irq(%d)\n",
-					__func__, iodev->dp_pmic_irq);
+					__func__, iodev->dp_irq);
 			goto err_s2dos05_data;
 		}
 	}
+
+#ifdef CONFIG_DEBUG_FS
+	s2dos05_debugfs_init(iodev);
+#endif
 
 	return ret;
 
@@ -796,7 +855,7 @@ err_pdata:
 }
 
 #if defined(CONFIG_OF)
-static struct of_device_id s2dos05_i2c_dt_ids[] = {
+static const struct of_device_id s2dos05_i2c_dt_ids[] = {
 	{ .compatible = "samsung,s2dos05pmic" },
 	{ },
 };
@@ -809,7 +868,7 @@ static int s2dos05_pmic_remove(struct i2c_client *i2c)
 
 	s2dos05_powermeter_deinit(s2dos05->iodev);
 #ifdef CONFIG_SEC_PM
-	s2dos05_sec_pm_deinit(s2dos05);
+	s2dos05_sec_pm_deinit();
 #endif /* CONFIG_SEC_PM */
 	return 0;
 }
@@ -841,7 +900,9 @@ static int s2dos05_pmic_resume(struct device *dev)
 				s2dos05->adc_en_val & 0x80, ADC_EN_MASK);
 #ifdef CONFIG_SEC_PM_DEBUG
 		if (ret < 0)
-			pr_err("%s: Failed to update_reg: %d\n", __func__, ret);
+			pr_err("%s s2dos05_update_reg is fail(%d)!!\n", __func__, ret);
+		else
+			pr_info("%s s2dos05_update_reg\n", __func__);
 #endif /* CONFIG_SEC_PM_DEBUG */
 	}
 	return 0;

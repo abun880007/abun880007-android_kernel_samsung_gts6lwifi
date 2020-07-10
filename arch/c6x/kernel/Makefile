@@ -1,13 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for arch/c6x/kernel/
-#
-
-extra-y := head.o vmlinux.lds
-
-obj-y := process.o traps.o irq.o signal.o ptrace.o
-obj-y += setup.o sys_c6x.o time.o devicetree.o
-obj-y += switch_to.o entry.o vectors.o c6x_ksyms.o
-obj-y += soc.o dma.o
-
-obj-$(CONFIG_MODULES)           += module.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:2ce7cfc9318a4b93ae2e1aac4abd13a7f71fc95691f726f3637d21d95afa8097
+size 318

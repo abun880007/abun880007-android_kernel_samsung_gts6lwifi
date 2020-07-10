@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-# The loops are all 64-bit code
-CFLAGS += -m64
-CFLAGS += -I$(CURDIR)
-
-TEST_GEN_PROGS := memcmp
-EXTRA_SOURCES := memcmp_64.S ../harness.c
-
-include ../../lib.mk
-
-$(TEST_GEN_PROGS): $(EXTRA_SOURCES)
+version https://git-lfs.github.com/spec/v1
+oid sha256:93bd873fb5e9c743dd67c227f08b4779cf5c50ddb3634b8f1768b9bf80b8917c
+size 231

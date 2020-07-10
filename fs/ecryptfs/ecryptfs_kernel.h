@@ -66,6 +66,7 @@
 #define ECRYPTFS_LABEL_SIZE 1024
 #define SEC_ECRYPTFS_HMAC_KEY_SIZE   32
 
+
 void ecryptfs_dump_auth_tok(struct ecryptfs_auth_tok *auth_tok);
 extern void ecryptfs_to_hex(char *dst, char *src, size_t src_size);
 extern void ecryptfs_from_hex(char *dst, char *src, int dst_size);
@@ -268,6 +269,7 @@ struct ecryptfs_crypt_stat {
 #define ECRYPTFS_ENCRYPTED_OTHER_DEVICE 0x00008000
 #endif
 #define ECRYPTFS_SUPPORT_HMAC_KEY     0x00010000
+
 	u32 flags;
 	unsigned int file_version;
 	size_t iv_bytes;
@@ -819,6 +821,8 @@ int ecryptfs_derive_iv(char *iv, struct ecryptfs_crypt_stat *crypt_stat,
 		       loff_t offset);
 
 extern const struct xattr_handler *ecryptfs_xattr_handlers[];
+
+
 
 #ifdef CONFIG_WTL_ENCRYPTION_FILTER
 extern int is_file_name_match(struct ecryptfs_mount_crypt_stat *mcs,

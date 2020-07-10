@@ -31,7 +31,7 @@
 #include <asm/ptrace.h>
 #include <asm/thread_info.h>
 
-#ifdef CONFIG_RKP_CFP_JOPP
+#ifdef CONFIG_RKP_CFP
 /*
  * Stack pushing/popping (register pairs only). Equivalent to store decrement
  * before, load increment after.

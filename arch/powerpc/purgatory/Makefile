@@ -1,16 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-targets += trampoline.o purgatory.ro kexec-purgatory.c
-
-LDFLAGS_purgatory.ro := -e purgatory_start -r --no-undefined
-
-$(obj)/purgatory.ro: $(obj)/trampoline.o FORCE
-		$(call if_changed,ld)
-
-CMD_BIN2C = $(objtree)/scripts/basic/bin2c
-quiet_cmd_bin2c = BIN2C   $@
-      cmd_bin2c = $(CMD_BIN2C) kexec_purgatory < $< > $@
-
-$(obj)/kexec-purgatory.c: $(obj)/purgatory.ro FORCE
-	$(call if_changed,bin2c)
-
-obj-y	+= kexec-purgatory.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:466085dcb4fc6b18e43b88557c4f54289cb1c129f4987217fff7721a337e3845
+size 461

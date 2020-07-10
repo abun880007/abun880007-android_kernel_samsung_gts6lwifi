@@ -1,9 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_VIDEO_OV5693) += ov5693.o
-
-# HACK! While this driver is in bad shape, don't enable several warnings
-#       that would be otherwise enabled with W=1
-ccflags-y += $(call cc-disable-warning, unused-but-set-variable)
-ccflags-y += $(call cc-disable-warning, unused-const-variable)
-ccflags-y += $(call cc-disable-warning, missing-prototypes)
-ccflags-y += $(call cc-disable-warning, missing-declarations)
+version https://git-lfs.github.com/spec/v1
+oid sha256:fed804f729777220e52beb58df46a8a329393f6dcfdf8abfc12c4e5b440163bf
+size 447

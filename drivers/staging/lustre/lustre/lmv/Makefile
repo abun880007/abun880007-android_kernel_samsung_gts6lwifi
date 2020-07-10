@@ -1,5 +1,3 @@
-subdir-ccflags-y += -I$(srctree)/drivers/staging/lustre/include
-subdir-ccflags-y += -I$(srctree)/drivers/staging/lustre/lustre/include
-
-obj-$(CONFIG_LUSTRE_FS) += lmv.o
-lmv-y := lmv_obd.o lmv_intent.o lmv_fld.o lproc_lmv.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:dc7a1d65804b1edf98b28dd887db47f6169b739bea2bb010140ddc95963dca49
+size 223

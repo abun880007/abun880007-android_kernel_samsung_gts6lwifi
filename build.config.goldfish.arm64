@@ -1,13 +1,3 @@
-ARCH=arm64
-BRANCH=android-4.4
-CROSS_COMPILE=aarch64-linux-android-
-DEFCONFIG=ranchu64_defconfig
-EXTRA_CMDS=''
-KERNEL_DIR=common
-LINUX_GCC_CROSS_COMPILE_PREBUILTS_BIN=prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin
-FILES="
-arch/arm64/boot/Image
-vmlinux
-System.map
-"
-STOP_SHIP_TRACEPRINTK=1
+version https://git-lfs.github.com/spec/v1
+oid sha256:46e6ec37efe7b8be04345ecf7ce7b26ff9924a6a0bdc52a622fdeb62a607b094
+size 303

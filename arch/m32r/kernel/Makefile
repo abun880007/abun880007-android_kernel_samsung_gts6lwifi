@@ -1,12 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the Linux/M32R kernel.
-#
-
-extra-y	:= head.o vmlinux.lds
-
-obj-y	:= process.o entry.o traps.o align.o irq.o setup.o time.o \
-	m32r_ksyms.o sys_m32r.o signal.o ptrace.o
-
-obj-$(CONFIG_SMP)		+= smp.o smpboot.o
-obj-$(CONFIG_MODULES)		+= module.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:8d7b65290bf86a0d8eed079663413fdfd3d207386fdd7c20d564e355d6c97c75
+size 292

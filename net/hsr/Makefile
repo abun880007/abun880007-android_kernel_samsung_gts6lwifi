@@ -1,8 +1,3 @@
-#
-# Makefile for HSR
-#
-
-obj-$(CONFIG_HSR)	+= hsr.o
-
-hsr-y			:= hsr_main.o hsr_framereg.o hsr_device.o \
-			   hsr_netlink.o hsr_slave.o hsr_forward.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:8126e01a9f9d4d744aebaf59452fc97408d4e520a624f9ac60b5d7b57e4bbef4
+size 150

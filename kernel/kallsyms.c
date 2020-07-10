@@ -25,17 +25,19 @@
 #include <linux/slab.h>
 #include <linux/filter.h>
 #include <linux/compiler.h>
-#if defined(CONFIG_SEC_DEBUG)
-#include <linux/sec_debug.h>
-#endif
 
 #include <asm/sections.h>
+
+#ifdef CONFIG_SEC_DEBUG
+#include <linux/sec_debug.h>
+#endif
 
 #ifdef CONFIG_KALLSYMS_ALL
 #define all_var 1
 #else
 #define all_var 0
 #endif
+
 /*
  * These will be re-linked against their real values
  * during the second link stage.
@@ -59,35 +61,33 @@ extern const u16 kallsyms_token_index[] __weak;
 
 extern const unsigned long kallsyms_markers[] __weak;
 
-#if defined(CONFIG_SEC_DEBUG)
-void sec_debug_set_kallsyms_info(struct sec_debug_ksyms *ksyms, int magic)
+#ifdef CONFIG_SEC_DEBUG_SUMMARY
+void sec_debug_summary_set_kallsyms_info(
+		struct sec_debug_summary_data_apss *apss)
 {
 	if (!IS_ENABLED(CONFIG_KALLSYMS_BASE_RELATIVE)) {
-		ksyms->addresses_pa = __pa(kallsyms_addresses);
-		ksyms->relative_base = 0x0;
-		ksyms->offsets_pa = 0x0;
+		apss->ksyms.addresses_pa = __pa(kallsyms_addresses);
+		apss->ksyms.relative_base = 0x0;
+		apss->ksyms.offsets_pa = 0x0;
 	} else {
-		ksyms->addresses_pa = 0x0;
-		ksyms->relative_base = (uint64_t)kallsyms_relative_base;
-		ksyms->offsets_pa = __pa(kallsyms_offsets);
+		apss->ksyms.addresses_pa = 0x0;
+		apss->ksyms.relative_base = (uint64_t)kallsyms_relative_base;
+		apss->ksyms.offsets_pa = __pa(kallsyms_offsets);
 	}
+	apss->ksyms.names_pa = __pa(kallsyms_names);
+	apss->ksyms.num_syms = kallsyms_num_syms;
+	apss->ksyms.token_table_pa = __pa(kallsyms_token_table);
+	apss->ksyms.token_index_pa = __pa(kallsyms_token_index);
+	apss->ksyms.markers_pa = __pa(kallsyms_markers);
 
-	ksyms->names_pa = __pa(kallsyms_names);
-	ksyms->num_syms = kallsyms_num_syms;
-	ksyms->token_table_pa = __pa(kallsyms_token_table);
-	ksyms->token_index_pa = __pa(kallsyms_token_index);
-	ksyms->markers_pa = __pa(kallsyms_markers);
+	apss->ksyms.sect.sinittext = (uintptr_t)_sinittext;
+	apss->ksyms.sect.einittext = (uintptr_t)_einittext;
+	apss->ksyms.sect.stext = (uintptr_t)_stext;
+	apss->ksyms.sect.etext = (uintptr_t)_etext;
+	apss->ksyms.sect.end = (uintptr_t)_end;
 
-	ksyms->sect.sinittext = (uint64_t)_sinittext;
-	ksyms->sect.einittext = (uint64_t)_einittext;
-	ksyms->sect.stext = (uint64_t)_stext;
-	ksyms->sect.etext = (uint64_t)_etext;
-	ksyms->sect.end = (uint64_t)_end;
-
-	ksyms->kallsyms_all = all_var;
-
-	ksyms->magic = magic;
-	ksyms->kimage_voffset = kimage_voffset;
+	apss->ksyms.kallsyms_all = all_var;
+	apss->ksyms.magic = SEC_DEBUG_SUMMARY_MAGIC1;
 }
 #endif
 

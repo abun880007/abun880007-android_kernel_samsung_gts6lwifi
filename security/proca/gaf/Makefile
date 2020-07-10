@@ -1,7 +1,3 @@
-# When adding new entries keep the list in alphabetical order
-obj-$(CONFIG_GAF_V3)		+= gaf_v3.o
-obj-$(CONFIG_GAF_V4)		+= gaf_v4.o
-obj-$(CONFIG_GAF_V5)		+= gaf_v5.o
-obj-$(CONFIG_GAF_V6)		+= gaf_v6.o
-
-ccflags-y += -Isecurity/proca
+version https://git-lfs.github.com/spec/v1
+oid sha256:fbb547a3f2215db4652f7261e6545a5f39a76d4b1ab09821a1a584773edcede0
+size 229

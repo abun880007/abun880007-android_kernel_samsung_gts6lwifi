@@ -1,16 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# for Renesas USB
-#
-
-obj-$(CONFIG_USB_RENESAS_USBHS)	+= renesas_usbhs.o
-
-renesas_usbhs-y			:= common.o mod.o pipe.o fifo.o rcar2.o rcar3.o
-
-ifneq ($(CONFIG_USB_RENESAS_USBHS_HCD),)
-	renesas_usbhs-y		+= mod_host.o
-endif
-
-ifneq ($(CONFIG_USB_RENESAS_USBHS_UDC),)
-	renesas_usbhs-y		+= mod_gadget.o
-endif
+version https://git-lfs.github.com/spec/v1
+oid sha256:950c13dc654e783e7c7f2deea12ad4a06b24f481bb7b4a3c0d43a0553b0bf289
+size 338

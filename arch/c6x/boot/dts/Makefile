@@ -1,21 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for device trees
-#
-
-DTC_FLAGS ?= -p 1024
-
-ifneq ($(DTB),)
-obj-y += linked_dtb.o
-endif
-
-quiet_cmd_cp = CP      $< $@$2
-	cmd_cp = cat $< >$@$2 || (rm -f $@ && echo false)
-
-# Generate builtin.dtb from $(DTB).dtb
-$(obj)/builtin.dtb: $(obj)/$(DTB).dtb
-	$(call if_changed,cp)
-
-$(obj)/linked_dtb.o: $(obj)/builtin.dtb
-
-clean-files := *.dtb
+version https://git-lfs.github.com/spec/v1
+oid sha256:cf49c07116600775766d6e8bb7f4212b8420ba7c04bc3aa189d427c9d2a16859
+size 381

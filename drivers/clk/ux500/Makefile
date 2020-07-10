@@ -1,17 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for ux500 clocks
-#
-
-# Clock types
-obj-y += clk-prcc.o
-obj-y += clk-prcmu.o
-obj-y += clk-sysctrl.o
-
-# Clock definitions
-obj-y += u8500_of_clk.o
-obj-y += u9540_clk.o
-obj-y += u8540_clk.o
-
-# ABX500 clock driver
-obj-y += abx500-clk.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:181a59fe8021830ec27d01d892db7df5cad6989a547eb343f1285db4bb57fff2
+size 278

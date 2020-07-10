@@ -1,13 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-# Intel pin control drivers
-
-obj-$(CONFIG_PINCTRL_BAYTRAIL)		+= pinctrl-baytrail.o
-obj-$(CONFIG_PINCTRL_CHERRYVIEW)	+= pinctrl-cherryview.o
-obj-$(CONFIG_PINCTRL_MERRIFIELD)	+= pinctrl-merrifield.o
-obj-$(CONFIG_PINCTRL_INTEL)		+= pinctrl-intel.o
-obj-$(CONFIG_PINCTRL_BROXTON)		+= pinctrl-broxton.o
-obj-$(CONFIG_PINCTRL_CANNONLAKE)	+= pinctrl-cannonlake.o
-obj-$(CONFIG_PINCTRL_DENVERTON)		+= pinctrl-denverton.o
-obj-$(CONFIG_PINCTRL_GEMINILAKE)	+= pinctrl-geminilake.o
-obj-$(CONFIG_PINCTRL_LEWISBURG)		+= pinctrl-lewisburg.o
-obj-$(CONFIG_PINCTRL_SUNRISEPOINT)	+= pinctrl-sunrisepoint.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:c10ab49ce2d5d48cc9178679f585ab93d2e30d21df4af52b7b69d6af5ee6db37
+size 619

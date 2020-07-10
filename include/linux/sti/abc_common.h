@@ -23,7 +23,11 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#ifdef CONFIG_DRV_SAMSUNG
 #include <linux/sec_class.h>
+#else
+extern struct class *sec_class;
+#endif
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
@@ -84,10 +88,12 @@ struct abc_qdata {
 
 struct abc_platform_data {
 	struct abc_qdata *gpu_items;
+	struct abc_qdata *gpu_page_items;
 	struct abc_qdata *aicl_items;
 
 	unsigned int nItem;
 	unsigned int nGpu;
+	unsigned int nGpuPage;
 	unsigned int nAicl;
 };
 

@@ -43,6 +43,9 @@
 #include <asm/virt.h>
 
 #include "efi-header.S"
+#ifdef CONFIG_RKP_CFP_ROPP
+#include <asm/rkp_cfp.h>
+#endif
 
 #define __PHYS_OFFSET	(KERNEL_START - TEXT_OFFSET)
 
@@ -88,11 +91,7 @@ _head:
 	le64sym	_kernel_offset_le		// Image load offset from start of RAM, little-endian
 	le64sym	_kernel_size_le			// Effective size of kernel image, little-endian
 	le64sym	_kernel_flags_le		// Informative flags, little-endian
-#ifdef CONFIG_UH_RKP
-	.quad	rkp_init_data - .		// rkp init data
-#else
 	.quad	0				// reserved
-#endif
 #ifdef CONFIG_PROCA
 	le64sym	_proca_conf_offset		// memory info for proca ta
 #else
@@ -122,6 +121,9 @@ pe_header:
 	 *  x19/x20    __primary_switch()         callee preserved temp registers
 	 */
 ENTRY(stext)
+#ifdef CONFIG_RKP_CFP_ROPP
+	ropp_primary_early_init
+#endif
 	bl	preserve_boot_args
 	bl	el2_setup			// Drop to EL1, w0=cpu_boot_mode
 	adrp	x23, __PHYS_OFFSET
@@ -578,7 +580,7 @@ ENTRY(__boot_cpu_mode)
  * with MMU turned off.
  */
 ENTRY(__early_cpu_boot_status)
-	.long 	0
+	.quad 	0
 
 	.popsection
 
@@ -630,6 +632,9 @@ __secondary_switched:
 	mov	sp, x1
 	ldr	x2, [x0, #CPU_BOOT_TASK]
 	msr	sp_el0, x2
+#ifdef CONFIG_RKP_CFP_ROPP
+	ropp_secondary_init x2
+#endif
 	mov	x29, #0
 	mov	x30, #0
 	b	secondary_start_kernel
@@ -683,10 +688,7 @@ ENTRY(__enable_mmu)
 	 * been dynamically patched at the PoU.
 	 */
 	ic	iallu
-#ifdef CONFIG_SOC_EXYNOS9820
-	tlbi    vaale1is, xzr                   // dummy TLBI
-#endif
-	dsb	ish
+	dsb	nsh
 	isb
 	ret
 ENDPROC(__enable_mmu)
@@ -752,18 +754,12 @@ __primary_switch:
 	bl	__create_page_tables		// recreate kernel mapping
 
 	tlbi	vmalle1				// Remove any stale TLB entries
-#ifdef CONFIG_SOC_EXYNOS9820
-	tlbi    vaale1is, xzr                   // dummy TLBI
-#endif
 	dsb	nsh
 
 	msr	sctlr_el1, x19			// re-enable the MMU
 	isb
 	ic	iallu				// flush instructions fetched
-#ifdef CONFIG_SOC_EXYNOS9820
-	tlbi    vaale1is, xzr                   // dummy TLBI
-#endif
-	dsb	ish				// via old mapping
+	dsb	nsh				// via old mapping
 	isb
 
 	bl	__relocate_kernel

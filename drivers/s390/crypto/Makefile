@@ -1,17 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# S/390 crypto devices
-#
-
-ap-objs := ap_bus.o ap_card.o ap_queue.o
-obj-$(subst m,y,$(CONFIG_ZCRYPT)) += ap.o
-# zcrypt_api.o and zcrypt_msgtype*.o depend on ap.o
-zcrypt-objs := zcrypt_api.o zcrypt_card.o zcrypt_queue.o
-zcrypt-objs += zcrypt_msgtype6.o zcrypt_msgtype50.o
-obj-$(CONFIG_ZCRYPT) += zcrypt.o
-# adapter drivers depend on ap.o and zcrypt.o
-obj-$(CONFIG_ZCRYPT) += zcrypt_pcixcc.o zcrypt_cex2a.o zcrypt_cex4.o
-
-# pkey kernel module
-pkey-objs := pkey_api.o
-obj-$(CONFIG_PKEY) += pkey.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:eb2bbb0428d9b984dd0e9cbac08d19749cee2f132bbbdca24155b0d897c0b309
+size 530

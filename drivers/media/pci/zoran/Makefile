@@ -1,7 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-zr36067-objs	:=	zoran_procfs.o zoran_device.o \
-			zoran_driver.o zoran_card.o
-
-obj-$(CONFIG_VIDEO_ZORAN) += zr36067.o videocodec.o
-obj-$(CONFIG_VIDEO_ZORAN_DC30) += zr36050.o zr36016.o
-obj-$(CONFIG_VIDEO_ZORAN_ZR36060) += zr36060.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:91fd7f2e5ddab3c766478fd6a423d3d2ebc45535e14de1fe6fe5d3d56fe589df
+size 268

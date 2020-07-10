@@ -1,21 +1,13 @@
 /*
  * s2mpb02-core.c - mfd core driver for the Samsung s2mpb02
  *
- * Copyright (C) 2014 Samsung Electronics
+ * Copyright (c) 2017 Samsung Electronics Co., Ltd
+ *              http://www.samsung.com
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *  This program is free software; you can redistribute  it and/or modify it
+ *  under  the terms of  the GNU General  Public License as published by the
+ *  Free Software Foundation;  either version 2 of the  License, or (at your
+ *  option) any later version.
  *
  * This driver is based on max77804.c
  */
@@ -27,9 +19,10 @@
 #include <linux/interrupt.h>
 #include <linux/mutex.h>
 #include <linux/mfd/core.h>
-#include <linux/mfd/samsung/s2mpb02.h>
-#include <linux/mfd/samsung/s2mpb02-regulator.h>
+#include <linux/mfd/s2mpb02.h>
+#include <linux/mfd/s2mpb02-private.h>
 #include <linux/regulator/machine.h>
+#include <linux/debugfs.h>
 
 #ifdef	CONFIG_OF
 #include <linux/of_device.h>
@@ -112,32 +105,110 @@ EXPORT_SYMBOL_GPL(s2mpb02_bulk_write);
 int s2mpb02_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask)
 {
 	struct s2mpb02_dev *s2mpb02 = i2c_get_clientdata(i2c);
-	int ret;
+	int ret, ret_val;
+	u8 old_val = 0, new_val = 0;
 
 	mutex_lock(&s2mpb02->i2c_lock);
 	ret = i2c_smbus_read_byte_data(i2c, reg);
 	if (ret >= 0) {
-		u8 old_val = ret & 0xff;
-		u8 new_val = (val & mask) | (old_val & (~mask));
+		old_val = ret & 0xff;
+		new_val = (val & mask) | (old_val & (~mask));
+
 		ret = i2c_smbus_write_byte_data(i2c, reg, new_val);
 	}
+
+	ret_val = i2c_smbus_read_byte_data(i2c, reg);
+	if (ret_val >= 0)
+		new_val = ret_val & 0xff;
 	mutex_unlock(&s2mpb02->i2c_lock);
+
+	pr_info("s2mpb02(0x%02X): 0x%02X -> 0x%02X\n", reg, old_val, new_val);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(s2mpb02_update_reg);
+
+#ifdef CONFIG_DEBUG_FS
+static int s2mpb02_regdump_show(struct seq_file *s, void *unused)
+{
+	struct s2mpb02_dev *s2mpb02_dev = s->private;
+	u8 i, val = 0;
+
+	for (i = S2MPB02_REG_ID; i <= S2MPB02_REG_LDO_DSCH3; i++) {
+		s2mpb02_read_reg(s2mpb02_dev->i2c, i, &val);
+		seq_printf(s, "0x%x: 0x%x\n", i, val);
+	}
+
+	return 0;
+}
+
+static int s2mpb02_regdump_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, s2mpb02_regdump_show, inode->i_private);
+}
+
+static const struct file_operations s2mpb02_regdump_operations = {
+	.open           = s2mpb02_regdump_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
+static void s2mpb02_debugfs_init(struct s2mpb02_dev *s2mpb02)
+{
+	debugfs_create_file("s2mpb02_regdump", 0440,
+			NULL, s2mpb02, &s2mpb02_regdump_operations);
+}
+#endif
 
 #ifdef	CONFIG_OF
 static int of_s2mpb02_dt(struct device *dev,
 		struct s2mpb02_platform_data *pdata)
 {
 	struct device_node *np_s2mpb02 = dev->of_node;
+	int count = 0;
+	int i, ret;
 
 	if (!np_s2mpb02)
 		return -EINVAL;
 
 	pdata->wakeup = of_property_read_bool(np_s2mpb02, "s2mpb02,wakeup");
 
+	count = of_property_count_strings(np_s2mpb02, "s2mpb02,mfd-cell");
+
+	if (!count || (count == -EINVAL)) {
+		pdata->devs_num = ARRAY_SIZE(s2mpb02_devs);
+		pdata->devs = s2mpb02_devs;
+
+		for (i = 0; i < pdata->devs_num; i++)
+			pr_info("%s mfd-cell(%d) = %s\n", __func__, i,
+				pdata->devs[i].name);
+
+	} else {
+		pdata->devs_num = count;
+		pdata->devs = kcalloc(pdata->devs_num,
+				      sizeof(struct mfd_cell), GFP_KERNEL);
+		if (!pdata->devs) {
+			pr_err("%s failed %d\n", __func__, __LINE__);
+			return -ENOMEM;
+		}
+
+		for (i = 0; i < pdata->devs_num; i++) {
+			ret = of_property_read_string_index(np_s2mpb02,
+				 "s2mpb02,mfd-cell", i, &pdata->devs[i].name);
+			pr_info("%s mfd-cell(%d) = %s\n", __func__, i,
+				pdata->devs[i].name);
+			if (ret < 0) {
+				pr_err("%s failed %d\n", __func__, __LINE__);
+				goto err_mfd_cell;
+			}
+		}
+	}
+
 	return 0;
+
+err_mfd_cell:
+	kfree(pdata->devs);
+	return ret;
 }
 #else
 static int of_s2mpb02_dt(struct device *dev,
@@ -213,11 +284,12 @@ static int s2mpb02_i2c_probe(struct i2c_client *i2c,
 			S2MPB02_REG_BST_CTRL2, &reg_data) < 0) {
 		pr_err("device not found on this channel!!\n");
 		ret = -ENODEV;
+		goto err_irq_init;
 	} else {
-		if (reg_data == 0x90) {
-			S2MPB02_PMIC_REV(s2mpb02) = 1;
-		} else
-			S2MPB02_PMIC_REV(s2mpb02) = 0;
+		if (reg_data == 0x90)
+			s2mpb02->rev_num = 1;
+		else
+			s2mpb02->rev_num = 0;
 		pr_info("%s: device id 0x%x is found\n",
 				__func__, s2mpb02->rev_num);
 	}
@@ -226,19 +298,22 @@ static int s2mpb02_i2c_probe(struct i2c_client *i2c,
 	if (ret < 0)
 		goto err_irq_init;
 
-	ret = mfd_add_devices(s2mpb02->dev, -1, s2mpb02_devs,
-			ARRAY_SIZE(s2mpb02_devs), NULL, 0, NULL);
+	ret = mfd_add_devices(s2mpb02->dev, -1, pdata->devs,
+			pdata->devs_num, NULL, 0, NULL);
 	if (ret < 0)
 		goto err_irq_init;
 
 	device_init_wakeup(s2mpb02->dev, pdata->wakeup);
+#ifdef CONFIG_DEBUG_FS
+	s2mpb02_debugfs_init(s2mpb02);
+#endif
 
 	return ret;
 
 err_irq_init:
 	mutex_destroy(&s2mpb02->i2c_lock);
 err:
-	kfree(pdata);
+	devm_kfree(&i2c->dev, (void *)pdata);
 	s2mpb02_irq_exit(s2mpb02);
 err_pdata:
 	kfree(s2mpb02);
@@ -265,7 +340,7 @@ static const struct i2c_device_id s2mpb02_i2c_id[] = {
 MODULE_DEVICE_TABLE(i2c, s2mpb02_i2c_id);
 
 #if defined(CONFIG_OF)
-static struct of_device_id s2mpb02_i2c_dt_ids[] = {
+static const struct of_device_id s2mpb02_i2c_dt_ids[] = {
 	{ .compatible = "s2mpb02,s2mpb02mfd" },
 	{},
 };

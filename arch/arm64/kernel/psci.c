@@ -21,7 +21,6 @@
 #include <linux/delay.h>
 #include <linux/psci.h>
 #include <linux/mm.h>
-#include <soc/samsung/exynos-cpupm.h>
 
 #include <uapi/linux/psci.h>
 
@@ -70,21 +69,13 @@ static int cpu_psci_cpu_disable(unsigned int cpu)
 
 static void cpu_psci_cpu_die(unsigned int cpu)
 {
-	u32 state;
-	int ret, affinity_level = 0;
+	int ret;
 	/*
 	 * There are no known implementations of PSCI actually using the
 	 * power state field, pass a sensible default for now.
 	 */
-	if (exynos_cpuhp_last_cpu(cpu))
-		affinity_level = 1;
-
-	state = ((PSCI_POWER_STATE_TYPE_POWER_DOWN
-			<< PSCI_0_2_POWER_STATE_TYPE_SHIFT)
-			& PSCI_0_2_POWER_STATE_TYPE_MASK) |
-		((affinity_level
-			<< PSCI_0_2_POWER_STATE_AFFL_SHIFT)
-			& PSCI_0_2_POWER_STATE_AFFL_MASK);
+	u32 state = PSCI_POWER_STATE_TYPE_POWER_DOWN <<
+		    PSCI_0_2_POWER_STATE_TYPE_SHIFT;
 
 	ret = psci_ops.cpu_off(state);
 
@@ -106,12 +97,12 @@ static int cpu_psci_cpu_kill(unsigned int cpu)
 	for (i = 0; i < 10; i++) {
 		err = psci_ops.affinity_info(cpu_logical_map(cpu), 0);
 		if (err == PSCI_0_2_AFFINITY_LEVEL_OFF) {
-			pr_info("CPU%d killed.\n", cpu);
+			pr_debug("CPU%d killed.\n", cpu);
 			return 0;
 		}
 
 		msleep(10);
-		pr_info("Retrying again to check for CPU kill\n");
+		pr_debug("Retrying again to check for CPU kill\n");
 	}
 
 	pr_warn("CPU%d may not have shut down cleanly (AFFINITY_INFO reports %d)\n",

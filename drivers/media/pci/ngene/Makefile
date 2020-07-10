@@ -1,15 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the nGene device driver
-#
-
-ngene-objs := ngene-core.o ngene-i2c.o ngene-cards.o ngene-dvb.o
-
-obj-$(CONFIG_DVB_NGENE) += ngene.o
-
-ccflags-y += -Idrivers/media/dvb-core/
-ccflags-y += -Idrivers/media/dvb-frontends/
-ccflags-y += -Idrivers/media/tuners/
-
-# For the staging CI driver cxd2099
-ccflags-y += -Idrivers/staging/media/cxd2099/
+version https://git-lfs.github.com/spec/v1
+oid sha256:eb74e437df7e0b857a01dde8427e7ead2a6ce0027f143034f44aa89d8c51d698
+size 384

@@ -1,18 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-au0828-objs	:= au0828-core.o au0828-i2c.o au0828-cards.o au0828-dvb.o
-
-ifeq ($(CONFIG_VIDEO_AU0828_V4L2),y)
-  au0828-objs   += au0828-video.o au0828-vbi.o
-endif
-
-ifeq ($(CONFIG_VIDEO_AU0828_RC),y)
-  au0828-objs   += au0828-input.o
-endif
-
-obj-$(CONFIG_VIDEO_AU0828) += au0828.o
-
-ccflags-y += -Idrivers/media/tuners
-ccflags-y += -Idrivers/media/dvb-core
-ccflags-y += -Idrivers/media/dvb-frontends
-
-ccflags-y += $(extra-cflags-y) $(extra-cflags-m)
+version https://git-lfs.github.com/spec/v1
+oid sha256:17909bcfdff433b29925cbb35a6e99ed6072afde9fb09a6b2c21ce76493a8004
+size 480

@@ -47,9 +47,6 @@
  * Event codes passed as unsigned long val to notifier calls
  */
 enum cpu_pm_event {
-	/* A single cpu is preparing lopower state */
-	CPU_PM_ENTER_PREPARE,
-
 	/* A single cpu is entering a low power state */
 	CPU_PM_ENTER,
 
@@ -58,9 +55,6 @@ enum cpu_pm_event {
 
 	/* A single cpu is exiting a low power state */
 	CPU_PM_EXIT,
-
-	/* A single cpu is post existing a low power state */
-	CPU_PM_EXIT_POST,
 
 	/* A cpu power domain is entering a low power state */
 	CPU_CLUSTER_PM_ENTER,
@@ -77,10 +71,8 @@ int cpu_pm_register_notifier(struct notifier_block *nb);
 int cpu_pm_unregister_notifier(struct notifier_block *nb);
 int cpu_pm_enter(void);
 int cpu_pm_exit(void);
-int cpu_cluster_pm_enter(void);
-int cpu_cluster_pm_exit(void);
-int cpu_pm_enter_pre(void);
-int cpu_pm_exit_post(void);
+int cpu_cluster_pm_enter(unsigned long aff_level);
+int cpu_cluster_pm_exit(unsigned long aff_level);
 
 #else
 
@@ -104,25 +96,14 @@ static inline int cpu_pm_exit(void)
 	return 0;
 }
 
-static inline int cpu_cluster_pm_enter(void)
+static inline int cpu_cluster_pm_enter(unsigned long aff_level)
 {
 	return 0;
 }
 
-static inline int cpu_cluster_pm_exit(void)
+static inline int cpu_cluster_pm_exit(unsigned long aff_level)
 {
 	return 0;
 }
-
-static inline int cpu_pm_enter_pre(void)
-{
-	return 0;
-}
-
-static inline int cpu_pm_exit_post(void)
-{
-	return 0;
-}
-
 #endif
 #endif

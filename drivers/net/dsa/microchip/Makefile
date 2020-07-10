@@ -1,2 +1,3 @@
-obj-$(CONFIG_MICROCHIP_KSZ)	        += ksz_common.o
-obj-$(CONFIG_MICROCHIP_KSZ_SPI_DRIVER)	+= ksz_spi.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:62c68a316bbd770c5dff3a9ff7543da36f1ae04d01eccd9d4b42a53943d82a2c
+size 104

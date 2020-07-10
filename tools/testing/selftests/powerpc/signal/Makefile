@@ -1,14 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-TEST_PROGS := signal signal_tm
-
-all: $(TEST_PROGS)
-
-$(TEST_PROGS): ../harness.c ../utils.c signal.S
-
-CFLAGS += -maltivec
-signal_tm: CFLAGS += -mhtm
-
-include ../../lib.mk
-
-clean:
-	rm -f $(TEST_PROGS) *.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:c189a5ad3b3c5e49f52c033106ce3a4617e5f32f8d838668c404cba5af610574
+size 238

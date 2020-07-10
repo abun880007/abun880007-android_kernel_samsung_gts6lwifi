@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the QLogic network device drivers.
-#
-
-obj-$(CONFIG_QLA3XXX) += qla3xxx.o
-obj-$(CONFIG_QLCNIC) += qlcnic/
-obj-$(CONFIG_QLGE) += qlge/
-obj-$(CONFIG_NETXEN_NIC) += netxen/
-obj-$(CONFIG_QED) += qed/
-obj-$(CONFIG_QEDE)+= qede/
+version https://git-lfs.github.com/spec/v1
+oid sha256:a79a68a397798466e774f586afbbb0583b5480ca49b141184fdfd2a7f0f98e04
+size 274

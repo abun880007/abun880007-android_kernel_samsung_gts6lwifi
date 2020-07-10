@@ -269,8 +269,7 @@ int ecryptfs_initialize_file(struct dentry *ecryptfs_dentry,
 			"[%pd]; rc = [%d]\n", __func__,
 			ecryptfs_dentry, rc);
 		goto out;
-	}
-    
+	}	
 #ifdef CONFIG_WTL_ENCRYPTION_FILTER
 	mutex_lock(&crypt_stat->cs_mutex);
 	if (crypt_stat->flags & ECRYPTFS_ENCRYPTED) {

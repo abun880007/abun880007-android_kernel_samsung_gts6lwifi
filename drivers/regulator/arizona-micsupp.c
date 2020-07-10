@@ -30,9 +30,9 @@
 #include <linux/mfd/arizona/pdata.h>
 #include <linux/mfd/arizona/registers.h>
 
-#include <linux/mfd/madera/core.h>
-#include <linux/mfd/madera/pdata.h>
-#include <linux/mfd/madera/registers.h>
+#include <linux/mfd/tacna/core.h>
+#include <linux/mfd/tacna/pdata.h>
+#include <linux/mfd/tacna/registers.h>
 
 #include <linux/regulator/arizona-micsupp.h>
 
@@ -40,7 +40,7 @@ struct arizona_micsupp {
 	struct regulator_dev *regulator;
 	struct regmap *regmap;
 	struct snd_soc_dapm_context **dapm;
-	unsigned int enable_reg;
+	const struct regulator_desc *desc;
 	struct device *dev;
 
 	struct regulator_consumer_supply supply;
@@ -82,6 +82,7 @@ static void arizona_micsupp_check_cp(struct work_struct *work)
 
 		if (sync)
 			snd_soc_dapm_sync(dapm);
+
 	}
 }
 
@@ -230,19 +231,19 @@ static const struct regulator_init_data arizona_micsupp_ext_default = {
 	.num_consumer_supplies = 1,
 };
 
-static const struct regulator_desc madera_micsupp = {
-	.name = "MICVDD",
-	.supply_name = "CPVDD1",
+static const struct regulator_desc tacna_micsupp = {
+	.name = "VOUT_MIC",
+	.supply_name = "VDD1_CP",
 	.type = REGULATOR_VOLTAGE,
 	.n_voltages = 40,
 	.ops = &arizona_micsupp_ops,
 
-	.vsel_reg = MADERA_LDO2_CONTROL_1,
-	.vsel_mask = MADERA_LDO2_VSEL_MASK,
-	.enable_reg = MADERA_MIC_CHARGE_PUMP_1,
-	.enable_mask = MADERA_CPMIC_ENA,
-	.bypass_reg = MADERA_MIC_CHARGE_PUMP_1,
-	.bypass_mask = MADERA_CPMIC_BYPASS,
+	.vsel_reg = TACNA_LDO2_CTRL1,
+	.vsel_mask = TACNA_LDO2_VSEL_MASK,
+	.enable_reg = TACNA_CHARGE_PUMP1,
+	.enable_mask = TACNA_CP2_EN,
+	.bypass_reg = TACNA_CHARGE_PUMP1,
+	.bypass_mask = TACNA_CP2_BYPASS,
 
 	.linear_ranges = arizona_micsupp_ext_ranges,
 	.n_linear_ranges = ARRAY_SIZE(arizona_micsupp_ext_ranges),
@@ -292,7 +293,7 @@ static int arizona_micsupp_common_init(struct platform_device *pdev,
 	micsupp->init_data.consumer_supplies = &micsupp->supply;
 	micsupp->supply.supply = "MICVDD";
 	micsupp->supply.dev_name = dev_name(micsupp->dev);
-	micsupp->enable_reg = desc->enable_reg;
+	micsupp->desc = desc;
 
 	config.dev = micsupp->dev;
 	config.driver_data = micsupp;
@@ -313,8 +314,8 @@ static int arizona_micsupp_common_init(struct platform_device *pdev,
 		config.init_data = &micsupp->init_data;
 
 	/* Default to regulated mode */
-	regmap_update_bits(micsupp->regmap, micsupp->enable_reg,
-			   ARIZONA_CPMIC_BYPASS, 0);
+	regmap_update_bits(micsupp->regmap, micsupp->desc->enable_reg,
+			   desc->bypass_mask, 0);
 	micsupp->forced_bypass.regulated = true;
 
 	micsupp->regulator = devm_regulator_register(&pdev->dev,
@@ -370,23 +371,23 @@ static int arizona_micsupp_probe(struct platform_device *pdev)
 					   &arizona->pdata.micvdd);
 }
 
-static int madera_micsupp_probe(struct platform_device *pdev)
+static int tacna_micsupp_probe(struct platform_device *pdev)
 {
-	struct madera *madera = dev_get_drvdata(pdev->dev.parent);
+	struct tacna *tacna = dev_get_drvdata(pdev->dev.parent);
 	struct arizona_micsupp *micsupp;
 
 	micsupp = devm_kzalloc(&pdev->dev, sizeof(*micsupp), GFP_KERNEL);
 	if (!micsupp)
 		return -ENOMEM;
 
-	micsupp->regmap = madera->regmap;
-	micsupp->dapm = &madera->dapm;
-	micsupp->dev = madera->dev;
+	micsupp->regmap = tacna->regmap;
+	micsupp->dapm = &tacna->dapm;
+	micsupp->dev = tacna->dev;
 	micsupp->init_data = arizona_micsupp_ext_default;
-	madera->micsupp_forced_bypass = &micsupp->forced_bypass;
+	tacna->micsupp_forced_bypass = &micsupp->forced_bypass;
 
-	return arizona_micsupp_common_init(pdev, micsupp, &madera_micsupp,
-					   &madera->pdata.micvdd);
+	return arizona_micsupp_common_init(pdev, micsupp, &tacna_micsupp,
+					   &tacna->pdata.micvdd);
 }
 
 static struct platform_driver arizona_micsupp_driver = {
@@ -396,17 +397,17 @@ static struct platform_driver arizona_micsupp_driver = {
 	},
 };
 
-static struct platform_driver madera_micsupp_driver = {
-	.probe = madera_micsupp_probe,
+static struct platform_driver tacna_micsupp_driver = {
+	.probe = tacna_micsupp_probe,
 	.driver		= {
-		.name	= "madera-micsupp",
+		.name	= "tacna-micsupp",
 		.suppress_bind_attrs = true,
 	},
 };
 
 static struct platform_driver * const arizona_micsupp_drivers[] = {
 	&arizona_micsupp_driver,
-	&madera_micsupp_driver,
+	&tacna_micsupp_driver,
 };
 
 static int __init arizona_micsupp_init(void)
@@ -428,4 +429,4 @@ MODULE_AUTHOR("Mark Brown <broonie@opensource.wolfsonmicro.com>");
 MODULE_DESCRIPTION("Arizona microphone supply driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:arizona-micsupp");
-MODULE_ALIAS("platform:madera-micsupp");
+MODULE_ALIAS("platform:tacna-micsupp");

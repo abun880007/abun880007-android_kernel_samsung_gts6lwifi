@@ -1,5 +1,3 @@
-obj-$(CONFIG_DVB_CXD2099) += cxd2099.o
-
-ccflags-y += -Idrivers/media/dvb-core/
-ccflags-y += -Idrivers/media/dvb-frontends/
-ccflags-y += -Idrivers/media/tuners/
+version https://git-lfs.github.com/spec/v1
+oid sha256:c4004b03d19c133416defb3ba780788f96658809ab9f006679c6a5821490c89b
+size 160

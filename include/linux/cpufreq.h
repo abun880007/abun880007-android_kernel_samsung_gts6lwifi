@@ -212,11 +212,38 @@ static inline unsigned int cpufreq_quick_get_max(unsigned int cpu)
 static inline void disable_cpufreq(void) { }
 #endif
 
+#if defined(CONFIG_CPU_FREQ_LIMIT_USERSPACE)
+enum {
+	DVFS_NO_ID			= 0,
+
+	/* need to update now */
+	DVFS_TOUCH_ID			= 1,
+	DVFS_FINGER_ID			= 2,
+	DVFS_MULTI_TOUCH_ID		= 3,
+	DVFS_ARGOS_ID			= 4,
+#ifdef CONFIG_USB_AUDIO_ENHANCED_DETECT_TIME
+	DVFS_BOOST_HOST_ID		= 5,
+#endif
+	DVFS_MAX_ID
+};
+
+#define DVFS_TOUCH_ID_MASK (1 << DVFS_TOUCH_ID)
+#define DVFS_FINGER_ID_MASK (1 << DVFS_FINGER_ID)
+#define DVFS_MULTI_TOUCH_ID_MASK (1 << DVFS_MULTI_TOUCH_ID)
+#define DVFS_ARGOS_ID_MASK (1 << DVFS_ARGOS_ID)
+#ifdef CONFIG_USB_AUDIO_ENHANCED_DETECT_TIME
+#define DVFS_BOOST_HOST_ID_MASK (1 << DVFS_BOOST_HOST_ID)
+#endif
+
+int set_freq_limit(unsigned long id, unsigned int freq);
+#endif
+
 #ifdef CONFIG_CPU_FREQ_STAT
 void cpufreq_stats_create_table(struct cpufreq_policy *policy);
 void cpufreq_stats_free_table(struct cpufreq_policy *policy);
 void cpufreq_stats_record_transition(struct cpufreq_policy *policy,
 				     unsigned int new_freq);
+int cpufreq_stats_on_check(struct cpufreq_policy *policy);
 #else
 static inline void cpufreq_stats_create_table(struct cpufreq_policy *policy) { }
 static inline void cpufreq_stats_free_table(struct cpufreq_policy *policy) { }
@@ -228,14 +255,9 @@ static inline void cpufreq_stats_record_transition(struct cpufreq_policy *policy
  *                      CPUFREQ DRIVER INTERFACE                     *
  *********************************************************************/
 
-#define CPUFREQ_RELATION_MASK	(0x3 << 0)
-#define CPUFREQ_RELATION_L	(0 << 0)	/* lowest frequency at or above target */
-#define CPUFREQ_RELATION_H	(1 << 0)	/* highest frequency below or at target */
-#define CPUFREQ_RELATION_C	(2 << 0)	/* closest frequency to target */
-
-#define CPUFREQ_REQUEST_MASK	(0x3 << 2)
-#define CPUFREQ_NORMAL_REQ	(0 << 2)	/* normal frequency request */
-#define CPUFREQ_HW_DVFS_REQ	(1 << 2)	/* for processing HW DVFS; it needs to be dealt specially */
+#define CPUFREQ_RELATION_L 0  /* lowest frequency at or above target */
+#define CPUFREQ_RELATION_H 1  /* highest frequency below or at target */
+#define CPUFREQ_RELATION_C 2  /* closest frequency to target */
 
 struct freq_attr {
 	struct attribute attr;
@@ -434,6 +456,7 @@ static inline void cpufreq_resume(void) {}
 /* Policy Notifiers  */
 #define CPUFREQ_ADJUST			(0)
 #define CPUFREQ_NOTIFY			(1)
+#define CPUFREQ_INCOMPATIBLE	(6)
 
 #ifdef CONFIG_CPU_FREQ
 int cpufreq_register_notifier(struct notifier_block *nb, unsigned int list);
@@ -537,9 +560,6 @@ void cpufreq_unregister_governor(struct cpufreq_governor *governor);
 struct cpufreq_governor *cpufreq_default_governor(void);
 struct cpufreq_governor *cpufreq_fallback_governor(void);
 
-#if defined (CONFIG_ARM_EXYNOS_FF)
-void cpufreq_policy_apply_limits(struct cpufreq_policy *policy);
-#else
 static inline void cpufreq_policy_apply_limits(struct cpufreq_policy *policy)
 {
 	if (policy->max < policy->cur)
@@ -547,7 +567,19 @@ static inline void cpufreq_policy_apply_limits(struct cpufreq_policy *policy)
 	else if (policy->min > policy->cur)
 		__cpufreq_driver_target(policy, policy->min, CPUFREQ_RELATION_L);
 }
-#endif
+
+static inline unsigned int
+cpufreq_policy_apply_limits_fast(struct cpufreq_policy *policy)
+{
+	unsigned int ret = 0;
+
+	if (policy->max < policy->cur)
+		ret = cpufreq_driver_fast_switch(policy, policy->max);
+	else if (policy->min > policy->cur)
+		ret = cpufreq_driver_fast_switch(policy, policy->min);
+
+	return ret;
+}
 
 /* Governor attribute set */
 struct gov_attr_set {
@@ -937,4 +969,6 @@ unsigned int cpufreq_generic_get(unsigned int cpu);
 int cpufreq_generic_init(struct cpufreq_policy *policy,
 		struct cpufreq_frequency_table *table,
 		unsigned int transition_latency);
+
+extern unsigned int cpuinfo_max_freq_cached;
 #endif /* _LINUX_CPUFREQ_H */

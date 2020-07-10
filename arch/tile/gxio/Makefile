@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-#
-# Makefile for the Tile-Gx device access support.
-#
-
-obj-$(CONFIG_TILE_GXIO) += iorpc_globals.o kiorpc.o
-obj-$(CONFIG_TILE_GXIO_DMA) += dma_queue.o
-obj-$(CONFIG_TILE_GXIO_MPIPE) += mpipe.o iorpc_mpipe.o iorpc_mpipe_info.o
-obj-$(CONFIG_TILE_GXIO_TRIO) += trio.o iorpc_trio.o
-obj-$(CONFIG_TILE_GXIO_UART) += uart.o iorpc_uart.o
-obj-$(CONFIG_TILE_GXIO_USB_HOST) += usb_host.o iorpc_usb_host.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:183f906b89f9645db6f2c4ecc40d10b408784898c4b50f66105b87d9b9b42ac7
+size 427

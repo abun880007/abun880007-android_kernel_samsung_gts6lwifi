@@ -1,9 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-obj-$(CONFIG_DW_DMAC_CORE)	+= dw_dmac_core.o
-dw_dmac_core-objs	:= core.o
-
-obj-$(CONFIG_DW_DMAC)		+= dw_dmac.o
-dw_dmac-objs		:= platform.o
-
-obj-$(CONFIG_DW_DMAC_PCI)	+= dw_dmac_pci.o
-dw_dmac_pci-objs	:= pci.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:e53332705b695595d0611ef3c38388dfdbf0eb92e9cb8d781a10b356cc50bb86
+size 243

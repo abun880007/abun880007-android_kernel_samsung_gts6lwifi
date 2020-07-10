@@ -26,13 +26,13 @@
 #include <linux/regulator/consumer.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/sec_class.h>
 
 #if defined(CONFIG_OF)
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #endif
 #include <linux/i2c/pcal6524.h>
-#include <linux/sec_class.h>
 
 struct pcal6524_chip {
 	struct i2c_client *client;
@@ -40,7 +40,7 @@ struct pcal6524_chip {
 	struct dentry	*dentry;
 	struct mutex lock;
 	struct pcal6524_platform_data *pdata;
-	unsigned int gpio_start;
+	unsigned gpio_start;
 
 	uint8_t reg_output[3];
 	uint8_t reg_polarity[3];
@@ -51,18 +51,16 @@ struct pcal6524_chip {
 	uint8_t reg_inputlatch[3];
 	uint8_t reg_enpullupdown[3];
 	uint8_t reg_selpullupdown[3];
-	//	uint8_t reg_intmask[3];
+//	uint8_t reg_intmask[3];
 	uint8_t reg_outputconfig;
 };
 
-struct pcal6524_chip *g_dev;
-
-static struct device *pcal6524_dev;
+static struct pcal6524_chip *g_dev = NULL;
 
 /* read the 8-bit register from the PCAL6524
- *  reg: register address
- *  val: the value read back from the PCAL6524
- */
+	 reg: register address
+   val: the value read back from the PCAL6524
+*/
 static int pcal6524_read_reg(struct pcal6524_chip *chip, int reg, uint8_t *val)
 {
 	int ret = i2c_smbus_read_byte_data(chip->client, reg);
@@ -78,9 +76,9 @@ static int pcal6524_read_reg(struct pcal6524_chip *chip, int reg, uint8_t *val)
 }
 
 /* write a 8-bit value to the PCAL6524
- *  reg: register address
- *  val: the value read back from the PCAL6524
- */
+	 reg: register address
+   val: the value read back from the PCAL6524
+*/
 static int pcal6524_write_reg(struct pcal6524_chip *chip, int reg, uint8_t val)
 {
 	int ret = i2c_smbus_write_byte_data(chip->client, reg, val);
@@ -94,11 +92,121 @@ static int pcal6524_write_reg(struct pcal6524_chip *chip, int reg, uint8_t val)
 	return 0;
 }
 
+/*
+static void print_pcal6524_gpio_state(struct pcal6524_chip *dev)
+{
+	struct pcal6524_chip *chip = dev;
+	struct pcal6524_chip chip_state;
+	int i, drv_str;
+	int quot = 0, rest = 0;
+	uint8_t read_input[3];
+	char buf[255];
+	unsigned int size;
+
+	for (i = 0; i < PCAL6524_PORT_CNT; i++) {
+		pcal6524_read_reg(chip, PCAL6524_INPUT + i, &read_input[i]);
+		pcal6524_read_reg(chip, PCAL6524_DAT_OUT + i, &chip_state.reg_output[i]);
+		pcal6524_read_reg(chip, PCAL6524_CONFIG + i, &chip_state.reg_config[i]);
+		if (i < 2) {
+			pcal6524_read_reg(chip, PCAL6524_DRIVE0 + i, &chip_state.reg_drive0[i]);
+			pcal6524_read_reg(chip, PCAL6524_DRIVE1 + i, &chip_state.reg_drive1[i]);
+			pcal6524_read_reg(chip, PCAL6524_DRIVE2 + i, &chip_state.reg_drive2[i]);
+		}
+		pcal6524_read_reg(chip, PCAL6524_EN_PULLUPDOWN + i, &chip_state.reg_enpullupdown[i]);
+		pcal6524_read_reg(chip, PCAL6524_SEL_PULLUPDOWN + i, &chip_state.reg_selpullupdown[i]);
+	}
+
+	for (i = 0; i <= PCAL6524_MAX_GPIO; i++) {
+		memset(buf, 0, sizeof(char) * 255);
+		size = 0;
+		size += sprintf(&buf[size], "Expander[3%02d]", i);
+		quot = i / 8;
+		rest = i % 8;
+
+		if ((chip_state.reg_config[quot] >> rest) & 0x1)
+			size += sprintf(&buf[size], " IN");
+		else {
+			if ((chip_state.reg_output[quot] >> rest) & 0x1)
+				size += sprintf(&buf[size], " OUT_HIGH");
+			else
+				size += sprintf(&buf[size], " OUT_LOW");
+		}
+
+		if ((chip_state.reg_enpullupdown[quot] >> rest) & 0x1) {
+			if ((chip_state.reg_selpullupdown[quot] >> rest) & 0x1)
+				size += sprintf(&buf[size], " PULL_UP");
+			else
+				size += sprintf(&buf[size], " PULL_DOWN");
+		} else
+			size += sprintf(&buf[size], " PULL_NONE");
+
+		if (quot == 2) {
+			if (rest > 3)
+				drv_str = (chip_state.reg_drive2[1] >> ((rest-4)*2)) & 0x3;
+			else
+				drv_str = (chip_state.reg_drive2[0] >> ((rest)*2)) & 0x3;
+		} else if (quot == 1) {
+			if (rest > 3)
+				drv_str = (chip_state.reg_drive1[1] >> ((rest-4)*2)) & 0x3;
+			else
+				drv_str = (chip_state.reg_drive1[0] >> ((rest)*2)) & 0x3;
+		} else {
+			if (rest > 3)
+				drv_str = (chip_state.reg_drive0[1] >> ((rest-4)*2)) & 0x3;
+			else
+				drv_str = (chip_state.reg_drive0[0] >> ((rest)*2)) & 0x3;
+		}
+
+		switch(drv_str) {
+		case GPIO_CFG_6_25MA:
+			size += sprintf(&buf[size], " DRV_6.25mA");
+			break;
+		case GPIO_CFG_12_5MA:
+			size += sprintf(&buf[size], " DRV_12.5mA");
+			break;
+		case GPIO_CFG_18_75MA:
+			size += sprintf(&buf[size], " DRV_18.75mA");
+			break;
+		case GPIO_CFG_25MA:
+			size += sprintf(&buf[size], " DRV_25mA");
+			break;
+		}
+
+		if ((read_input[quot] >> rest) & 0x1)
+			size += sprintf(&buf[size], " VAL_HIGH\n");
+		else
+			size += sprintf(&buf[size], " VAL_LOW\n");
+
+		pr_info("%s : %s\n", __func__, buf); 
+	}
+
+	return;
+}
+*/
+void pcal6524_sync_structure_with_register(struct pcal6524_chip *dev)
+{
+	struct pcal6524_chip *chip = dev;
+	int i;
+
+	pr_info("%s \n", __func__);
+	for (i = 0; i < PCAL6524_PORT_CNT; i++) {
+		pcal6524_read_reg(chip, PCAL6524_DAT_OUT + i, &chip->reg_output[i]);
+		pcal6524_read_reg(chip, PCAL6524_CONFIG + i, &chip->reg_config[i]);
+		if (i < 2) {
+			pcal6524_read_reg(chip, PCAL6524_DRIVE0 + i, &chip->reg_drive0[i]);
+			pcal6524_read_reg(chip, PCAL6524_DRIVE1 + i, &chip->reg_drive1[i]);
+			pcal6524_read_reg(chip, PCAL6524_DRIVE2 + i, &chip->reg_drive2[i]);
+		}
+		pcal6524_read_reg(chip, PCAL6524_EN_PULLUPDOWN + i, &chip->reg_enpullupdown[i]);
+		pcal6524_read_reg(chip, PCAL6524_SEL_PULLUPDOWN + i, &chip->reg_selpullupdown[i]);
+	}	
+	return;
+}
 /* read a port pin value (INPUT register) from the PCAL6524
- *  off: bit number (0..23)
- *  return: bit value 0 or 1
- */
-static int pcal6524_gpio_get_value(struct gpio_chip *gc, unsigned int off)
+   off: bit number (0..23)
+   return: bit value 0 or 1
+*/
+static int pcal6524_gpio_get_value(struct gpio_chip *gc, unsigned off)
 {
 	int ret;
 	int quot = off / 8;
@@ -124,12 +232,12 @@ static int pcal6524_gpio_get_value(struct gpio_chip *gc, unsigned int off)
 }
 
 /* write a port pin value (INPUT register) from the PCAL6524
- *  off: bit number (0..23)
- *  val: 0 or 1
- *  return: none
- */
+   off: bit number (0..23)
+   val: 0 or 1
+   return: none
+*/
 static void pcal6524_gpio_set_value(struct gpio_chip *gc,
-		unsigned int off, int val)
+					unsigned off, int val)
 {
 	int quot = off / 8;
 	int rest = off % 8;
@@ -143,13 +251,14 @@ static void pcal6524_gpio_set_value(struct gpio_chip *gc,
 		chip->reg_output[quot] &= ~(1u << rest);
 
 	pcal6524_write_reg(chip, PCAL6524_DAT_OUT + quot, chip->reg_output[quot]);
+	pr_info("%s : off =%d, val=%d\n",__func__ ,off , val);
 	mutex_unlock(&chip->lock);
 }
 
 /* set the CONFIGURATION register of a port pin as an input
- *  off: bit number (0..23)
- */
-static int pcal6524_gpio_direction_input(struct gpio_chip *gc, unsigned int off)
+   off: bit number (0..23)
+*/
+static int pcal6524_gpio_direction_input(struct gpio_chip *gc, unsigned off)
 {
 	int ret;
 	int quot = off / 8;
@@ -168,12 +277,12 @@ static int pcal6524_gpio_direction_input(struct gpio_chip *gc, unsigned int off)
 }
 
 /* set the DIRECTION (CONFIGURATION register) of a port pin as an output
- *  off: bit number (0..23)
- *  val = 1 or 0
- *  return: 0 if successful
- */
+   off: bit number (0..23)
+   val = 1 or 0
+   return: 0 if successful
+*/
 static int pcal6524_gpio_direction_output(struct gpio_chip *gc,
-		unsigned int off, int val)
+					unsigned off, int val)
 {
 	int ret;
 	int quot = off / 8;
@@ -200,12 +309,12 @@ static int pcal6524_gpio_direction_output(struct gpio_chip *gc,
 	return ret;
 }
 
-static int pcal6524_gpio_request(struct gpio_chip *gc, unsigned int off)
+static int pcal6524_gpio_request(struct gpio_chip *gc, unsigned off)
 {
 	struct pcal6524_chip *chip
 		= container_of(gc, struct pcal6524_chip, gpio_chip);
 
-	pr_info("%s gpio %d\n", __func__, off);
+	pr_info("%s gpio %d \n", __func__, off);
 	if (off >= chip->gpio_chip.ngpio) {
 		pr_err("[%s] offset over max = [%d]\n", __func__, off);
 		return 1;
@@ -214,21 +323,21 @@ static int pcal6524_gpio_request(struct gpio_chip *gc, unsigned int off)
 	return 0;
 }
 
-static void pcal6524_gpio_free(struct gpio_chip *gc, unsigned int off)
+static void pcal6524_gpio_free(struct gpio_chip *gc, unsigned off)
 {
 	struct pcal6524_chip *chip
 		= container_of(gc, struct pcal6524_chip, gpio_chip);
 
-	pr_info("%s gpio %d\n", __func__, off);
-	if (off >= chip->gpio_chip.ngpio)
+	pr_info("%s gpio %d \n", __func__, off);
+	if (off >= chip->gpio_chip.ngpio) {
 		pr_err("[%s] offset over max = [%d]\n", __func__, off);
+	}
 	/* to do*/
 }
 
 static int pcal6524_gpio_setup(struct pcal6524_chip *dev)
 {
 	int ret, i;
-
 	pr_info("[%s] GPIO Expander Init setting\n", __func__);
 
 	dev->reg_outputconfig = 0x00;
@@ -239,16 +348,14 @@ static int pcal6524_gpio_setup(struct pcal6524_chip *dev)
 	}
 
 	for (i = 0; i < PCAL6524_PORT_CNT; i++) {
-		ret = pcal6524_write_reg(dev, PCAL6524_DAT_OUT + i, dev->reg_output[i]);
-		/* 1 : output high, 0 : output low */
+		ret = pcal6524_write_reg(dev, PCAL6524_DAT_OUT + i, dev->reg_output[i]);		/* 1 : output high, 0 : output low */
 		if (ret < 0) {
 			pr_err("failed set data out\n");
 			return ret;
 		}
 	}
 	for (i = 0; i < PCAL6524_PORT_CNT; i++) {
-		ret = pcal6524_write_reg(dev, PCAL6524_CONFIG + i, dev->reg_config[i]);
-		/* 1 : input, 0 : output */
+		ret = pcal6524_write_reg(dev, PCAL6524_CONFIG + i, dev->reg_config[i]);		/* 1 : input, 0 : output */
 		if (ret < 0) {
 			pr_err("failed set config\n");
 			return ret;
@@ -291,8 +398,7 @@ static int pcal6524_gpio_setup(struct pcal6524_chip *dev)
 
 	for (i = 0; i < PCAL6524_PORT_CNT; i++) {
 		dev->reg_inputlatch[i] = 0x00;
-		ret = pcal6524_write_reg(dev, PCAL6524_INPUT_LATCH + i, dev->reg_inputlatch[i]);
-		/* not use latch */
+		ret = pcal6524_write_reg(dev, PCAL6524_INPUT_LATCH + i, dev->reg_inputlatch[i]);		/* not use latch */
 		if (ret < 0) {
 			pr_err("failed set input latch\n");
 			return ret;
@@ -300,21 +406,34 @@ static int pcal6524_gpio_setup(struct pcal6524_chip *dev)
 	}
 
 	for (i = 0; i < PCAL6524_PORT_CNT; i++) {
-		ret = pcal6524_write_reg(dev, PCAL6524_SEL_PULLUPDOWN + i, dev->reg_selpullupdown[i]);
-		/* 1 : pull-up, 0 : pull-down */
+		ret = pcal6524_write_reg(dev, PCAL6524_SEL_PULLUPDOWN + i, dev->reg_selpullupdown[i]);	/* 1 : pull-up, 0 : pull-down */
 		if (ret < 0) {
 			pr_err("failed set select pull\n");
 			return ret;
 		}
 	}
 	for (i = 0; i < PCAL6524_PORT_CNT; i++) {
-		ret = pcal6524_write_reg(dev, PCAL6524_EN_PULLUPDOWN + i, dev->reg_enpullupdown[i]);
-		/* 1 : enable, 0 : disable */
+		ret = pcal6524_write_reg(dev, PCAL6524_EN_PULLUPDOWN + i, dev->reg_enpullupdown[i]);		/* 1 : enable, 0 : disable */
 		if (ret < 0) {
 			pr_err("failed set enable pullupdown\n");
 			return ret;
 		}
 	}
+#if 0
+	dev->reg_intmask = 0xFFFF;
+	ret = pcal6524_write_reg(dev, PCAL6524_INT_MASK,
+			dev->reg_intmask);		/* not use int */
+	if (ret < 0) {
+		pr_err("failed set int mask\n");
+		return ret;
+	}
+	ret = pcal6524_read_reg(dev, PCAL6524_INT_MASK,
+			&read_val);
+	if (ret < 0) {
+		pr_err("failed read int mask\n");
+		return ret;
+	}
+#endif
 
 	return 0;
 }
@@ -324,6 +443,7 @@ static int pcal6524_parse_dt(struct device *dev,
 		struct pcal6524_platform_data *pdata)
 {
 	struct device_node *np = dev->of_node;
+	struct pinctrl *reset_pinctrl;
 	int ret, i, j;
 	u32 pull_reg[3];
 
@@ -339,17 +459,41 @@ static int pcal6524_parse_dt(struct device *dev,
 		return ret;
 	}
 	pdata->reset_gpio = of_get_named_gpio(np, "pcal6524,reset-gpio", 0);
+	/* Get pinctrl if target uses pinctrl */
+	reset_pinctrl = devm_pinctrl_get_select(dev, "expander_reset_setting");
+	if (IS_ERR(reset_pinctrl)) {
+		if (PTR_ERR(reset_pinctrl) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
+
+		pr_debug("Target does not use pinctrl\n");
+		reset_pinctrl = NULL;
+	}
+
 	ret = of_property_read_u32(np, "pcal6524,support_initialize", (u32 *)&pdata->support_init);
 	if (ret < 0) {
 		pr_err("[%s]: Unable to read pcal6524,support_init\n", __func__);
 		pdata->support_init = 0;
 	}
 
+	pdata->vdd = devm_regulator_get(dev, "pcal6524,vdd");
+	if (IS_ERR(pdata->vdd)) {
+		pr_err("%s: cannot get pcal6524,vdd\n", __func__);
+		ret = -ENOMEM;
+		return ret;
+	} else if (!regulator_get_voltage(pdata->vdd)) {
+		ret = regulator_set_voltage(pdata->vdd, 1800000, 1800000);
+		if (ret < 0) {
+			pr_err("regulator set voltage failed, %d\n",
+				ret);
+			return ret;
+		}
+	}
+
 	if (pdata->support_init) {
 		ret = of_property_read_u32(np, "pcal6524,config", (u32 *)&pdata->init_config);
 		if (ret < 0) {
 			pr_err("[%s]: Unable to read pcal6524,support_init\n", __func__);
-			pdata->init_config = 0x000000;
+			pdata->init_config= 0x000000;
 		}
 		ret = of_property_read_u32(np, "pcal6524,data_out", (u32 *)&pdata->init_data_out);
 		if (ret < 0) {
@@ -357,30 +501,31 @@ static int pcal6524_parse_dt(struct device *dev,
 			pdata->init_data_out = 0x000000;
 		}
 		ret = of_property_read_u32(np, "pcal6524,pull_reg_p0", &pull_reg[0]);
-		if (ret < 0)
+		if (ret < 0) {
 			pr_err("[%s]: Unable to read pcal6524,pull_reg_p0\n", __func__);
-
+		}
 		ret = of_property_read_u32(np, "pcal6524,pull_reg_p1", &pull_reg[1]);
-		if (ret < 0)
+		if (ret < 0) {
 			pr_err("[%s]: Unable to read pcal6524,pull_reg_p1\n", __func__);
-
+		}
 		ret = of_property_read_u32(np, "pcal6524,pull_reg_p2", &pull_reg[2]);
-		if (ret < 0)
+		if (ret < 0) {
 			pr_err("[%s]: Unable to read pcal6524,pull_reg_p2\n", __func__);
-
-		pr_info("[%s] Pull reg P0[0x%04x] P1[0x%04x] P2[0x%04x]\n", __func__,
-				pull_reg[0], pull_reg[1], pull_reg[2]);
+		}
+		pr_info("[%s] Pull reg P0[0x%04x] P1[0x%04x] P2[0x%04x]\n", __func__, pull_reg[0], pull_reg[1], pull_reg[2]);
 		pdata->init_en_pull = 0x000000;
 		pdata->init_sel_pull = 0x000000;
-		for (j = 0; j < 3; j++) {
+		for (j = 0; j < 3; j++){
 			for (i = 0; i < 8; i++) {
 				if (((pull_reg[j]>>(i*2))&0x3) == NO_PULL) {
 					pdata->init_en_pull &= ~(1 << (i + (8 * j)));
 					pdata->init_sel_pull &= ~(1 << (i + (8 * j)));
-				} else if (((pull_reg[j]>>(i*2))&0x3) == PULL_DOWN) {
+				}
+				else if (((pull_reg[j]>>(i*2))&0x3) == PULL_DOWN) {
 					pdata->init_en_pull |= (1 << (i + (8 * j)));
 					pdata->init_sel_pull &= ~(1 << (i + (8 * j)));
-				} else if (((pull_reg[j]>>(i*2))&0x3) == PULL_UP) {
+				}
+				else if (((pull_reg[j]>>(i*2))&0x3) == PULL_UP) {
 					pdata->init_en_pull |= (1 << (i + (8 * j)));
 					pdata->init_sel_pull |= (1 << (i + (8 * j)));
 				}
@@ -403,6 +548,38 @@ static int pcal6524_parse_dt(struct device *dev,
 	return 0;
 }
 #endif
+
+static void pcal6524_power_ctrl(struct pcal6524_platform_data *pdata, char enable)
+{
+	int ret = 0;
+	struct regulator *reg_power = pdata->vdd;
+
+	if (enable) {
+		if (regulator_is_enabled(reg_power))
+			pr_err("%s: power regulator(1.8V) is enabled\n", __func__);
+		else
+			ret = regulator_enable(reg_power);
+		if (ret) {
+			pr_err("%s: power regulator enable failed, rc=%d\n",
+					__func__, ret);
+			return;
+		}
+		pr_info("%s: gpio expander 1.8V on is finished.\n", __func__);
+	} else {
+		if (regulator_is_enabled(reg_power))
+			ret = regulator_disable(reg_power);
+		else
+			pr_err("%s: power regulator(1.8V) is disabled\n", __func__);
+		if (ret) {
+			pr_err("%s: disable power regulator failed, rc=%d\n",
+					__func__, ret);
+			return;
+		}
+		pr_info("%s: gpio expander 1.8V off is finished.\n", __func__);
+	}
+	pr_err("[pcal6524 gpio expander] %s enable(%d)\n", __func__, enable);
+	return;
+}
 
 static int pcal6524_reset_chip(struct pcal6524_platform_data *pdata)
 {
@@ -479,12 +656,13 @@ static ssize_t store_pcal6524_gpio_inout(struct device *dev,
 		if (in_out == 'i') {
 			retval = gpio_direction_input(gpio_pcal6524);
 			val = gpio_get_value(gpio_pcal6524);
-		} else
+		}
+		else
 			retval = gpio_direction_output(gpio_pcal6524, val);
 
 		if (retval)
 			pr_err("%s: unable to set direction for gpio [%d]\n",
-					__func__, gpio_pcal6524);
+						__func__, gpio_pcal6524);
 
 		gpio_free(gpio_pcal6524);
 	}
@@ -502,7 +680,12 @@ static ssize_t show_pcal6524_gpio_state(struct device *dev,
 	int i, drv_str;
 	int quot = 0, rest = 0;
 	uint8_t read_input[3];
-	char *bufp = buf;
+	size_t size = 0;
+
+	if (chip == NULL) {
+		pr_info("%s: driver data is NULL", __func__);		
+		return size;
+	}
 
 	for (i = 0; i < PCAL6524_PORT_CNT; i++) {
 		pcal6524_read_reg(chip, PCAL6524_INPUT + i, &read_input[i]);
@@ -518,26 +701,26 @@ static ssize_t show_pcal6524_gpio_state(struct device *dev,
 	}
 
 	for (i = 0; i <= PCAL6524_MAX_GPIO; i++) {
-		bufp += sprintf(bufp, "Expander[3%02d]", i);
+		size += sprintf(&buf[size], "Expander[3%02d]", i);
 		quot = i / 8;
 		rest = i % 8;
 
 		if ((chip_state.reg_config[quot] >> rest) & 0x1)
-			bufp += sprintf(bufp, " IN");
+			size += sprintf(&buf[size], " IN");
 		else {
 			if ((chip_state.reg_output[quot] >> rest) & 0x1)
-				bufp += sprintf(bufp, " OUT_HIGH");
+				size += sprintf(&buf[size], " OUT_HIGH");
 			else
-				bufp += sprintf(bufp, " OUT_LOW");
+				size += sprintf(&buf[size], " OUT_LOW");
 		}
 
 		if ((chip_state.reg_enpullupdown[quot] >> rest) & 0x1) {
 			if ((chip_state.reg_selpullupdown[quot] >> rest) & 0x1)
-				bufp += sprintf(bufp, " PULL_UP");
+				size += sprintf(&buf[size], " PULL_UP");
 			else
-				bufp += sprintf(bufp, " PULL_DOWN");
+				size += sprintf(&buf[size], " PULL_DOWN");
 		} else
-			bufp += sprintf(bufp, " PULL_NONE");
+			size += sprintf(&buf[size], " PULL_NONE");
 
 		if (quot == 2) {
 			if (rest > 3)
@@ -556,120 +739,32 @@ static ssize_t show_pcal6524_gpio_state(struct device *dev,
 				drv_str = (chip_state.reg_drive0[0] >> ((rest)*2)) & 0x3;
 		}
 
-		switch (drv_str) {
+		switch(drv_str) {
 		case GPIO_CFG_6_25MA:
-			bufp += sprintf(bufp, " DRV_6.25mA");
+			size += sprintf(&buf[size], " DRV_6.25mA");
 			break;
 		case GPIO_CFG_12_5MA:
-			bufp += sprintf(bufp, " DRV_12.5mA");
+			size += sprintf(&buf[size], " DRV_12.5mA");
 			break;
 		case GPIO_CFG_18_75MA:
-			bufp += sprintf(bufp, " DRV_18.75mA");
+			size += sprintf(&buf[size], " DRV_18.75mA");
 			break;
 		case GPIO_CFG_25MA:
-			bufp += sprintf(bufp, " DRV_25mA");
+			size += sprintf(&buf[size], " DRV_25mA");
 			break;
 		}
 
 		if ((read_input[quot] >> rest) & 0x1)
-			bufp += sprintf(bufp, " VAL_HIGH\n");
+			size += sprintf(&buf[size], " VAL_HIGH\n");
 		else
-			bufp += sprintf(bufp, " VAL_LOW\n");
+			size += sprintf(&buf[size], " VAL_LOW\n");
 	}
 
-	return strlen(buf);
+	return size;
 }
 
 static DEVICE_ATTR(expgpio, 0644,
 		show_pcal6524_gpio_state, store_pcal6524_gpio_inout);
-
-#ifdef CONFIG_SEC_PM_DEBUG
-int expander_print_all(void)
-{
-	struct pcal6524_chip chip_state;
-	int i, drv_str;
-	int quot = 0, rest = 0;
-	uint8_t read_input[3];
-
-	if (!g_dev)
-		return -ENODEV;
-
-	for (i = 0; i < PCAL6524_PORT_CNT; i++) {
-		pcal6524_read_reg(g_dev, PCAL6524_INPUT + i, &read_input[i]);
-		pcal6524_read_reg(g_dev, PCAL6524_DAT_OUT + i, &chip_state.reg_output[i]);
-		pcal6524_read_reg(g_dev, PCAL6524_CONFIG + i, &chip_state.reg_config[i]);
-		if (i < 2) {
-			pcal6524_read_reg(g_dev, PCAL6524_DRIVE0 + i, &chip_state.reg_drive0[i]);
-			pcal6524_read_reg(g_dev, PCAL6524_DRIVE1 + i, &chip_state.reg_drive1[i]);
-			pcal6524_read_reg(g_dev, PCAL6524_DRIVE2 + i, &chip_state.reg_drive2[i]);
-		}
-		pcal6524_read_reg(g_dev, PCAL6524_EN_PULLUPDOWN + i, &chip_state.reg_enpullupdown[i]);
-		pcal6524_read_reg(g_dev, PCAL6524_SEL_PULLUPDOWN + i, &chip_state.reg_selpullupdown[i]);
-	}
-
-	for (i = 0; i <= PCAL6524_MAX_GPIO; i++) {
-		pr_info("Expander[3%02d]\n", i);
-		quot = i / 8;
-		rest = i % 8;
-
-		if ((chip_state.reg_config[quot] >> rest) & 0x1)
-			pr_info("\tIN\n");
-		else {
-			if ((chip_state.reg_output[quot] >> rest) & 0x1)
-				pr_info("\tOUT_HIGH\n");
-			else
-				pr_info("\tOUT_LOW\n");
-		}
-
-		if ((chip_state.reg_enpullupdown[quot] >> rest) & 0x1) {
-			if ((chip_state.reg_selpullupdown[quot] >> rest) & 0x1)
-				pr_info("\tPULL_UP\n");
-			else
-				pr_info("\tPULL_DOWN\n");
-		} else
-			pr_info("\tPULL_NONE\n");
-
-		if (quot == 2) {
-			if (rest > 3)
-				drv_str = (chip_state.reg_drive2[1] >> ((rest-4)*2)) & 0x3;
-			else
-				drv_str = (chip_state.reg_drive2[0] >> ((rest)*2)) & 0x3;
-		} else if (quot == 1) {
-			if (rest > 3)
-				drv_str = (chip_state.reg_drive1[1] >> ((rest-4)*2)) & 0x3;
-			else
-				drv_str = (chip_state.reg_drive1[0] >> ((rest)*2)) & 0x3;
-		} else {
-			if (rest > 3)
-				drv_str = (chip_state.reg_drive0[1] >> ((rest-4)*2)) & 0x3;
-			else
-				drv_str = (chip_state.reg_drive0[0] >> ((rest)*2)) & 0x3;
-		}
-
-		switch (drv_str) {
-		case GPIO_CFG_6_25MA:
-			pr_info("\tDRV_6.25mA\n");
-			break;
-		case GPIO_CFG_12_5MA:
-			pr_info("\tDRV_12.5mA\n");
-			break;
-		case GPIO_CFG_18_75MA:
-			pr_info("\tDRV_18.75mA\n");
-			break;
-		case GPIO_CFG_25MA:
-			pr_info("\tDRV_25mA\n");
-			break;
-		}
-
-		if ((read_input[quot] >> rest) & 0x1)
-			pr_info("\tVAL_HIGH\n");
-		else
-			pr_info("\tVAL_LOW\n");
-	}
-
-	return 0;
-}
-#endif
 
 static int expander_show(struct seq_file *s, void *unused)
 {
@@ -697,21 +792,21 @@ static int expander_show(struct seq_file *s, void *unused)
 		rest = i % 8;
 
 		if ((chip_state.reg_config[quot] >> rest) & 0x1)
-			seq_puts(s, " IN");
+			seq_printf(s, " IN");
 		else {
 			if ((chip_state.reg_output[quot] >> rest) & 0x1)
-				seq_puts(s, " OUT_HIGH");
+				seq_printf(s, " OUT_HIGH");
 			else
-				seq_puts(s, " OUT_LOW");
+				seq_printf(s, " OUT_LOW");
 		}
 
 		if ((chip_state.reg_enpullupdown[quot] >> rest) & 0x1) {
 			if ((chip_state.reg_selpullupdown[quot] >> rest) & 0x1)
-				seq_puts(s, " PULL_UP");
+				seq_printf(s, " PULL_UP");
 			else
-				seq_puts(s, " PULL_DOWN");
+				seq_printf(s, " PULL_DOWN");
 		} else
-			seq_puts(s, " PULL_NONE");
+			seq_printf(s, " PULL_NONE");
 
 		if (quot == 2) {
 			if (rest > 3)
@@ -730,25 +825,25 @@ static int expander_show(struct seq_file *s, void *unused)
 				drv_str = (chip_state.reg_drive0[0] >> ((rest)*2)) & 0x3;
 		}
 
-		switch (drv_str) {
+		switch(drv_str) {
 		case GPIO_CFG_6_25MA:
-			seq_puts(s, " DRV_6.25mA");
+			seq_printf(s, " DRV_6.25mA");
 			break;
 		case GPIO_CFG_12_5MA:
-			seq_puts(s, " DRV_12.5mA");
+			seq_printf(s, " DRV_12.5mA");
 			break;
 		case GPIO_CFG_18_75MA:
-			seq_puts(s, " DRV_18.75mA");
+			seq_printf(s, " DRV_18.75mA");
 			break;
 		case GPIO_CFG_25MA:
-			seq_puts(s, " DRV_25mA");
+			seq_printf(s, " DRV_25mA");
 			break;
 		}
 
 		if ((read_input[quot] >> rest) & 0x1)
-			seq_puts(s, " VAL_HIGH\n");
+			seq_printf(s, " VAL_HIGH\n");
 		else
-			seq_puts(s, " VAL_LOW\n");
+			seq_printf(s, " VAL_LOW\n");
 	}
 
 	return 0;
@@ -766,15 +861,13 @@ static const struct file_operations expander_operations = {
 };
 
 static int pcal6524_gpio_probe(struct i2c_client *client,
-		const struct i2c_device_id *id)
+					const struct i2c_device_id *id)
 {
 	struct device_node *np = client->dev.of_node;
 	struct pcal6524_platform_data *pdata = NULL;
 	struct pcal6524_chip *dev;
 	struct gpio_chip *gc;
-#if 0
 	struct dentry *debugfs_file;
-#endif
 	int ret, i;
 	int retry;
 
@@ -812,6 +905,7 @@ static int pcal6524_gpio_probe(struct i2c_client *client,
 		dev_err(&client->dev, "missing platform data\n");
 		return -ENODEV;
 	}
+	pcal6524_power_ctrl(pdata, POWER_ON);
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (dev == NULL) {
@@ -831,6 +925,7 @@ static int pcal6524_gpio_probe(struct i2c_client *client,
 	gc->request = pcal6524_gpio_request;
 	gc->free = pcal6524_gpio_free;
 	gc->can_sleep = 0;
+	/*Require dev to use the of_gpio api*/
 	gc->parent = &client->dev;
 
 	gc->base = pdata->gpio_start;
@@ -848,28 +943,33 @@ static int pcal6524_gpio_probe(struct i2c_client *client,
 	}
 
 	retry = 0;
-	while (1) {
-		ret = pcal6524_reset_chip(pdata);
-		if (ret) {
-			pr_err("[%s]reset control fail\n", __func__);
-		} else {
-			ret = pcal6524_gpio_setup(dev);
+	if (0) { 
+		while(0) { // do not reset
+			ret = pcal6524_reset_chip(pdata);
 			if (ret) {
-				dev_err(&client->dev,
-						"expander setup i2c retry [%d]\n", retry);
+				pr_err("[%s]reset control fail\n", __func__);
 			} else {
-				pr_info("[%s]Expander setup success [%d]\n",
-						__func__, retry);
-				break;
+				ret = pcal6524_gpio_setup(dev);
+				if (ret) {
+					dev_err(&client->dev,
+						"expander setup i2c retry [%d]\n", retry);
+				} else {
+					pr_info("[%s]Expander setup success [%d]\n",
+							__func__, retry);
+					break;
+				}
 			}
+			if (retry++ > 5) {
+				dev_err(&client->dev,
+						"Failed to expander retry[%d]\n", retry);
+				panic("pcal6524 i2c fail, check HW!\n");
+				goto err;
+
+			}
+			usleep_range(100, 200);
 		}
-		if (retry++ > 5) {
-			dev_err(&client->dev,
-					"Failed to expander retry[%d]\n", retry);
-			panic("pcal6524 i2c fail, check HW!\n");
-			goto err;
-		}
-		usleep_range(100, 200);
+	}else {
+		pcal6524_sync_structure_with_register(dev);
 	}
 
 	ret = gpiochip_add(&dev->gpio_chip);
@@ -880,7 +980,7 @@ static int pcal6524_gpio_probe(struct i2c_client *client,
 			gc->base, gc->base + gc->ngpio - 1,
 			client->name);
 
-	pcal6524_dev = sec_device_create(dev, "expander");
+	pcal6524_dev = sec_device_create(0, dev, "expander");
 	if (IS_ERR(pcal6524_dev)) {
 		dev_err(&client->dev,
 				"Failed to create device for expander\n");
@@ -888,7 +988,6 @@ static int pcal6524_gpio_probe(struct i2c_client *client,
 		goto err;
 	}
 
-#if 0
 	ret = sysfs_create_file(&pcal6524_dev->kobj, &dev_attr_expgpio.attr);
 	if (ret) {
 		dev_err(&client->dev,
@@ -903,30 +1002,27 @@ static int pcal6524_gpio_probe(struct i2c_client *client,
 		goto err_debug_dir;
 
 	}
-	debugfs_file = debugfs_create_file("gpio", S_IFREG | 0444,
+	debugfs_file = debugfs_create_file("gpio", S_IFREG | S_IRUGO,
 			dev->dentry, NULL, &expander_operations);
 	if (IS_ERR_OR_NULL(debugfs_file)) {
 		dev_err(&client->dev,
 				"Failed to create debugfs file for gpio\n");
 		goto err_debug_file;
 	}
-#endif
 
 	i2c_set_clientdata(client, dev);
 	g_dev = dev;
 
 	return 0;
 
-#if 0
 err_debug_file:
 	debugfs_remove_recursive(dev->dentry);
 err_debug_dir:
 	sysfs_remove_file(&pcal6524_dev->kobj, &dev_attr_expgpio.attr);
 err_destroy:
-	sec_device_destroy(0);
-	return ret;
-#endif
+	sec_device_destroy(pcal6524_dev->devt);
 err:
+	pcal6524_power_ctrl(pdata, POWER_OFF);
 	mutex_destroy(&dev->lock);
 	kfree(dev);
 	return ret;
@@ -936,6 +1032,7 @@ static int pcal6524_gpio_remove(struct i2c_client *client)
 {
 	struct pcal6524_chip *dev = i2c_get_clientdata(client);
 
+	pcal6524_power_ctrl(dev->pdata, POWER_OFF);
 	gpiochip_remove(&dev->gpio_chip);
 	if (!IS_ERR_OR_NULL(dev->dentry))
 		debugfs_remove_recursive(dev->dentry);
@@ -946,7 +1043,7 @@ static int pcal6524_gpio_remove(struct i2c_client *client)
 }
 
 #ifdef CONFIG_OF
-static const struct of_device_id pcal6524_dt_ids[] = {
+static struct of_device_id pcal6524_dt_ids[] = {
 	{ .compatible = "pcal6524,gpio-expander",},
 	{ /* sentinel */ },
 };
@@ -959,11 +1056,11 @@ MODULE_DEVICE_TABLE(i2c, pcal6524_gpio_id);
 
 static struct i2c_driver pcal6524_gpio_driver = {
 	.driver = {
-		.name = DRV_NAME,
+		   .name = DRV_NAME,
 #ifdef CONFIG_OF
-		.of_match_table = of_match_ptr(pcal6524_dt_ids),
+		   .of_match_table = of_match_ptr(pcal6524_dt_ids),
 #endif
-	},
+		   },
 	.probe = pcal6524_gpio_probe,
 	.remove = pcal6524_gpio_remove,
 	.id_table = pcal6524_gpio_id,
@@ -985,3 +1082,4 @@ module_exit(pcal6524_gpio_exit);
 
 MODULE_DESCRIPTION("GPIO expander driver for PCAL6524");
 MODULE_LICENSE("GPL");
+

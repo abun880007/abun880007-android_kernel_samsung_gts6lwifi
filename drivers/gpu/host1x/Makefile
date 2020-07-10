@@ -1,17 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-host1x-y = \
-	bus.o \
-	syncpt.o \
-	dev.o \
-	intr.o \
-	cdma.o \
-	channel.o \
-	job.o \
-	debug.o \
-	mipi.o \
-	hw/host1x01.o \
-	hw/host1x02.o \
-	hw/host1x04.o \
-	hw/host1x05.o
-
-obj-$(CONFIG_TEGRA_HOST1X) += host1x.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:4c0bd173cc08bb7f4b65b1ea519244c444e2ca49b0cfe2ed41bfc8cd6881f831
+size 247

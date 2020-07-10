@@ -1,7 +1,3 @@
-#
-# Makefile for the linux kernel.
-#
-
-obj-y := entry.o platform.o ctop.o
-obj-$(CONFIG_SMP) += smp.o
-obj-$(CONFIG_EZNPS_MTM_EXT) += mtm.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:5e27417e08e9473eced1c817088495033ff5afce8d9852229d398a081a4baa52
+size 137

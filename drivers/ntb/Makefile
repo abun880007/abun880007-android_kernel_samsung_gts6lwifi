@@ -1,2 +1,3 @@
-obj-$(CONFIG_NTB) += ntb.o hw/ test/
-obj-$(CONFIG_NTB_TRANSPORT) += ntb_transport.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:45f62325743b6009c61aacd3af65d3848fc310935fdc33422eaaa0241a2bca84
+size 84

@@ -1,3 +1,3 @@
-obj-$(CONFIG_CRYPTO_DEV_CCREE) := ccree.o
-ccree-y := ssi_driver.o ssi_sysfs.o ssi_buffer_mgr.o ssi_request_mgr.o ssi_cipher.o ssi_hash.o ssi_aead.o ssi_ivgen.o ssi_sram_mgr.o ssi_pm.o
-ccree-$(CONFIG_CRYPTO_FIPS) += ssi_fips.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:557295cb7b0f1fca219a8383c9ba6aab7f2bdff3619a4983d71e6b8a33e79b34
+size 226

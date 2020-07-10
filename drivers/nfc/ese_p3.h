@@ -12,6 +12,8 @@
  *
  */
 
+#define DEFAULT_BUFFER_SIZE 260
+
 #define FEATURE_ESE_WAKELOCK
 
 #define P3_MAGIC 0xED

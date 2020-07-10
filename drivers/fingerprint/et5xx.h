@@ -14,14 +14,8 @@
 #ifndef _ET5XX_LINUX_DIRVER_H_
 #define _ET5XX_LINUX_DIRVER_H_
 
-#ifdef ENABLE_SENSORS_FPRINT_SECURE
-#define FEATURE_SPI_WAKELOCK
-#endif /* CONFIG_SEC_FACTORY */
-
 #include <linux/module.h>
 #include <linux/spi/spi.h>
-
-#include <linux/platform_data/spi-s3c64xx.h>
 #include <linux/wakelock.h>
 #ifdef ENABLE_SENSORS_FPRINT_SECURE
 #include <linux/clk.h>
@@ -30,32 +24,69 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_dma.h>
-#if defined(CONFIG_SECURE_OS_BOOSTER_API)
-#if defined(CONFIG_SOC_EXYNOS8890) || defined(CONFIG_SOC_EXYNOS7870) \
-	|| defined(CONFIG_SOC_EXYNOS7880) || defined(CONFIG_SOC_EXYNOS7570) \
-	|| defined(CONFIG_SOC_EXYNOS7885) || defined(CONFIG_SOC_EXYNOS9810)
-#include <soc/samsung/secos_booster.h>
-#else
-#include <mach/secos_booster.h>
-#endif
-#elif defined(CONFIG_TZDEV_BOOST)
-#include <../drivers/misc/tzdev/tz_boost.h>
+#include <linux/msm-bus.h>
+#include <linux/msm-bus-board.h>
 #endif
 
-struct sec_spi_info {
-	int		port;
-	unsigned long	speed;
+#include <linux/cpufreq.h>
+#include <linux/pinctrl/consumer.h>
+#include "../pinctrl/core.h"
+#include <linux/pm_qos.h>
+
+#ifdef ENABLE_SENSORS_FPRINT_SECURE
+#define FP_DDR_FREQ_CONTROL
+#endif
+
+#ifdef FP_DDR_FREQ_CONTROL
+#define MHZ_TO_BPS(mhz, w) ((uint64_t)mhz * 1000 * 1000 * w)
+
+#define NUM_BUS_TABLE 11
+#define BUS_W 4	/* SDM845 DDR Voting('w' for DDR is 4) */
+
+enum {
+	MHZ_NONE = 0,
+	MHZ_200,
+	MHZ_300,
+	MHZ_451,
+	MHZ_547,
+	MHZ_681,
+	MHZ_768,
+	MHZ_1017,
+	MHZ_1296,
+	MHZ_1555,
+	MHZ_1803
 };
+
+static int ab_ib_bus_vectors[NUM_BUS_TABLE][2] = {
+{0, 0},		/* 0 */
+{0, 200},	/* 1 */
+{0, 300},	/* 2 */
+{0, 451},	/* 3 */
+{0, 547},	/* 4 */
+{0, 681},	/* 5 */
+{0, 768},	/* 6 */
+{0, 1017},	/* 7 */
+{0, 1296},	/* 8 */
+{0, 1555},	/* 9 */
+{0, 1803}	/* 10 */
+};
+
+static u32 bus_hdl;
+
+static struct msm_bus_vectors fpsensor_reg_bus_vectors[NUM_BUS_TABLE];
+
+static struct msm_bus_paths fpsensor_reg_bus_usecases[ARRAY_SIZE(
+            fpsensor_reg_bus_vectors)];
+ 
+static struct msm_bus_scale_pdata fpsensor_reg_bus_scale_table = {
+      .usecase = fpsensor_reg_bus_usecases,
+      .num_usecases = ARRAY_SIZE(fpsensor_reg_bus_usecases),
+      .name = "fpsensor_bw",
+};
+
 #endif
 
-/*
- * This feature is temporary for exynos AP only.
- * It's for control GPIO config on enabled TZ before enable GPIO protection.
- * If it's still defined this feature after enable GPIO protection,
- * it will be happened kernel panic
- * So it should be un-defined after enable GPIO protection
- */
-#undef DISABLED_GPIO_PROTECTION
+
 /*#define ET5XX_SPI_DEBUG*/
 
 #ifdef ET5XX_SPI_DEBUG
@@ -84,8 +115,11 @@ struct sec_spi_info {
 #define OP_NVM_WE						0x46
 #define OP_NVM_OFF						0x48
 #define OP_IMG_R						0x50
+#define OP_NBM_R						0x52
 #define OP_VDM_R						0x60
 #define OP_VDM_W						0x62
+#define OP_CLB_R						0x64
+#define OP_CLB_W						0x66
 #define BITS_PER_WORD					8
 
 #define SLOW_BAUD_RATE					12500000
@@ -115,6 +149,9 @@ struct sec_spi_info {
 #define FP_NVM_WRITE					0x41
 #define FP_NVM_OFF						0x42
 #define FP_NVM_WRITEEX					0x43
+#define FP_NBM_READ						0x44
+#define FP_CLB_READ						0x45
+#define FP_CLB_WRITE					0x46
 
 #ifdef ENABLE_SENSORS_FPRINT_SECURE
 #define FP_DISABLE_SPI_CLOCK				0x10
@@ -167,27 +204,8 @@ struct egis_ioc_transfer {
 	__u8 cs_change;
 	__u8 opcode;
 	__u8 pad[3];
-};
 
-/*
- *	If platform is 32bit and kernel is 64bit
- *	We will alloc egis_ioc_transfer for 64bit and 32bit
- *	We use ioc_32(32bit) to get data from user mode.
- *	Then copy the ioc_32 to ioc(64bit).
- */
-#ifdef CONFIG_SENSORS_FINGERPRINT_32BITS_PLATFORM_ONLY
-struct egis_ioc_transfer_32 {
-	__u32 tx_buf;
-	__u32 rx_buf;
-	__u32 len;
-	__u32 speed_hz;
-	__u16 delay_usecs;
-	__u8 bits_per_word;
-	__u8 cs_change;
-	__u8 opcode;
-	__u8 pad[3];
 };
-#endif
 
 #define EGIS_IOC_MAGIC			'k'
 #define EGIS_MSGSIZE(N) \
@@ -209,17 +227,7 @@ struct etspi_data {
 	unsigned int drdyPin;	/* DRDY GPIO pin number */
 	unsigned int sleepPin;	/* Sleep GPIO pin number */
 	unsigned int ldo_pin;	/* Ldo GPIO pin number */
-#ifndef ENABLE_SENSORS_FPRINT_SECURE
-#ifdef CONFIG_SOC_EXYNOS8890
-	/* set cs pin in fp driver, use only Exynos8890 */
-	/* for use auto cs mode with dualization fp sensor */
-	unsigned int cs_gpio;
-#endif
-#endif
-	struct pinctrl *p;
-	struct pinctrl_state *pins_poweron;
-	struct pinctrl_state *pins_poweroff;
-
+	unsigned int min_cpufreq_limit;
 	unsigned int spi_cs;	/* spi cs pin <temporary gpio setting> */
 
 	unsigned int drdy_irq_flag;	/* irq flag */
@@ -234,22 +242,24 @@ struct etspi_data {
 	int sensortype;
 	u32 spi_value;
 	struct device *fp_device;
+	int reset_count;
+	int interrupt_count;
 #ifdef ENABLE_SENSORS_FPRINT_SECURE
 	bool enabled_clk;
-#ifdef FEATURE_SPI_WAKELOCK
+	bool isGpio_cfgDone;
 	struct wake_lock fp_spi_lock;
 #endif
-#endif
-	unsigned int orient;
 	struct wake_lock fp_signal_lock;
 	bool tz_mode;
 	int detect_period;
 	int detect_threshold;
 	bool finger_on;
 	const char *chipid;
-	bool ldo_enabled;
-	int reset_count;
-	int interrupt_count;
+	unsigned int orient;
+	struct pinctrl *p;
+	struct pinctrl_state *pins_sleep;
+	struct pinctrl_state *pins_idle;
+	struct pm_qos_request pm_qos;
 };
 
 int etspi_io_burst_read_register(struct etspi_data *etspi,
@@ -283,10 +293,7 @@ int etspi_io_vdm_read(struct etspi_data *etspi,
 int etspi_io_vdm_write(struct etspi_data *etspi,
 		struct egis_ioc_transfer *ioc);
 int etspi_io_get_frame(struct etspi_data *etspi, u8 *frame, u32 size);
-
-extern int fingerprint_register(struct device *dev, void *drvdata,
-	struct device_attribute *attributes[], char *name);
-extern void fingerprint_unregister(struct device *dev,
-	struct device_attribute *attributes[]);
-
+int etspi_io_nbm_read(struct etspi_data *etspi, struct egis_ioc_transfer *ioc);
+int etspi_io_clb_read(struct etspi_data *etspi, struct egis_ioc_transfer *ioc);
+int etspi_io_clb_write(struct etspi_data *etspi, struct egis_ioc_transfer *ioc);
 #endif

@@ -104,7 +104,6 @@ queue_ra_store(struct request_queue *q, const char *page, size_t count)
 	ssize_t ret;
 	static const char temp[] = "temporary ";
 	
-	/* IOPP-ra-v2.0.4.14 */
 	if (strncmp(page, temp, sizeof(temp) - 1) != 0)
 		return count;
 	
@@ -746,12 +745,10 @@ static ssize_t queue_io_vol_stats_show(struct request_queue *q, char *page)
 
 	return ret;
 }
-
 static struct queue_sysfs_entry queue_io_volume_stats_entry = {
 	.attr = {.name = "io_volume_stats", .mode = S_IRUGO | S_IWUSR },
 	.show = queue_io_vol_stats_show,
 };
-
 static ssize_t queue_io_vol_show(struct request_queue *q, char *page)
 {
 	/* not protect with lock (just for data monitoring) */

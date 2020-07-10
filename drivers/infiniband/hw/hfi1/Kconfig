@@ -1,22 +1,3 @@
-config INFINIBAND_HFI1
-	tristate "Intel OPA Gen1 support"
-	depends on X86_64 && INFINIBAND_RDMAVT && I2C
-	select MMU_NOTIFIER
-	select CRC32
-	select I2C_ALGOBIT
-	---help---
-	This is a low-level driver for Intel OPA Gen1 adapter.
-config HFI1_DEBUG_SDMA_ORDER
-	bool "HFI1 SDMA Order debug"
-	depends on INFINIBAND_HFI1
-	default n
-	---help---
-	This is a debug flag to test for out of order
-	sdma completions for unit testing
-config SDMA_VERBOSITY
-	bool "Config SDMA Verbosity"
-	depends on INFINIBAND_HFI1
-	default n
-	---help---
-	This is a configuration flag to enable verbose
-	SDMA debug
+version https://git-lfs.github.com/spec/v1
+oid sha256:4875f1a0c69371820f444a609cccba3c2ef0d84fec45aec6933683718f140bee
+size 583

@@ -1,25 +1,3 @@
-#
-# Mellanox driver configuration
-#
-
-config NET_VENDOR_MELLANOX
-	bool "Mellanox devices"
-	default y
-	depends on PCI || I2C
-	---help---
-	  If you have a network (Ethernet or RDMA) device belonging to this
-	  class, say Y.
-
-	  Note that the answer to this question doesn't directly affect the
-	  kernel: saying N will just cause the configurator to skip all
-	  the questions about Mellanox cards. If you say Y, you will be asked
-	  for your specific card in the following questions.
-
-if NET_VENDOR_MELLANOX
-
-source "drivers/net/ethernet/mellanox/mlx4/Kconfig"
-source "drivers/net/ethernet/mellanox/mlx5/core/Kconfig"
-source "drivers/net/ethernet/mellanox/mlxsw/Kconfig"
-source "drivers/net/ethernet/mellanox/mlxfw/Kconfig"
-
-endif # NET_VENDOR_MELLANOX
+version https://git-lfs.github.com/spec/v1
+oid sha256:06eb64bb18fd0c45bb9aa638e33fd69c31594b587f5c99eeb30cb0260d41b394
+size 750

@@ -1,10 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_CAVIUM_OCTEON_SOC)	+= octeon_3xxx.dtb octeon_68xx.dtb
-
-obj-y				+= $(patsubst %.dtb, %.dtb.o, $(dtb-y))
-
-# Force kbuild to make empty built-in.o if necessary
-obj-				+= dummy.o
-
-always				:= $(dtb-y)
-clean-files			:= *.dtb *.dtb.S
+version https://git-lfs.github.com/spec/v1
+oid sha256:4699074535f7f6db04f2287e1f2e1bfee18b951cf88fac71b7162f45aed6b239
+size 279

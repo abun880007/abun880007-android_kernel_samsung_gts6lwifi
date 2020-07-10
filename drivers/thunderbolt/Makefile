@@ -1,3 +1,3 @@
-obj-${CONFIG_THUNDERBOLT} := thunderbolt.o
-thunderbolt-objs := nhi.o ctl.o tb.o switch.o cap.o path.o tunnel_pci.o eeprom.o
-thunderbolt-objs += domain.o dma_port.o icm.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:f4d17ca10e7d63db3a4e1afcefccf47a35c6f10c0c2681977944832f7799c0ec
+size 170

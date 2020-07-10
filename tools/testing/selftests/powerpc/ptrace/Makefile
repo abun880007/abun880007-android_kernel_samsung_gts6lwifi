@@ -1,15 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-TEST_PROGS := ptrace-gpr ptrace-tm-gpr ptrace-tm-spd-gpr \
-              ptrace-tar ptrace-tm-tar ptrace-tm-spd-tar ptrace-vsx ptrace-tm-vsx \
-              ptrace-tm-spd-vsx ptrace-tm-spr ptrace-hwbreak
-
-include ../../lib.mk
-
-all: $(TEST_PROGS)
-
-CFLAGS += -m64 -I../../../../../usr/include -I../tm -mhtm -fno-pie
-
-$(TEST_PROGS): ../harness.c ../utils.c ../lib/reg.S ptrace.h
-
-clean:
-	rm -f $(TEST_PROGS) *.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:03279ccd7d17c42b30a63f4380d2f3e02f29829ec6fb9ee1bcf8d93f2f764fee
+size 444

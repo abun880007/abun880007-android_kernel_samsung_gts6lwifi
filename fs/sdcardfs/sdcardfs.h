@@ -618,6 +618,8 @@ out_unlock:
 	return err;
 }
 
+#define AID_USE_ROOT_RESERVED KGIDT_INIT(5678)
+
 /*
  * Return 1, if a disk has enough free space, otherwise 0.
  * We assume that any files can not be overwritten.

@@ -1,11 +1,3 @@
-#
-# Makefile for the optics drivers.
-#
-
-# Each configuration option enables a list of files.
-
-obj-$(CONFIG_SENSORS_HRMSENSOR)		+= hrmsensor.o
-obj-$(CONFIG_SENSORS_HRM_MAX86915)	+= hrm_max86915.o
-obj-$(CONFIG_SENSORS_MAX86915)		+= max86915.o
-obj-$(CONFIG_SENSORS_TCS3407)		+= tcs3407.o
-obj-$(CONFIG_SENSORS_VD6281)		+= vd6281.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:c1c627fa8886333f69c462e78bd48cd1c3d9418f57a1c3ef52426e78cbba3380
+size 329

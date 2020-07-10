@@ -128,6 +128,7 @@ typedef void (*ctor_fn_t)(void);
 extern int do_one_initcall(initcall_t fn);
 extern char __initdata boot_command_line[];
 extern char *saved_command_line;
+extern char *erased_command_line;
 extern unsigned int reset_devices;
 
 /* used by init/main.c */
@@ -228,8 +229,8 @@ extern bool initcall_debug;
 	__used __section(.security_initcall.init) = fn
 
 #ifdef CONFIG_DEFERRED_INITCALLS
-#define deferred_initcall(fn, id) \
-	static initcall_t __initcall_##fn##id __used \
+#define deferred_initcall(fn, id)				\
+	static initcall_t __initcall_##fn##id __used		\
 	__attribute__((__section__(".deferred_initcall" #id ".init"))) = fn
 #endif
 
@@ -290,8 +291,8 @@ void __init parse_early_options(char *cmdline);
 #define deferred_module_init(fn) deferred_initcall(fn, 0)
 #define deferred_module_init_sync(fn) deferred_initcall(fn, 0s)
 #endif
-#else /* MODULE */
 
+#else /* MODULE */
 #ifdef CONFIG_DEFERRED_INITCALLS
 #define deferred_module_init(fn) module_init(fn)
 #endif
@@ -302,6 +303,8 @@ void __init parse_early_options(char *cmdline);
 
 /* Data marked not to be saved by software suspend */
 #define __nosavedata __section(.data..nosave)
+
+#define __rticdata  __attribute__((section(".bss.rtic")))
 
 #ifdef MODULE
 #define __exit_p(x) x

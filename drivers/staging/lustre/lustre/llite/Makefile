@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-subdir-ccflags-y += -I$(srctree)/drivers/staging/lustre/include
-subdir-ccflags-y += -I$(srctree)/drivers/staging/lustre/lustre/include
-
-obj-$(CONFIG_LUSTRE_FS) += lustre.o
-lustre-y := dcache.o dir.o file.o llite_lib.o llite_nfs.o \
-	    rw.o rw26.o namei.o symlink.o llite_mmap.o range_lock.o \
-	    xattr.o xattr_cache.o xattr_security.o \
-	    super25.o statahead.o glimpse.o lcommon_cl.o lcommon_misc.o \
-	    vvp_dev.o vvp_page.o vvp_lock.o vvp_io.o vvp_object.o \
-	    lproc_llite.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:531c8bae217c34484d53d9022fe82f2117bd581cbe807a0922c7131e4778aaf6
+size 523

@@ -1,7 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-plus_sec := $(call as-instr,.arch_extension sec,+sec)
-AFLAGS_smc.o := -Wa,-march=armv7-a$(plus_sec)
-
-obj-y += setup.o smc.o
-obj-$(CONFIG_SMP) += platsmp.o
-obj-$(CONFIG_SUSPEND) += pm.o
+version https://git-lfs.github.com/spec/v1
+oid sha256:38a4eb01107d885d44c4ae527ee558a68dc7535cdc7b5b9b63496d8b85943ca0
+size 220

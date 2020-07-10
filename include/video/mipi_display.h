@@ -4,6 +4,7 @@
  *
  * Copyright (C) 2010 Guennadi Liakhovetski <g.liakhovetski@gmx.de>
  * Copyright (C) 2006 Nokia Corporation
+ * Copyright (c) 2017, The Linux Foundation. All rights reserved.
  * Author: Imre Deak <imre.deak@nokia.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -60,8 +61,8 @@ enum {
 	MIPI_DSI_PIXEL_STREAM_3BYTE_18			= 0x2e,
 	MIPI_DSI_PACKED_PIXEL_STREAM_24			= 0x3e,
 
-	MIPI_DSI_DSC_PRA                                = 0x07,
-	MIPI_DSI_DSC_PPS                                = 0x0a,
+	MIPI_DSI_COMPRESSION_MODE			= 0x07,
+	MIPI_DSI_PPS					= 0x0a,
 };
 
 /* MIPI DSI Peripheral-to-Processor transaction types */
