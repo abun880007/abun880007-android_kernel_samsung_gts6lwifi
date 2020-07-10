@@ -1,3 +1,6 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:fc4fab15cadcdb5d6fac2c4be407c8fb9ce31830cbf64b820bcf455a30658c9d
-size 268
+ARCH=arm64
+CROSS_COMPILE=aarch64-linux-android-
+CLANG_TRIPLE=aarch64-linux-gnu-
+FILES="
+vmlinux:vmlinux
+"
